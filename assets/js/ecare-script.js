@@ -1,17 +1,17 @@
 /**
  * E-Care Health Services - Frontend & Admin JavaScript
- * Pure jQuery - No frameworks
+ * Pure jQuery - Shukhee/Meditaj UI
  */
 (function($) {
     'use strict';
 
     // ================================================================
-    // CAREGIVER BOOKING MODULE
+    // CAREGIVER BOOKING MODULE – Tab-style filters
     // ================================================================
 
     function loadCaregivers() {
-        var type = $('#ecare-filter-type').val();
-        var pkg = $('#ecare-filter-package').val();
+        var type = $('#ecare-filter-type .ecare-type-tab.active').data('type') || '';
+        var pkg  = $('#ecare-filter-package .ecare-package-tab.active').data('package') || '';
 
         $('#ecare-caregiver-grid').html('<p>Loading caregivers...</p>');
 
@@ -27,12 +27,21 @@
         });
     }
 
-    // Filter caregivers on change
-    $(document).on('change', '#ecare-filter-type, #ecare-filter-package', function() {
+    // Type tabs
+    $(document).on('click', '#ecare-filter-type .ecare-type-tab', function() {
+        $('#ecare-filter-type .ecare-type-tab').removeClass('active');
+        $(this).addClass('active');
         loadCaregivers();
     });
 
-    // Load caregivers on page load
+    // Package tabs
+    $(document).on('click', '#ecare-filter-package .ecare-package-tab', function() {
+        $('#ecare-filter-package .ecare-package-tab').removeClass('active');
+        $(this).addClass('active');
+        loadCaregivers();
+    });
+
+    // Load on page load
     if ($('#ecare-caregiver-grid').length) {
         loadCaregivers();
     }
@@ -62,17 +71,28 @@
     $(document).on('click', '.ecare-modal-close', function() {
         $('#ecare-caregiver-detail-modal').fadeOut(200);
     });
-
     $(document).on('click', '#ecare-caregiver-detail-modal', function(e) {
         if ($(e.target).is('#ecare-caregiver-detail-modal')) {
             $(this).fadeOut(200);
         }
     });
 
-    // Update price display on package select
-    $(document).on('change', 'input[name="package_type"]', function() {
-        var price = $(this).data('price');
-        $('#ecare-price-display').text(price ? parseFloat(price).toLocaleString() : '0');
+    // Package radio selection in detail view
+    $(document).on('click', '.ecare-package-tab', function() {
+        var $radio = $(this).find('input[type="radio"]');
+        if ($radio.length) {
+            $radio.prop('checked', true);
+            var price = $radio.data('price');
+            $('#ecare-price-display').text(price ? parseFloat(price).toLocaleString() : '0');
+            $(this).closest('.ecare-package-tabs').find('.ecare-package-tab').removeClass('active');
+            $(this).addClass('active');
+        }
+    });
+
+    // Family member selection
+    $(document).on('click', '.ecare-family-option', function() {
+        $(this).closest('.ecare-family-card').find('.ecare-family-option').removeClass('selected');
+        $(this).addClass('selected');
     });
 
     // Submit caregiver booking form
@@ -145,7 +165,6 @@
     // LAB TEST MODULE
     // ================================================================
 
-    // Load divisions on page load
     if ($('#ecare-lab-division').length) {
         loadLocations('division', 0, '#ecare-lab-division');
     }
@@ -168,63 +187,41 @@
         });
     }
 
-    // Cascade location selects
     $(document).on('change', '#ecare-lab-division', function() {
         var val = $(this).val();
-        var name = $(this).find('option:selected').data('name') || '';
-        var $dist = $('#ecare-lab-district');
-        var $area = $('#ecare-lab-area');
-        var $prov = $('#ecare-lab-provider');
-        $dist.html('<option value="">All Districts</option>').prop('disabled', true);
-        $area.html('<option value="">All Areas</option>').prop('disabled', true);
-        $prov.html('<option value="">All Providers</option>').prop('disabled', true);
-        if (val) {
-            loadLocations('district', val, '#ecare-lab-district');
-        }
+        $('#ecare-lab-district').html('<option value="">All Districts</option>').prop('disabled', true);
+        $('#ecare-lab-area').html('<option value="">All Areas</option>').prop('disabled', true);
+        $('#ecare-lab-provider').html('<option value="">All Providers</option>').prop('disabled', true);
+        if (val) loadLocations('district', val, '#ecare-lab-district');
         loadLabTests();
     });
 
     $(document).on('change', '#ecare-lab-district', function() {
         var val = $(this).val();
-        var $area = $('#ecare-lab-area');
-        var $prov = $('#ecare-lab-provider');
-        $area.html('<option value="">All Areas</option>').prop('disabled', true);
-        $prov.html('<option value="">All Providers</option>').prop('disabled', true);
-        if (val) {
-            loadLocations('area', val, '#ecare-lab-area');
-        }
+        $('#ecare-lab-area').html('<option value="">All Areas</option>').prop('disabled', true);
+        $('#ecare-lab-provider').html('<option value="">All Providers</option>').prop('disabled', true);
+        if (val) loadLocations('area', val, '#ecare-lab-area');
         loadLabTests();
     });
 
     $(document).on('change', '#ecare-lab-area', function() {
         var val = $(this).val();
-        var $prov = $('#ecare-lab-provider');
-        $prov.html('<option value="">All Providers</option>').prop('disabled', true);
-        if (val) {
-            loadLocations('lab_provider', val, '#ecare-lab-provider');
-        }
+        $('#ecare-lab-provider').html('<option value="">All Providers</option>').prop('disabled', true);
+        if (val) loadLocations('lab_provider', val, '#ecare-lab-provider');
         loadLabTests();
     });
 
-    $(document).on('change', '#ecare-lab-provider', function() {
-        loadLabTests();
-    });
-
-    $(document).on('keyup', '#ecare-lab-search', function() {
-        loadLabTests();
-    });
+    $(document).on('change', '#ecare-lab-provider', function() { loadLabTests(); });
+    $(document).on('keyup', '#ecare-lab-search', function() { loadLabTests(); });
 
     function getSelectedText(selectId) {
         var $sel = $(selectId);
-        if ($sel.val()) {
-            return $sel.find('option:selected').data('name') || '';
-        }
+        if ($sel.val()) return $sel.find('option:selected').data('name') || '';
         return '';
     }
 
     function loadLabTests() {
         $('#ecare-lab-grid').html('<p>Loading lab tests...</p>');
-
         $.post(ecare_ajax.ajax_url, {
             action: 'ecare_filter_lab_tests',
             nonce: ecare_ajax.nonce,
@@ -234,9 +231,7 @@
             lab_provider: getSelectedText('#ecare-lab-provider'),
             search: $('#ecare-lab-search').val()
         }, function(response) {
-            if (response.success) {
-                $('#ecare-lab-grid').html(response.data.html);
-            }
+            if (response.success) $('#ecare-lab-grid').html(response.data.html);
         });
     }
 
@@ -256,7 +251,7 @@
                 $btn.text('Added!');
                 if (response.data.cart_url) {
                     var notice = $('<div class="ecare-form-response success" style="margin-top:10px;">Added to cart! <a href="' + response.data.cart_url + '">View Cart</a></div>');
-                    $btn.closest('.ecare-lab-test-card').append(notice);
+                    $btn.closest('.ecare-lab-card').append(notice);
                 }
             } else {
                 alert(response.data.message);
@@ -266,24 +261,30 @@
     });
 
     // ================================================================
-    // AMBULANCE MODULE
+    // AMBULANCE MODULE – Card-style type select
     // ================================================================
 
-    // Update price summary
-    $(document).on('change', '#ecare-ambulance-type', function() {
-        var val = $(this).val();
-        var prices = { 'Standard': 1500, 'ICU': 3000, 'Freezer': 5000 };
-        var price = prices[val] || 0;
-        $('#ecare-summary-type').text(val || '-');
-        $('#ecare-summary-price').text(price.toLocaleString());
+    // Ambulance type card click
+    $(document).on('click', '#ecare-ambulance-type .ecare-amb-type-card', function() {
+        $('#ecare-ambulance-type .ecare-amb-type-card').removeClass('active');
+        $(this).addClass('active');
+        var type = $(this).data('type');
+        var price = $(this).data('price');
+        $('input[name="ambulance_type"]').val(type);
+        $('#ecare-summary-type').text(type);
+        $('#ecare-summary-price').text(Number(price).toLocaleString());
+    });
+
+    // Priority select update
+    $(document).on('change', 'select[name="priority_level"]', function() {
+        $('#ecare-summary-priority').text($(this).val());
     });
 
     // Submit ambulance request
     $(document).on('submit', '#ecare-ambulance-form', function(e) {
         e.preventDefault();
-
         var $form = $(this);
-        var $btn = $form.find('button[type="submit"]');
+        var $btn = $form.find('.ecare-confirm-btn');
         $btn.prop('disabled', true).text('Submitting...');
 
         $.post(ecare_ajax.ajax_url, {
@@ -359,17 +360,16 @@
             status: status
         }, function(response) {
             if (response.success) {
-                // Update the badge if present
                 var $row = $select.closest('tr');
-                $row.find('.ecare-status-badge')
-                    .removeClass()
-                    .addClass('ecare-status-badge ecare-status-' + status)
-                    .text(status.charAt(0).toUpperCase() + status.slice(1));
+                var $pill = $row.find('.ecare-pill');
+                var colorMap = { pending: 'yellow', approved: 'green', completed: 'green', cancelled: 'red', dispatched: 'blue', assigned: 'blue' };
+                var color = colorMap[status] || 'gray';
+                $pill.removeClass().addClass('ecare-pill ecare-pill-' + color).text(status.charAt(0).toUpperCase() + status.slice(1));
             }
         });
     });
 
-    // Approve/Reject provider from admin list
+    // Approve/Reject provider
     $(document).on('click', '.ecare-approve-provider, .ecare-reject-provider', function() {
         var $btn = $(this);
         var id = $btn.data('id');
@@ -383,11 +383,10 @@
         }, function(response) {
             if (response.success) {
                 var $row = $btn.closest('tr');
-                $row.find('.ecare-status-badge')
-                    .removeClass()
-                    .addClass('ecare-status-badge ecare-status-' + status)
-                    .text(status.charAt(0).toUpperCase() + status.slice(1));
-                $btn.closest('td').find('.button').hide();
+                var $pill = $row.find('.ecare-pill');
+                var colorMap = { approved: 'green', rejected: 'red', pending: 'yellow' };
+                $pill.removeClass().addClass('ecare-pill ecare-pill-' + (colorMap[status] || 'gray')).text(status.charAt(0).toUpperCase() + status.slice(1));
+                $btn.closest('td').find('.ecare-approve-provider, .ecare-reject-provider').hide();
             }
         });
     });

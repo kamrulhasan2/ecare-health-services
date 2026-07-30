@@ -70,16 +70,12 @@ class ECare_Ajax {
                     $price_label = 'Monthly 24H';
                 }
 
-                $html .= '<div class="ecare-caregiver-card" data-id="' . esc_attr($id) . '">';
-                $html .= '<div class="ecare-card-image">' . get_the_post_thumbnail($id, 'medium') . '</div>';
-                $html .= '<div class="ecare-card-body">';
+                $html .= '<div class="ecare-cg-card" data-id="' . esc_attr($id) . '">';
+                $html .= '<div class="ecare-cg-card-image">' . get_the_post_thumbnail($id, 'medium') . '</div>';
+                $html .= '<div class="ecare-cg-card-body">';
                 $html .= '<h3>' . get_the_title() . '</h3>';
-                $html .= '<span class="ecare-badge ecare-badge-type">' . esc_html($provider_type) . '</span>';
-                if ($price) {
-                    $html .= '<p class="ecare-price">' . esc_html($price_label) . ': ৳' . esc_html(number_format($price)) . '</p>';
-                }
-                $html .= '<p class="ecare-excerpt">' . get_the_excerpt() . '</p>';
-                $html .= '<a href="#" class="ecare-btn ecare-btn-primary ecare-view-details" data-id="' . esc_attr($id) . '">View Details & Book</a>';
+                $html .= '<p class="ecare-cg-card-bio">&#10077;' . esc_html(get_the_excerpt()) . '&#10078;</p>';
+                $html .= '<a href="#" class="ecare-cg-card-btn ecare-view-details" data-id="' . esc_attr($id) . '">View Details & Book</a>';
                 $html .= '</div></div>';
             }
             wp_reset_postdata();
@@ -112,51 +108,81 @@ class ECare_Ajax {
             'monthly_24_price' => get_post_meta($id, '_monthly_24_price', true),
         );
 
-        $html = '<div class="ecare-caregiver-detail">';
-        $html .= '<div class="ecare-detail-header">';
-        $html .= '<div class="ecare-detail-image">' . get_the_post_thumbnail($id, 'large') . '</div>';
-        $html .= '<div class="ecare-detail-info">';
-        $html .= '<h2>' . get_the_title($id) . '</h2>';
-        $html .= '<span class="ecare-badge ecare-badge-type">' . esc_html($meta['provider_type']) . '</span>';
-        $html .= '<p><strong>Experience:</strong> ' . esc_html($meta['experience']) . ' years</p>';
-        $html .= '<p><strong>Education:</strong> ' . esc_html($meta['education']) . '</p>';
-        $html .= '</div></div>';
-        $html .= '<div class="ecare-detail-body">';
-        $html .= '<h3>Skills</h3><p>' . nl2br(esc_html($meta['skills'])) . '</p>';
-        $html .= '<h3>About</h3><p>' . nl2br(esc_html($post->post_content)) . '</p>';
+        $html = '<div class="ecare-detail-grid">';
 
-        $html .= '<h3>Select Package</h3>';
-        $html .= '<div class="ecare-package-grid">';
+        // Left Sidebar
+        $html .= '<div class="ecare-detail-sidebar">';
+        $html .= get_the_post_thumbnail($id, 'medium', array('class' => 'ecare-profile-img'));
+        $html .= '<h3>' . get_the_title($id) . '</h3>';
+        $html .= '<p style="color:var(--brand-teal);font-weight:600;font-size:13px;">' . esc_html($meta['provider_type']) . '</p>';
+        $html .= '<div class="ecare-sidebar-label">Education</div>';
+        $html .= '<p>' . nl2br(esc_html($meta['education'] ?: 'Not specified')) . '</p>';
+        $html .= '<div class="ecare-sidebar-label">Biography</div>';
+        $html .= '<p>' . nl2br(esc_html($post->post_content ?: 'No biography available.')) . '</p>';
+        $html .= '<div class="ecare-sidebar-label">Special Skills</div>';
+        $html .= '<p>' . nl2br(esc_html($meta['skills'] ?: 'None specified')) . '</p>';
+        $html .= '</div>';
+
+        // Right Column
+        $html .= '<div class="ecare-detail-main">';
+
+        // Family Members
+        $html .= '<div class="ecare-family-card">';
+        $html .= '<h4>Family Members</h4>';
+        $html .= '<div class="ecare-family-option selected"><span>&#128100;</span> <span>Select Family Member</span></div>';
+        $html .= '<div class="ecare-family-option"><span>&#128100;</span> <span>Spouse</span></div>';
+        $html .= '<div class="ecare-family-option"><span>&#128100;</span> <span>Child</span></div>';
+        $html .= '<div class="ecare-family-option"><span>&#128100;</span> <span>Parent</span></div>';
+        $html .= '<div class="ecare-family-option"><span>&#128100;</span> <span>Sibling</span></div>';
+        $html .= '</div>';
+
+        // Additional Information
+        $html .= '<form id="ecare-booking-form">';
+        $html .= '<h4 style="font-size:14px;font-weight:700;margin:0 0 10px;">Additional Information</h4>';
+        $html .= '<input type="hidden" name="caregiver_id" value="' . esc_attr($id) . '" />';
+        $html .= '<div class="ecare-info-grid">';
+        $html .= '<div><label>Patient Name <span>*</span></label><input type="text" name="patient_name" required /></div>';
+        $html .= '<div><label>Patient Type <span>*</span></label><select name="patient_type" required><option value="">Select</option><option value="Adult">Adult</option><option value="Child">Child</option><option value="Elderly">Elderly</option><option value="Infant">Infant</option></select></div>';
+        $html .= '<div><label>Required Date <span>*</span></label><input type="date" name="required_date" required /></div>';
+        $html .= '<div><label><input type="checkbox" name="diaper_change" value="1" style="width:auto;margin-right:6px;" /> Diaper Change Needed</label></div>';
+        $html .= '<div class="ecare-full-width"><label>Address <span>*</span></label><textarea name="address" required></textarea></div>';
+        $html .= '<div><label>Contact Number <span>*</span></label><input type="text" name="contact_phone" required /></div>';
+        $html .= '<div><label>Disease</label><textarea name="disease"></textarea></div>';
+
+        // Package selection
+        $html .= '<div class="ecare-full-width"><label>Select Package</label>';
         $packages = array(
             'daily_12' => array('label' => 'Daily (12 Hours)', 'price' => $meta['daily_12_price']),
             'daily_24' => array('label' => 'Daily (24 Hours)', 'price' => $meta['daily_24_price']),
             'monthly_12' => array('label' => 'Monthly (12 Hours)', 'price' => $meta['monthly_12_price']),
             'monthly_24' => array('label' => 'Monthly (24 Hours)', 'price' => $meta['monthly_24_price']),
         );
+        $html .= '<div style="display:flex;gap:10px;flex-wrap:wrap;">';
         foreach ($packages as $key => $pkg) {
             if ($pkg['price']) {
-                $html .= '<label class="ecare-package-option"><input type="radio" name="package_type" value="' . esc_attr($key) . '" data-price="' . esc_attr($pkg['price']) . '"> <span>' . esc_html($pkg['label']) . ' – ৳' . esc_html(number_format($pkg['price'])) . '</span></label>';
+                $html .= '<label class="ecare-package-tab" style="cursor:pointer;flex:1;min-width:140px;"><input type="radio" name="package_type" value="' . esc_attr($key) . '" data-price="' . esc_attr($pkg['price']) . '" style="display:none;" /> <span class="ecare-pkg-label">' . esc_html($pkg['label']) . '</span> <span class="ecare-pkg-price">৳' . esc_html(number_format($pkg['price'])) . '</span></label>';
             }
         }
+        $html .= '</div></div>';
+
+        $html .= '</div>'; // end info-grid
+
+        // Documents Upload
+        $html .= '<div class="ecare-doc-upload" onclick="document.getElementById(\'ecare-booking-file\').click()">';
+        $html .= '<span class="ecare-upload-icon">&#128206;</span>';
+        $html .= '<p>Upload Prescription / NID</p>';
+        $html .= '<input type="file" id="ecare-booking-file" name="booking_file" style="display:none;" />';
         $html .= '</div>';
 
-        $html .= '<h3>Patient Booking Form</h3>';
-        $html .= '<form id="ecare-booking-form" class="ecare-form">';
-        $html .= '<input type="hidden" name="caregiver_id" value="' . esc_attr($id) . '" />';
-        $html .= '<div class="ecare-form-row"><label>Patient Name <span>*</span></label><input type="text" name="patient_name" required /></div>';
-        $html .= '<div class="ecare-form-row"><label>Patient Type <span>*</span></label><select name="patient_type" required><option value="">Select</option><option value="Adult">Adult</option><option value="Child">Child</option><option value="Elderly">Elderly</option><option value="Infant">Infant</option></select></div>';
-        $html .= '<div class="ecare-form-row"><label>Required Date <span>*</span></label><input type="date" name="required_date" required /></div>';
-        $html .= '<div class="ecare-form-row"><label><input type="checkbox" name="diaper_change" value="1" /> Diaper Change Needed</label></div>';
-        $html .= '<div class="ecare-form-row"><label>Address <span>*</span></label><textarea name="address" required></textarea></div>';
-        $html .= '<div class="ecare-form-row"><label>Contact Number <span>*</span></label><input type="text" name="contact_phone" required /></div>';
-        $html .= '<div class="ecare-form-row"><label>Disease</label><textarea name="disease"></textarea></div>';
-        $html .= '<div class="ecare-form-row"><label>Upload Prescription/NID</label><input type="file" name="booking_file" /></div>';
-        $html .= '<div class="ecare-form-row">';
-        $html .= '<p class="ecare-total-price">Total: ৳<span id="ecare-price-display">0</span></p>';
-        $html .= '<button type="submit" class="ecare-btn ecare-btn-primary">Confirm Booking</button>';
+        // Total and Book Button
+        $html .= '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-top:8px;">';
+        $html .= '<p style="font-size:18px;font-weight:700;color:var(--brand-teal);margin:0;">Total: ৳<span id="ecare-price-display">0</span></p>';
+        $html .= '<button type="submit" class="ecare-book-btn">Book Caregiver</button>';
         $html .= '</div>';
+
         $html .= '</form>';
-        $html .= '</div></div>';
+        $html .= '</div>'; // end detail-main
+        $html .= '</div>'; // end detail-grid
 
         wp_send_json_success(array('html' => $html));
     }
@@ -350,16 +376,15 @@ class ECare_Ajax {
                 $sample = get_post_meta($id, '_sample_type', true);
                 $turnaround = get_post_meta($id, '_turnaround_days', true);
 
-                $html .= '<div class="ecare-lab-test-card">';
-                $html .= '<div class="ecare-lab-test-body">';
+                $html .= '<div class="ecare-lab-card">';
                 $html .= '<h3>' . get_the_title() . '</h3>';
                 $html .= '<p class="ecare-test-code">Code: ' . esc_html(get_post_meta($id, '_test_code', true)) . '</p>';
-                if ($cat) $html .= '<span class="ecare-badge ecare-badge-cat">' . esc_html($cat) . '</span>';
-                if ($sample) $html .= '<span class="ecare-badge ecare-badge-sample">' . esc_html($sample) . '</span>';
-                if ($turnaround) $html .= '<p><small>Turnaround: ' . esc_html($turnaround) . ' days</small></p>';
-                $html .= '<p class="ecare-lab-price">Starting from ৳' . esc_html(number_format($price)) . '</p>';
-                $html .= '<a href="#" class="ecare-btn ecare-btn-primary ecare-add-lab-cart" data-id="' . esc_attr($id) . '">Add to Cart</a>';
-                $html .= '</div></div>';
+                if ($cat) $html .= '<span class="ecare-pill ecare-pill-yellow" style="margin-right:4px;">' . esc_html($cat) . '</span>';
+                if ($sample) $html .= '<span class="ecare-pill ecare-pill-green">' . esc_html($sample) . '</span>';
+                if ($turnaround) $html .= '<p style="font-size:12px;color:var(--text-muted);margin:6px 0;">Turnaround: ' . esc_html($turnaround) . ' days</p>';
+                $html .= '<p class="ecare-lab-price">From ৳' . esc_html(number_format($price)) . '</p>';
+                $html .= '<a href="#" class="ecare-cg-card-btn ecare-add-lab-cart" data-id="' . esc_attr($id) . '">Add to Cart</a>';
+                $html .= '</div>';
             }
             wp_reset_postdata();
         } else {
