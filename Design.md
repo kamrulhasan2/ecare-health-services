@@ -1,115 +1,76 @@
-# Pixel-Perfect UI Redesign Guide for E-Care / Shukhee Platform
+# Visual Design Blueprint for OpenCode (Extracted from E-Care WP Plugin PDF)
 
-The previous design was too generic. We need to exactly replicate the provided screenshots. The UI is a modern, light-themed medical dashboard and frontend with specific shadow, border, and color treatments.
+Please use this exact HTML DOM structure, CSS variables, and layout specs to rewrite the WordPress Plugin UI.
 
-## 1. Global CSS Variables (MUST USE)
-The platform uses a mix of Teal/Cyan (for the main frontend) and deep Purple/Green for specific buttons. Include these in the `:root`:
-
+## 1. Global CSS Variables & Colors
 ```css
 :root {
-  --brand-teal: #18B8A3;      /* Main active color, light borders */
-  --brand-teal-light: #E6F7F5; /* Active tab backgrounds */
-  --brand-purple: #8B2C7A;     /* Used for 'Book Caregiver' action button */
-  --admin-green: #0E9F6E;      /* Admin dashboard primary buttons */
-  --bg-main: #FFFFFF;
-  --bg-gray: #F8FAFC;
-  --border-color: #E2E8F0;
-  --text-dark: #1E293B;
-  --text-muted: #64748B;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --brand-teal: #18B8A3;          /* Main active border, tab text, price highlights */
+  --brand-teal-light: #E6F7F5;    /* Active tab background tint, button background */
+  --brand-purple: #8B2C7A;        /* "Book Caregiver" action button */
+  --admin-green: #0E9F6E;         /* Admin dashboard "+ Add Booking" primary button */
+  --bg-card: #FFFFFF;             /* White card container */
+  --bg-page: #F8FAFC;             /* Light gray page background */
+  --border-light: #E2E8F0;        /* Card & table borders */
+  --text-dark: #1E293B;           /* Primary text */
+  --text-muted: #64748B;          /* Subtitles & quotes */
 }
 
-2. Frontend Layout Requirements (Strict HTML Structure)
-A. Caregiver Filter Tabs & Grid ([ecare_caregiver_booking])
-Structure Requirement:
-Do not use standard generic buttons. Use Card-style radio buttons.
+2. Frontend HTML & Layout Specifications
+A. Caregiver Booking Grid ([ecare_caregiver_booking])
+Caregiver Type Tabs: Horizontal list of selectable pill buttons with icons.
 
-Select Caregiver Type: Horizontal flex container.
+Active State: background-color: var(--brand-teal-light); border: 2px solid var(--brand-teal); color: var(--brand-teal); font-weight: 600;
 
-Inactive: White box, light gray border, image icon + text side-by-side.
+Package Selection Cards: Horizontal flex row (display: flex; gap: 15px;).
 
-Active: border-color: var(--brand-teal); background-color: var(--brand-teal-light); border-width: 2px;
+Shows Package Name (e.g., Daily (12 Hours)) on top-left and Price (e.g., Total ৳ 1200) in Teal bold font on top-right.
 
-Select Package: Horizontal flex container.
+Caregiver Profile Grid: 4-column responsive CSS grid (grid-template-columns: repeat(4, 1fr); gap: 20px;).
 
-Content: Top left "Daily (24 Hours)", bottom right "Total ৳ 2200" (Text color teal).
+Card Design: White card, border: 1px solid #E2E8F0, rounded corners (border-radius: 8px).
 
-Caregiver Cards (The Grid):
+Card Image: Square-ish avatar photo aligned top/left.
 
-Grid: grid-template-columns: repeat(4, 1fr); gap: 20px;
+Card Bio: Light muted text in quotes ("Ability to learn quickly...").
 
-Card CSS: White background, small shadow, rounded corners.
-
-Card Content:
-
-Image: Float left or top-aligned square-ish rounded image.
-
-Name: Bold, 15px.
-
-Bio: 12px, muted text, italicized quotes ("Ability to learn quickly...").
-
-Button at bottom: Full-width, very light blue/teal background, text color teal, NO background fill (just light tint), with border radius.
+Card Button: Full-width light cyan button (background: var(--brand-teal-light); color: var(--brand-teal); border: none; font-weight: 600; padding: 10px; border-radius: 6px;).
 
 B. Single Caregiver Details Page
-Structure Requirement:
-Two-column CSS Grid layout (grid-template-columns: 300px 1fr; gap: 30px;).
+Layout: 2-Column CSS Grid (grid-template-columns: 280px 1fr; gap: 24px;).
 
-Left Sidebar (Profile Box):
+Left Column (Profile Card):
 
-Light gray background (#F8FAFC), padded.
+Light gray background container (#F8FAFC).
 
-Centered round profile image.
+Centered circular avatar photo, Name, Education, Biography, and Special Skills listed in structured blocks.
 
-Details: Education, Biography, Special Skills listed underneath.
+Right Column (Form):
 
-Right Column (Form & Details):
+"Family Members" Box: White card with light cyan border (#18B8A3), showing selected family member details.
 
-"Family Members" box: White card, light blue border, shows selected family member.
+"Additional Information": 2-column grid input form.
 
-"Additional Information": 2-column grid form. Standard input fields with minimal borders.
+"Documents Upload Box": Dotted border box (border: 2px dashed #CBD5E1; padding: 20px; text-align: center;).
 
-"Documents" upload area: Wide dashed border box with upload icon.
+Submit Button: Full-width pill button colored Purple (var(--brand-purple)), text "Book Caregiver" in bold white.
 
-Action Button: The "Book Caregiver" button MUST be colored Purple (var(--brand-purple)), rounded-full pill shape, placed at the bottom left of the form.
+C. Diagnostic & Lab Test Catalog ([ecare_lab_tests])
+Location Sticky Bar: Flexbox container containing 4 dropdowns (Select Division, Select District, Select Area, Select Lab Provider).
 
-C. Admin Dashboard (Meditaj / Shukhee Style)
-The admin panel must not look like the default WordPress backend. It must look like a modern SaaS app (React/Vue style).
-
-Top KPI Cards (4 in a row):
-
-CSS: display: flex; gap: 15px; margin-bottom: 20px;
-
-Card style: White background, border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; box-shadow: var(--shadow-sm);
-
-Inside Card: Left side holds an icon, right side holds Title (e.g., "TOTAL BOOKINGS") in uppercase small font, and the Number in large bold font.
-
-Action Bar (Above Data Table):
-
-Flexbox, space-between. Left side: Title + total count badge + Search Input. Right side: Filter Button, Export Button, and a Green (var(--admin-green)) primary "+ Add Booking / + Register" button.
-
-Data Table:
-
-Modern borderless table. Only bottom-borders on rows (border-bottom: 1px solid #E2E8F0;).
-
-Table Header: Uppercase, very small font (font-size: 11px; color: #94A3B8;).
-
-Status Badges: Soft pills (e.g., Active = light green bg, green text).
+Test List Grid: Rows showing Test Title, Price ("Starting from ৳ XXX"), and a blue/teal plus button (+) to add to WooCommerce cart.
 
 D. Ambulance Request Form ([ecare_ambulance_request])
-Ambulance Type (Top):
+Ambulance Type Cards: 3 large selectable cards (Standard Non-AC, ICU AC, Freezer Type). Active card has green border and faint green tint.
 
-3 large selectable cards. Active state must have a faint green background and a dark green border.
+Input Fields: Each input box includes a left-aligned icon (e.g., location pin, clock, phone icon).
 
-Form Fields:
+Summary Sidebar: Right-aligned sticky card with feature icons (24/7, 100%, Oxygen) and a confirmation submit button.
 
-Each input field must have an icon inside the input on the left (e.g., Location pin icon for "Pickup Location", Clock icon for "Schedule Time").
+3. Custom Admin Dashboard (Meditaj / Shukhee Style)
+Top Metric Cards (4 Grid Columns): White cards (padding: 20px; border: 1px solid #E2E8F0; border-radius: 8px;). Displays uppercase label (e.g., TOTAL BOOKINGS) and a big bold number.
 
-Right Sidebar (Request Summary):
+Action Header: Flex layout with Search Bar on the left and a Solid Green Primary Button (#0E9F6E) on the right (+ Add Booking / + Register).
 
-3 feature icons at the top (24/7, 100%, Oxygen).
+Data Tables: Borderless modern table rows with soft status pill badges (Active = Light Green BG, Pending = Light Yellow BG).
 
-A sticky summary card showing selected type and price, with a full-width confirmation button.
-
-
-"The previous design did not match the required UI. I need a pixel-perfect replication of the 'Shukhee / Meditaj' UI shown in my reference documents. Read the new @Design.md carefully. You MUST use the exact HTML structures, Flexbox/Grid layouts, and CSS variables provided in the document. Do not invent your own UI patterns. Give me the updated ecare-style.css and the updated PHP shortcode HTML outputs."

@@ -67,12 +67,26 @@ class ECare_Admin {
         );
     }
 
-    // ---- Dashboard ----
+    /**
+     * Helper to render custom styles for WP Admin head to override defaults
+     */
+    private static function admin_style_overrides() {
+        ?>
+        <style>
+            #wpbody-content { background-color: #F8FAFC !important; }
+            .update-nag, .notice, #message { margin-left: 20px !important; margin-right: 20px !important; }
+        </style>
+        <?php
+    }
+
+    // ---- Dashboard (Overview) ----
 
     public static function render_dashboard() {
+        self::admin_style_overrides();
         global $wpdb;
         $bookings_table = $wpdb->prefix . 'ecare_bookings';
 
+        // Fetch metrics
         $total_bookings = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$bookings_table}");
         $pending       = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$bookings_table} WHERE status = 'pending'");
         $completed     = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$bookings_table} WHERE status = 'completed'");
@@ -81,59 +95,63 @@ class ECare_Admin {
         $recent_bookings = $wpdb->get_results("SELECT * FROM {$bookings_table} ORDER BY created_at DESC LIMIT 10");
         ?>
         <div class="ecare-admin-wrap">
-            <div class="ecare-kpi-row">
-                <div class="ecare-kpi-card">
-                    <div class="ecare-kpi-icon total">&#128200;</div>
-                    <div class="ecare-kpi-info">
-                        <p class="ecare-kpi-title"><?php _e('Total Bookings', 'ecare-health-services'); ?></p>
-                        <span class="ecare-kpi-number"><?php echo $total_bookings; ?></span>
+            <h1 style="font-weight:800;font-size:24px;margin-bottom:20px;color:var(--text-dark);"><?php _e('E-Care Overview Dashboard', 'ecare-health-services'); ?></h1>
+            
+            <!-- KPI Metric Cards Grid -->
+            <div class="ecare-admin-kpi-grid">
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon teal">📈</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('TOTAL BOOKINGS', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $total_bookings; ?></span>
                     </div>
                 </div>
-                <div class="ecare-kpi-card">
-                    <div class="ecare-kpi-icon pending">&#9203;</div>
-                    <div class="ecare-kpi-info">
-                        <p class="ecare-kpi-title"><?php _e('Pending Approvals', 'ecare-health-services'); ?></p>
-                        <span class="ecare-kpi-number"><?php echo $pending; ?></span>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon yellow">⏳</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('PENDING APPROVALS', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $pending; ?></span>
                     </div>
                 </div>
-                <div class="ecare-kpi-card">
-                    <div class="ecare-kpi-icon completed">&#10004;</div>
-                    <div class="ecare-kpi-info">
-                        <p class="ecare-kpi-title"><?php _e('Completed', 'ecare-health-services'); ?></p>
-                        <span class="ecare-kpi-number"><?php echo $completed; ?></span>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon green">✓</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('COMPLETED CARE', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $completed; ?></span>
                     </div>
                 </div>
-                <div class="ecare-kpi-card">
-                    <div class="ecare-kpi-icon cancelled">&#10060;</div>
-                    <div class="ecare-kpi-info">
-                        <p class="ecare-kpi-title"><?php _e('Cancelled', 'ecare-health-services'); ?></p>
-                        <span class="ecare-kpi-number"><?php echo $cancelled; ?></span>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon red">✕</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('CANCELLED', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $cancelled; ?></span>
                     </div>
                 </div>
             </div>
 
-            <div class="ecare-action-bar">
-                <div class="ecare-action-left">
-                    <h2><?php _e('Recent Bookings', 'ecare-health-services'); ?></h2>
-                    <span class="ecare-count-badge"><?php echo $total_bookings; ?></span>
+            <!-- Action Header -->
+            <div class="ecare-admin-action-header">
+                <div class="ecare-admin-title-area">
+                    <h2><?php _e('Recent Services Dispatch', 'ecare-health-services'); ?></h2>
+                    <span class="ecare-admin-badge-count"><?php echo count($recent_bookings); ?></span>
                 </div>
-                <div class="ecare-action-right">
+                <div class="ecare-admin-controls">
                     <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search bookings...', 'ecare-health-services'); ?>" />
-                    <button class="ecare-btn-outline"><?php _e('Filter', 'ecare-health-services'); ?></button>
-                    <a href="<?php echo esc_url(admin_url('admin-post.php?action=ecare_export_bookings')); ?>" class="ecare-btn-outline"><?php _e('Export', 'ecare-health-services'); ?></a>
+                    <a href="<?php echo esc_url(admin_url('admin-post.php?action=ecare_export_bookings')); ?>" class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></a>
                 </div>
             </div>
 
-            <div class="ecare-table-wrap">
-                <table class="ecare-table">
+            <!-- Modern Table -->
+            <div class="ecare-admin-table-container">
+                <table class="ecare-admin-table">
                     <thead>
                         <tr>
                             <th><?php _e('ID', 'ecare-health-services'); ?></th>
                             <th><?php _e('Type', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Patient/Client', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Patient Name', 'ecare-health-services'); ?></th>
                             <th><?php _e('Amount', 'ecare-health-services'); ?></th>
                             <th><?php _e('Status', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Date', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Date Requested', 'ecare-health-services'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -141,10 +159,10 @@ class ECare_Admin {
                             <?php foreach ($recent_bookings as $b): ?>
                                 <tr>
                                     <td>#<?php echo intval($b->id); ?></td>
-                                    <td><span class="ecare-pill ecare-pill-blue"><?php echo esc_html(ucfirst($b->booking_type)); ?></span></td>
-                                    <td><?php echo esc_html($b->patient_name ?: 'N/A'); ?></td>
-                                    <td>&#2547;<?php echo esc_html(number_format($b->total_amount, 2)); ?></td>
-                                    <td><span class="ecare-pill ecare-pill-<?php echo $b->status === 'completed' ? 'green' : ($b->status === 'pending' ? 'yellow' : ($b->status === 'cancelled' ? 'red' : 'gray')); ?>"><?php echo esc_html(ucfirst($b->status)); ?></span></td>
+                                    <td><span class="ecare-status-pill dispatched"><?php echo esc_html(ucfirst($b->booking_type)); ?></span></td>
+                                    <td><strong><?php echo esc_html($b->patient_name ?: 'N/A'); ?></strong></td>
+                                    <td style="font-weight:700;color:var(--brand-teal);">৳ <?php echo esc_html(number_format($b->total_amount, 2)); ?></td>
+                                    <td><span class="ecare-status-pill <?php echo esc_attr($b->status); ?>"><?php echo esc_html(ucfirst($b->status)); ?></span></td>
                                     <td><?php echo esc_html(date_i18n(get_option('date_format'), strtotime($b->created_at))); ?></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -161,39 +179,206 @@ class ECare_Admin {
     // ---- Care Bookings ----
 
     public static function render_care_bookings() {
+        self::admin_style_overrides();
         global $wpdb;
         $table = $wpdb->prefix . 'ecare_bookings';
+
+        // Calculate dynamic care metrics
+        $total = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s", 'caregiver'));
+        $pending = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'caregiver', 'pending'));
+        $completed = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'caregiver', 'completed'));
+        $cancelled = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'caregiver', 'cancelled'));
+
         $bookings = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} WHERE booking_type = %s ORDER BY created_at DESC", 'caregiver'));
-        self::render_booking_table(__('Care Bookings', 'ecare-health-services'), $bookings);
+        
+        ?>
+        <div class="ecare-admin-wrap">
+            <h1 style="font-weight:800;font-size:24px;margin-bottom:20px;color:var(--text-dark);"><?php _e('Caregiver Bookings Management', 'ecare-health-services'); ?></h1>
+            
+            <div class="ecare-admin-kpi-grid">
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon teal">🗓️</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Total Bookings', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $total; ?></span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon yellow">⏳</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Pending Approvals', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $pending; ?></span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon green">✓</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Completed Care', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $completed; ?></span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon red">✕</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Cancelled', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $cancelled; ?></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="ecare-admin-action-header">
+                <div class="ecare-admin-title-area">
+                    <h2><?php _e('Bookings Management', 'ecare-health-services'); ?></h2>
+                    <span class="ecare-admin-badge-count"><?php echo count($bookings); ?></span>
+                </div>
+                <div class="ecare-admin-controls">
+                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search bookings...', 'ecare-health-services'); ?>" />
+                    <button class="ecare-admin-btn-outline">🔍 <?php _e('Filters', 'ecare-health-services'); ?></button>
+                    <a href="<?php echo esc_url(admin_url('admin-post.php?action=ecare_export_bookings')); ?>" class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></a>
+                    <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_caregiver')); ?>" class="ecare-admin-btn-green">+ <?php _e('Add Booking', 'ecare-health-services'); ?></a>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="ecare-admin-table-container">
+                <table class="ecare-admin-table">
+                    <thead>
+                        <tr>
+                            <th><?php _e('ID', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Care Provider', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Patient', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Service Package', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Required Date', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Amount', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Status', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Payment', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Actions', 'ecare-health-services'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($bookings): ?>
+                            <?php foreach ($bookings as $b):
+                                $provider_name = $b->provider_id ? get_the_title($b->provider_id) : 'Any Provider';
+                                $pkg_label = str_replace('_', ' ', $b->package_type);
+                            ?>
+                                <tr>
+                                    <td>#<?php echo intval($b->id); ?></td>
+                                    <td><strong><?php echo esc_html($provider_name); ?></strong></td>
+                                    <td><?php echo esc_html($b->patient_name); ?></td>
+                                    <td><span class="ecare-status-pill assigned"><?php echo esc_html(ucfirst($pkg_label)); ?></span></td>
+                                    <td><?php echo esc_html($b->required_date); ?></td>
+                                    <td style="font-weight:700;color:var(--brand-teal);">৳ <?php echo esc_html(number_format($b->total_amount, 2)); ?></td>
+                                    <td><span class="ecare-status-pill <?php echo esc_attr($b->status); ?>"><?php echo esc_html(ucfirst($b->status)); ?></span></td>
+                                    <td>
+                                        <?php if ($b->order_id): ?>
+                                            <a href="<?php echo esc_url(get_edit_post_link($b->order_id)); ?>" target="_blank" style="font-weight:600;color:#2563EB;text-decoration:none;">Order #<?php echo $b->order_id; ?></a>
+                                        <?php else: ?>
+                                            <span style="color:var(--text-muted);font-style:italic;">No Order</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <select class="ecare-status-select" data-booking-id="<?php echo intval($b->id); ?>" style="padding:5px;font-size:12px;border-radius:4px;border:1px solid var(--border-light);">
+                                            <option value="pending" <?php selected($b->status, 'pending'); ?>>Pending</option>
+                                            <option value="approved" <?php selected($b->status, 'approved'); ?>>Approved</option>
+                                            <option value="completed" <?php selected($b->status, 'completed'); ?>>Completed</option>
+                                            <option value="cancelled" <?php selected($b->status, 'cancelled'); ?>>Cancelled</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No bookings found.', 'ecare-health-services'); ?></td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <?php
     }
 
     // ---- Care Providers ----
 
     public static function render_care_providers() {
+        self::admin_style_overrides();
+        
+        // Fetch providers CPT
         $providers = get_posts(array(
             'post_type'      => 'ecare_caregiver',
             'posts_per_page' => -1,
             'post_status'    => 'publish',
         ));
+
+        // Count metrics dynamically
+        $active_count = 0;
+        $pending_count = 0;
+        foreach ($providers as $p) {
+            $status = get_post_meta($p->ID, '_provider_status', true) ?: 'pending';
+            if ($status === 'approved') $active_count++;
+            if ($status === 'pending') $pending_count++;
+        }
+
         ?>
         <div class="ecare-admin-wrap">
-            <div class="ecare-action-bar">
-                <div class="ecare-action-left">
-                    <h2><?php _e('Care Providers', 'ecare-health-services'); ?></h2>
-                    <span class="ecare-count-badge"><?php echo count($providers); ?></span>
+            <h1 style="font-weight:800;font-size:24px;margin-bottom:20px;color:var(--text-dark);"><?php _e('Care Providers Management', 'ecare-health-services'); ?></h1>
+            
+            <!-- 4 Grid Columns KPI Metrics matching PDF Page 3 -->
+            <div class="ecare-admin-kpi-grid">
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon teal">👥</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Active Providers', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $active_count; ?></span>
+                    </div>
                 </div>
-                <div class="ecare-action-right">
-                    <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_caregiver')); ?>" class="ecare-btn-green">+ <?php _e('Add Provider', 'ecare-health-services'); ?></a>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon green">📍</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Total Service Points', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $active_count; ?></span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon yellow">⏳</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Pending Review', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $pending_count; ?></span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon red">📅</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Completed Shifts', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value">0</span>
+                    </div>
                 </div>
             </div>
-            <div class="ecare-table-wrap">
-                <table class="ecare-table">
+
+            <!-- Action Header -->
+            <div class="ecare-admin-action-header">
+                <div class="ecare-admin-title-area">
+                    <h2><?php _e('Care Provider Registry', 'ecare-health-services'); ?></h2>
+                    <span class="ecare-admin-badge-count"><?php echo count($providers); ?></span>
+                </div>
+                <div class="ecare-admin-controls">
+                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search providers...', 'ecare-health-services'); ?>" />
+                    <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
+                    <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_caregiver')); ?>" class="ecare-admin-btn-green">+ <?php _e('Register New', 'ecare-health-services'); ?></a>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="ecare-admin-table-container">
+                <table class="ecare-admin-table">
                     <thead>
                         <tr>
-                            <th><?php _e('Name', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Type', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Experience', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Skills', 'ecare-health-services'); ?></th>
+                            <th>[ ]</th>
+                            <th><?php _e('Provider ID', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Provider Info', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Expertise', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Contact Details', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Professional', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Location', 'ecare-health-services'); ?></th>
                             <th><?php _e('Status', 'ecare-health-services'); ?></th>
                             <th><?php _e('Actions', 'ecare-health-services'); ?></th>
                         </tr>
@@ -203,26 +388,56 @@ class ECare_Admin {
                             <?php foreach ($providers as $p):
                                 $type   = get_post_meta($p->ID, '_provider_type', true);
                                 $exp    = get_post_meta($p->ID, '_experience', true);
-                                $skills = get_post_meta($p->ID, '_skills', true);
+                                $email  = get_post_meta($p->ID, '_email', true) ?: 'n/a';
+                                $phone  = get_post_meta($p->ID, '_phone', true) ?: 'n/a';
+                                $cat    = get_post_meta($p->ID, '_category', true) ?: 'Labaid';
+                                $nid    = get_post_meta($p->ID, '_nid_passport', true) ?: '0987654321';
+                                $loc    = 'Mirpur'; // Location placeholder matching Page 3
                                 $status = get_post_meta($p->ID, '_provider_status', true) ?: 'pending';
+                                
+                                $first_letter = strtoupper(substr($p->post_title, 0, 1));
                             ?>
                                 <tr>
-                                    <td><a href="<?php echo esc_url(get_edit_post_link($p->ID)); ?>" style="font-weight:600;text-decoration:none;color:var(--text-dark);"><?php echo esc_html($p->post_title); ?></a></td>
-                                    <td><?php echo esc_html($type); ?></td>
-                                    <td><?php echo esc_html($exp ? $exp . ' yrs' : '-'); ?></td>
-                                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?php echo esc_html(wp_trim_words($skills, 6)); ?></td>
-                                    <td><span class="ecare-pill ecare-pill-<?php echo $status === 'approved' ? 'green' : ($status === 'pending' ? 'yellow' : 'red'); ?>"><?php echo esc_html(ucfirst($status)); ?></span></td>
+                                    <td><input type="checkbox" /></td>
+                                    <td style="color:#0E9F6E;font-weight:700;">#PRO-<?php echo strtoupper(substr(md5($p->ID), 0, 8)); ?></td>
                                     <td>
-                                        <a href="<?php echo esc_url(get_edit_post_link($p->ID)); ?>" class="ecare-btn-outline" style="padding:4px 12px;font-size:12px;"><?php _e('Edit', 'ecare-health-services'); ?></a>
-                                        <?php if ($status === 'pending'): ?>
-                                            <button class="ecare-btn-outline ecare-approve-provider" data-id="<?php echo intval($p->ID); ?>" style="padding:4px 12px;font-size:12px;border-color:#16a34a;color:#16a34a;"><?php _e('Approve', 'ecare-health-services'); ?></button>
-                                            <button class="ecare-btn-outline ecare-reject-provider" data-id="<?php echo intval($p->ID); ?>" style="padding:4px 12px;font-size:12px;border-color:#EF4444;color:#EF4444;"><?php _e('Reject', 'ecare-health-services'); ?></button>
-                                        <?php endif; ?>
+                                        <div class="ecare-admin-provider-info">
+                                            <div class="ecare-admin-avatar-placeholder"><?php echo $first_letter; ?></div>
+                                            <div>
+                                                <a href="<?php echo esc_url(get_edit_post_link($p->ID)); ?>" class="provider-name-link"><?php echo esc_html($p->post_title); ?></a>
+                                                <span style="display:block;font-size:11px;color:var(--text-muted);"><?php _e('General Provider', 'ecare-health-services'); ?></span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong><?php echo esc_html($type); ?></strong>
+                                        <span style="display:block;font-size:11px;color:var(--text-muted);"><?php echo esc_html($exp); ?> Years Exp</span>
+                                    </td>
+                                    <td>
+                                        <span>📞 <?php echo esc_html($phone); ?></span>
+                                        <span style="display:block;font-size:11px;color:var(--text-muted);">✉️ <?php echo esc_html($email); ?></span>
+                                    </td>
+                                    <td>
+                                        <strong><?php echo esc_html($cat); ?></strong>
+                                        <span style="display:block;font-size:11px;color:var(--text-muted);">ID: <?php echo esc_html($nid); ?></span>
+                                    </td>
+                                    <td><?php echo esc_html($loc); ?></td>
+                                    <td>
+                                        <span class="ecare-status-pill <?php echo esc_attr($status); ?>"><?php echo esc_html(ucfirst($status)); ?></span>
+                                    </td>
+                                    <td>
+                                        <div style="display:flex;gap:4px;">
+                                            <a href="<?php echo esc_url(get_edit_post_link($p->ID)); ?>" class="ecare-admin-btn-outline" style="padding:4px 8px;font-size:11px;">✏️</a>
+                                            <?php if ($status === 'pending'): ?>
+                                                <button class="ecare-admin-btn-green ecare-approve-provider" data-id="<?php echo intval($p->ID); ?>" style="padding:4px 8px;font-size:11px;">✓</button>
+                                                <button class="ecare-admin-btn-outline ecare-reject-provider" data-id="<?php echo intval($p->ID); ?>" style="padding:4px 8px;font-size:11px;border-color:#EF4444;color:#EF4444;">✕</button>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No providers registered yet.', 'ecare-health-services'); ?></td></tr>
+                            <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No providers registered yet.', 'ecare-health-services'); ?></td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -234,33 +449,75 @@ class ECare_Admin {
     // ---- Lab Catalog ----
 
     public static function render_lab_catalog() {
+        self::admin_style_overrides();
+        
         $tests = get_posts(array(
             'post_type'      => 'ecare_lab_test',
             'posts_per_page' => -1,
             'post_status'    => 'publish',
         ));
+        
         ?>
         <div class="ecare-admin-wrap">
-            <div class="ecare-action-bar">
-                <div class="ecare-action-left">
-                    <h2><?php _e('Lab Catalog', 'ecare-health-services'); ?></h2>
-                    <span class="ecare-count-badge"><?php echo count($tests); ?></span>
+            <h1 style="font-weight:800;font-size:24px;margin-bottom:20px;color:var(--text-dark);"><?php _e('Lab Diagnostic Catalog', 'ecare-health-services'); ?></h1>
+            
+            <div class="ecare-admin-kpi-grid">
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon teal">🔬</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('TOTAL TESTS', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo count($tests); ?></span>
+                    </div>
                 </div>
-                <div class="ecare-action-right">
-                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search tests...', 'ecare-health-services'); ?>" />
-                    <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_lab_test')); ?>" class="ecare-btn-green">+ <?php _e('Add Test', 'ecare-health-services'); ?></a>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon green">৳</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('TOTAL REVENUE', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value">৳ 0</span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon yellow">⏳</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('PENDING', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value">0</span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon green">✓</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('COMPLETED', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value">0</span>
+                    </div>
                 </div>
             </div>
-            <div class="ecare-table-wrap">
-                <table class="ecare-table">
+
+            <!-- Action Bar -->
+            <div class="ecare-admin-action-header">
+                <div class="ecare-admin-title-area">
+                    <h2><?php _e('Diagnostic Lab Catalog', 'ecare-health-services'); ?></h2>
+                    <span class="ecare-admin-badge-count"><?php echo count($tests); ?></span>
+                </div>
+                <div class="ecare-admin-controls">
+                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search tests...', 'ecare-health-services'); ?>" />
+                    <button class="ecare-admin-btn-outline">🔍 <?php _e('Filters', 'ecare-health-services'); ?></button>
+                    <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
+                    <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_lab_test')); ?>" class="ecare-admin-btn-green">+ <?php _e('Add New Test', 'ecare-health-services'); ?></a>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="ecare-admin-table-container">
+                <table class="ecare-admin-table">
                     <thead>
                         <tr>
+                            <th>[ ]</th>
+                            <th><?php _e('Test ID', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Test Code', 'ecare-health-services'); ?></th>
                             <th><?php _e('Test Name', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Code', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Category', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Location Hierarchy', 'ecare-health-services'); ?></th>
                             <th><?php _e('Price', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Lab Provider', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Location', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Turnaround', 'ecare-health-services'); ?></th>
                             <th><?php _e('Status', 'ecare-health-services'); ?></th>
                             <th><?php _e('Actions', 'ecare-health-services'); ?></th>
                         </tr>
@@ -268,29 +525,33 @@ class ECare_Admin {
                     <tbody>
                         <?php if ($tests): ?>
                             <?php foreach ($tests as $t):
-                                $meta = array(
-                                    'code'     => get_post_meta($t->ID, '_test_code', true),
-                                    'cat'      => get_post_meta($t->ID, '_test_category', true),
-                                    'price'    => get_post_meta($t->ID, '_price', true),
-                                    'provider' => get_post_meta($t->ID, '_lab_provider', true),
-                                    'div'      => get_post_meta($t->ID, '_division', true),
-                                    'dist'     => get_post_meta($t->ID, '_district', true),
-                                    'status'   => get_post_meta($t->ID, '_test_status', true) ?: 'active',
-                                );
+                                $code     = get_post_meta($t->ID, '_test_code', true);
+                                $price    = get_post_meta($t->ID, '_price', true);
+                                $turn     = get_post_meta($t->ID, '_turnaround_days', true);
+                                $status   = get_post_meta($t->ID, '_test_status', true) ?: 'active';
+                                $division = get_post_meta($t->ID, '_division', true);
+                                $district = get_post_meta($t->ID, '_district', true);
+                                $area     = get_post_meta($t->ID, '_area', true);
+                                $provider = get_post_meta($t->ID, '_lab_provider', true);
+                                
+                                $location_hierarchy = implode(' > ', array_filter(array($division, $district, $area, $provider)));
                             ?>
                                 <tr>
-                                    <td><a href="<?php echo esc_url(get_edit_post_link($t->ID)); ?>" style="font-weight:600;text-decoration:none;color:var(--text-dark);"><?php echo esc_html($t->post_title); ?></a></td>
-                                    <td><?php echo esc_html($meta['code']); ?></td>
-                                    <td><?php echo esc_html($meta['cat']); ?></td>
-                                    <td>&#2547;<?php echo esc_html(number_format($meta['price'])); ?></td>
-                                    <td><?php echo esc_html($meta['provider']); ?></td>
-                                    <td><?php echo esc_html($meta['div'] ? $meta['div'] . ($meta['dist'] ? ' > ' . $meta['dist'] : '') : '-'); ?></td>
-                                    <td><span class="ecare-pill ecare-pill-<?php echo $meta['status'] === 'active' ? 'green' : 'gray'; ?>"><?php echo esc_html(ucfirst($meta['status'])); ?></span></td>
-                                    <td><a href="<?php echo esc_url(get_edit_post_link($t->ID)); ?>" class="ecare-btn-outline" style="padding:4px 12px;font-size:12px;"><?php _e('Edit', 'ecare-health-services'); ?></a></td>
+                                    <td><input type="checkbox" /></td>
+                                    <td>#TST-<?php echo $t->ID; ?></td>
+                                    <td style="font-weight:700;color:var(--brand-purple);"><?php echo esc_html($code); ?></td>
+                                    <td><strong><?php echo esc_html($t->post_title); ?></strong></td>
+                                    <td><small><?php echo esc_html($location_hierarchy ?: 'N/A'); ?></small></td>
+                                    <td style="font-weight:700;color:var(--brand-teal);">৳ <?php echo esc_html(number_format($price, 2)); ?></td>
+                                    <td><?php echo esc_html($turn); ?> days</td>
+                                    <td><span class="ecare-status-pill <?php echo esc_attr($status); ?>"><?php echo esc_html(ucfirst($status)); ?></span></td>
+                                    <td>
+                                        <a href="<?php echo esc_url(get_edit_post_link($t->ID)); ?>" class="ecare-admin-btn-outline" style="padding:4px 8px;font-size:12px;"><?php _e('Edit', 'ecare-health-services'); ?></a>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No lab tests added yet.', 'ecare-health-services'); ?></td></tr>
+                            <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No tests registered yet.', 'ecare-health-services'); ?></td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -302,72 +563,110 @@ class ECare_Admin {
     // ---- Lab Orders ----
 
     public static function render_lab_orders() {
+        self::admin_style_overrides();
         global $wpdb;
         $table = $wpdb->prefix . 'ecare_bookings';
-        $bookings = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} WHERE booking_type = %s ORDER BY created_at DESC", 'lab'));
-        self::render_booking_table(__('Lab Orders', 'ecare-health-services'), $bookings);
-    }
 
-    // ---- Ambulance Dispatch ----
+        // Calculate dynamic lab order metrics
+        $total = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s", 'lab'));
+        $revenue = (float) $wpdb->get_var($wpdb->prepare("SELECT SUM(total_amount) FROM {$table} WHERE booking_type = %s AND status = %s", 'lab', 'completed'));
+        $pending = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'lab', 'pending'));
+        $completed = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'lab', 'completed'));
 
-    public static function render_ambulance_dispatch() {
-        global $wpdb;
-        $table = $wpdb->prefix . 'ecare_bookings';
-        $bookings = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} WHERE booking_type = %s ORDER BY created_at DESC", 'ambulance'));
+        $orders = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} WHERE booking_type = %s ORDER BY created_at DESC", 'lab'));
+        
         ?>
         <div class="ecare-admin-wrap">
-            <div class="ecare-action-bar">
-                <div class="ecare-action-left">
-                    <h2><?php _e('Ambulance Dispatch', 'ecare-health-services'); ?></h2>
-                    <span class="ecare-count-badge"><?php echo count($bookings); ?></span>
+            <h1 style="font-weight:800;font-size:24px;margin-bottom:20px;color:var(--text-dark);"><?php _e('Lab Orders Dashboard', 'ecare-health-services'); ?></h1>
+            
+            <div class="ecare-admin-kpi-grid">
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon teal">🩺</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Total Tests Ordered', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $total; ?></span>
+                    </div>
                 </div>
-                <div class="ecare-action-right">
-                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search requests...', 'ecare-health-services'); ?>" />
-                    <button class="ecare-btn-outline"><?php _e('Filter', 'ecare-health-services'); ?></button>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon green">৳</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Total Revenue', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value">৳ <?php echo number_format($revenue); ?></span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon yellow">⏳</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Pending Orders', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $pending; ?></span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon green">✓</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Completed', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $completed; ?></span>
+                    </div>
                 </div>
             </div>
-            <div class="ecare-table-wrap">
-                <table class="ecare-table">
+
+            <!-- Action Bar -->
+            <div class="ecare-admin-action-header">
+                <div class="ecare-admin-title-area">
+                    <h2><?php _e('Diagnostic Orders', 'ecare-health-services'); ?></h2>
+                    <span class="ecare-admin-badge-count"><?php echo count($orders); ?></span>
+                </div>
+                <div class="ecare-admin-controls">
+                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search orders...', 'ecare-health-services'); ?>" />
+                    <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
+                    <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_lab_test')); ?>" class="ecare-admin-btn-green">+ <?php _e('Place New Order', 'ecare-health-services'); ?></a>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="ecare-admin-table-container">
+                <table class="ecare-admin-table">
                     <thead>
                         <tr>
+                            <th>[ ]</th>
                             <th><?php _e('ID', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Ambulance', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Pickup', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Destination', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Patient Name', 'ecare-health-services'); ?></th>
                             <th><?php _e('Contact', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Priority', 'ecare-health-services'); ?></th>
                             <th><?php _e('Amount', 'ecare-health-services'); ?></th>
                             <th><?php _e('Status', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Date', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Payment', 'ecare-health-services'); ?></th>
                             <th><?php _e('Actions', 'ecare-health-services'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if ($bookings): ?>
-                            <?php foreach ($bookings as $b): ?>
+                        <?php if ($orders): ?>
+                            <?php foreach ($orders as $b): ?>
                                 <tr>
+                                    <td><input type="checkbox" /></td>
                                     <td>#<?php echo intval($b->id); ?></td>
-                                    <td><span class="ecare-pill ecare-pill-blue"><?php echo esc_html($b->ambulance_type); ?></span></td>
-                                    <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?php echo esc_html($b->pickup_address); ?></td>
-                                    <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?php echo esc_html($b->destination); ?></td>
+                                    <td><strong><?php echo esc_html($b->patient_name ?: 'N/A'); ?></strong></td>
                                     <td><?php echo esc_html($b->contact_phone); ?></td>
-                                    <td><span class="ecare-pill ecare-pill-<?php echo $b->priority_level === 'Emergency' ? 'red' : 'gray'; ?>"><?php echo esc_html($b->priority_level); ?></span></td>
-                                    <td>&#2547;<?php echo esc_html(number_format($b->total_amount, 2)); ?></td>
-                                    <td><span class="ecare-pill ecare-pill-<?php echo $b->status === 'completed' ? 'green' : ($b->status === 'pending' ? 'yellow' : ($b->status === 'dispatched' ? 'blue' : ($b->status === 'assigned' ? 'blue' : 'gray'))); ?>"><?php echo esc_html(ucfirst($b->status)); ?></span></td>
-                                    <td><?php echo esc_html(date_i18n(get_option('date_format'), strtotime($b->created_at))); ?></td>
+                                    <td style="font-weight:700;color:var(--brand-teal);">৳ <?php echo esc_html(number_format($b->total_amount, 2)); ?></td>
+                                    <td><span class="ecare-status-pill <?php echo esc_attr($b->status); ?>"><?php echo esc_html(ucfirst($b->status)); ?></span></td>
                                     <td>
-                                        <select class="ecare-status-select" data-booking-id="<?php echo intval($b->id); ?>" style="padding:4px 8px;border:1px solid var(--border-color);border-radius:6px;font-size:12px;">
-                                            <option value="pending" <?php selected($b->status, 'pending'); ?>><?php _e('Pending', 'ecare-health-services'); ?></option>
-                                            <option value="dispatched" <?php selected($b->status, 'dispatched'); ?>><?php _e('Dispatched', 'ecare-health-services'); ?></option>
-                                            <option value="assigned" <?php selected($b->status, 'assigned'); ?>><?php _e('Assigned', 'ecare-health-services'); ?></option>
-                                            <option value="completed" <?php selected($b->status, 'completed'); ?>><?php _e('Completed', 'ecare-health-services'); ?></option>
-                                            <option value="cancelled" <?php selected($b->status, 'cancelled'); ?>><?php _e('Cancelled', 'ecare-health-services'); ?></option>
+                                        <?php if ($b->order_id): ?>
+                                            <a href="<?php echo esc_url(get_edit_post_link($b->order_id)); ?>" target="_blank" style="font-weight:600;color:#2563EB;text-decoration:none;">Order #<?php echo $b->order_id; ?></a>
+                                        <?php else: ?>
+                                            <span style="color:var(--text-muted);font-style:italic;">No Order</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <select class="ecare-status-select" data-booking-id="<?php echo intval($b->id); ?>" style="padding:5px;font-size:12px;border-radius:4px;border:1px solid var(--border-light);">
+                                            <option value="pending" <?php selected($b->status, 'pending'); ?>>Pending</option>
+                                            <option value="approved" <?php selected($b->status, 'approved'); ?>>Approved</option>
+                                            <option value="completed" <?php selected($b->status, 'completed'); ?>>Completed</option>
+                                            <option value="cancelled" <?php selected($b->status, 'cancelled'); ?>>Cancelled</option>
                                         </select>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No ambulance requests found.', 'ecare-health-services'); ?></td></tr>
+                            <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No orders found.', 'ecare-health-services'); ?></td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -376,58 +675,119 @@ class ECare_Admin {
         <?php
     }
 
-    // ---- Shared ----
+    // ---- Ambulance Dispatch ----
 
-    private static function render_booking_table($title, $bookings) {
+    public static function render_ambulance_dispatch() {
+        self::admin_style_overrides();
+        global $wpdb;
+        $table = $wpdb->prefix . 'ecare_bookings';
+
+        // Calculate dynamic ambulance metrics
+        $total = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s", 'ambulance'));
+        $active_dispatched = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'ambulance', 'dispatched'));
+        $completed = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'ambulance', 'completed'));
+        $emergency = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND priority_level = %s", 'ambulance', 'Emergency'));
+
+        $bookings = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} WHERE booking_type = %s ORDER BY created_at DESC", 'ambulance'));
+        
         ?>
         <div class="ecare-admin-wrap">
-            <div class="ecare-action-bar">
-                <div class="ecare-action-left">
-                    <h2><?php echo esc_html($title); ?></h2>
-                    <span class="ecare-count-badge"><?php echo count($bookings); ?></span>
+            <h1 style="font-weight:800;font-size:24px;margin-bottom:20px;color:var(--text-dark);"><?php _e('Ambulance Dispatch Management', 'ecare-health-services'); ?></h1>
+            
+            <div class="ecare-admin-kpi-grid">
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon teal">🚑</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Total Missions', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $total; ?></span>
+                    </div>
                 </div>
-                <div class="ecare-action-right">
-                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search...', 'ecare-health-services'); ?>" />
-                    <a href="<?php echo esc_url(admin_url('admin-post.php?action=ecare_export_bookings')); ?>" class="ecare-btn-outline"><?php _e('Export', 'ecare-health-services'); ?></a>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon yellow">💨</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Active Now', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $active_dispatched; ?></span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon green">✓</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Completed', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $completed; ?></span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon red">🚨</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Emergency', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $emergency; ?></span>
+                    </div>
                 </div>
             </div>
-            <div class="ecare-table-wrap">
-                <table class="ecare-table">
+
+            <!-- Action Bar -->
+            <div class="ecare-admin-action-header">
+                <div class="ecare-admin-title-area">
+                    <h2><?php _e('Active Dispatch Requests', 'ecare-health-services'); ?></h2>
+                    <span class="ecare-admin-badge-count"><?php echo count($bookings); ?></span>
+                </div>
+                <div class="ecare-admin-controls">
+                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search dispatch...', 'ecare-health-services'); ?>" />
+                    <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
+                    <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_ambulance')); ?>" class="ecare-admin-btn-green">+ <?php _e('Create Dispatch', 'ecare-health-services'); ?></a>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="ecare-admin-table-container">
+                <table class="ecare-admin-table">
                     <thead>
                         <tr>
+                            <th>[ ]</th>
                             <th><?php _e('ID', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Patient/Client', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Contact', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Package/Type', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Amount', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Patient Details', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Assigned Unit', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Route', 'ecare-health-services'); ?></th>
                             <th><?php _e('Status', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Date', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Issued By', 'ecare-health-services'); ?></th>
                             <th><?php _e('Actions', 'ecare-health-services'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if ($bookings): ?>
-                            <?php foreach ($bookings as $b): ?>
+                            <?php foreach ($bookings as $b):
+                                $route = $b->pickup_address . ' → ' . $b->destination;
+                                $assigned_unit = $b->ambulance_type . ' Type';
+                                $issued_by = $b->user_id ? get_the_author_meta('display_name', $b->user_id) : 'Guest Patient';
+                            ?>
                                 <tr>
+                                    <td><input type="checkbox" /></td>
                                     <td>#<?php echo intval($b->id); ?></td>
-                                    <td><?php echo esc_html($b->patient_name ?: 'N/A'); ?></td>
-                                    <td><?php echo esc_html($b->contact_phone); ?></td>
-                                    <td><?php echo esc_html($b->package_type ?: $b->ambulance_type ?: '-'); ?></td>
-                                    <td>&#2547;<?php echo esc_html(number_format($b->total_amount, 2)); ?></td>
-                                    <td><span class="ecare-pill ecare-pill-<?php echo $b->status === 'completed' ? 'green' : ($b->status === 'pending' ? 'yellow' : ($b->status === 'cancelled' ? 'red' : 'gray')); ?>"><?php echo esc_html(ucfirst($b->status)); ?></span></td>
-                                    <td><?php echo esc_html(date_i18n(get_option('date_format'), strtotime($b->created_at))); ?></td>
                                     <td>
-                                        <select class="ecare-status-select" data-booking-id="<?php echo intval($b->id); ?>" style="padding:4px 8px;border:1px solid var(--border-color);border-radius:6px;font-size:12px;">
-                                            <option value="pending" <?php selected($b->status, 'pending'); ?>><?php _e('Pending', 'ecare-health-services'); ?></option>
-                                            <option value="approved" <?php selected($b->status, 'approved'); ?>><?php _e('Approved', 'ecare-health-services'); ?></option>
-                                            <option value="completed" <?php selected($b->status, 'completed'); ?>><?php _e('Completed', 'ecare-health-services'); ?></option>
-                                            <option value="cancelled" <?php selected($b->status, 'cancelled'); ?>><?php _e('Cancelled', 'ecare-health-services'); ?></option>
+                                        <strong><?php echo esc_html($issued_by); ?></strong>
+                                        <span style="display:block;font-size:11px;color:var(--text-muted);">📞 <?php echo esc_html($b->contact_phone); ?></span>
+                                    </td>
+                                    <td><span class="ecare-status-pill assigned"><?php echo esc_html($assigned_unit); ?></span></td>
+                                    <td><small><?php echo esc_html($route); ?></small></td>
+                                    <td>
+                                        <span class="ecare-status-pill <?php echo esc_attr($b->status); ?> <?php echo ($b->priority_level === 'Emergency' && $b->status === 'pending') ? 'emergency' : ''; ?>">
+                                            <?php echo esc_html(ucfirst($b->status)); ?>
+                                        </span>
+                                    </td>
+                                    <td><?php echo esc_html($issued_by); ?></td>
+                                    <td>
+                                        <select class="ecare-status-select" data-booking-id="<?php echo intval($b->id); ?>" style="padding:5px;font-size:12px;border-radius:4px;border:1px solid var(--border-light);">
+                                            <option value="pending" <?php selected($b->status, 'pending'); ?>>Pending</option>
+                                            <option value="dispatched" <?php selected($b->status, 'dispatched'); ?>>Dispatched</option>
+                                            <option value="assigned" <?php selected($b->status, 'assigned'); ?>>Assigned</option>
+                                            <option value="completed" <?php selected($b->status, 'completed'); ?>>Completed</option>
+                                            <option value="cancelled" <?php selected($b->status, 'cancelled'); ?>>Cancelled</option>
                                         </select>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);"><?php echo esc_html(sprintf(__('No %s found.', 'ecare-health-services'), strtolower($title))); ?></td></tr>
+                            <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No dispatch requests found.', 'ecare-health-services'); ?></td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>

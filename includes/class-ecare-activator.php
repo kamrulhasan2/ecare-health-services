@@ -79,13 +79,45 @@ class ECare_Activator {
             return;
         }
 
+        // Divisions
         $divisions = array(
             'Dhaka', 'Chattogram', 'Rajshahi', 'Khulna',
             'Barishal', 'Sylhet', 'Rangpur', 'Mymensingh',
         );
 
+        $division_ids = array();
         foreach ($divisions as $div) {
             $wpdb->insert($table, array('location_type' => 'division', 'name' => $div));
+            $division_ids[$div] = $wpdb->insert_id;
+        }
+
+        // District: Dhaka under Dhaka Division
+        if (isset($division_ids['Dhaka'])) {
+            $dhaka_div_id = $division_ids['Dhaka'];
+            $wpdb->insert($table, array('location_type' => 'district', 'name' => 'Dhaka', 'parent_id' => $dhaka_div_id));
+            $dhaka_dist_id = $wpdb->insert_id;
+
+            // Areas: Ashkona, Mirpur, Uttara
+            $areas = array('Ashkona', 'Mirpur', 'Uttara');
+            $area_ids = array();
+            foreach ($areas as $area) {
+                $wpdb->insert($table, array('location_type' => 'area', 'name' => $area, 'parent_id' => $dhaka_dist_id));
+                $area_ids[$area] = $wpdb->insert_id;
+            }
+
+            // Lab Providers under Areas
+            if (isset($area_ids['Ashkona'])) {
+                $ashkona_id = $area_ids['Ashkona'];
+                $wpdb->insert($table, array('location_type' => 'lab_provider', 'name' => 'Praava Health', 'parent_id' => $ashkona_id));
+            }
+            if (isset($area_ids['Mirpur'])) {
+                $mirpur_id = $area_ids['Mirpur'];
+                $wpdb->insert($table, array('location_type' => 'lab_provider', 'name' => 'Labaid Diagnostics', 'parent_id' => $mirpur_id));
+            }
+            if (isset($area_ids['Uttara'])) {
+                $uttara_id = $area_ids['Uttara'];
+                $wpdb->insert($table, array('location_type' => 'lab_provider', 'name' => 'Popular Diagnostic', 'parent_id' => $uttara_id));
+            }
         }
     }
 }
