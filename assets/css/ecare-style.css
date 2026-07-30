@@ -1,0 +1,500 @@
+/* ============================================================
+   E-Care Health Services – Main Stylesheet
+   ============================================================ */
+
+/* ---- Container ---- */
+.ecare-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.ecare-container h2 {
+    font-size: 28px;
+    margin-bottom: 8px;
+    color: #1a202c;
+}
+
+.ecare-container h3 {
+    font-size: 20px;
+    margin: 24px 0 12px;
+    color: #2d3748;
+}
+
+.ecare-form-desc {
+    color: #718096;
+    margin-bottom: 24px;
+}
+
+/* ---- Filters ---- */
+.ecare-filters {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: #f7fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.ecare-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 200px;
+}
+
+.ecare-filter-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ecare-select, .ecare-input {
+    padding: 10px 14px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 14px;
+    color: #2d3748;
+    transition: border-color 0.2s;
+}
+
+.ecare-select:focus, .ecare-input:focus {
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+}
+
+/* ---- Grid ---- */
+.ecare-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+/* ---- Caregiver Card ---- */
+.ecare-caregiver-card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #e2e8f0;
+}
+
+.ecare-caregiver-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.ecare-card-image img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.ecare-card-body {
+    padding: 16px;
+}
+
+.ecare-card-body h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: #1a202c;
+}
+
+.ecare-price {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2b6cb0;
+    margin: 8px 0;
+}
+
+.ecare-excerpt {
+    color: #718096;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 8px 0;
+}
+
+/* ---- Badges ---- */
+.ecare-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.ecare-badge-type {
+    background: #ebf8ff;
+    color: #2b6cb0;
+}
+
+.ecare-badge-cat {
+    background: #fefcbf;
+    color: #975a16;
+    margin-right: 4px;
+}
+
+.ecare-badge-sample {
+    background: #e6fffa;
+    color: #234e52;
+}
+
+/* ---- Buttons ---- */
+.ecare-btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    transition: background 0.2s;
+}
+
+.ecare-btn-primary {
+    background: #4299e1;
+    color: #fff;
+}
+
+.ecare-btn-primary:hover {
+    background: #3182ce;
+}
+
+.ecare-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ---- Modal ---- */
+.ecare-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 40px;
+    overflow-y: auto;
+}
+
+.ecare-modal-content {
+    background: #fff;
+    border-radius: 12px;
+    max-width: 800px;
+    width: 95%;
+    padding: 30px;
+    position: relative;
+    margin-bottom: 40px;
+}
+
+.ecare-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-size: 28px;
+    cursor: pointer;
+    color: #a0aec0;
+    line-height: 1;
+}
+
+.ecare-modal-close:hover {
+    color: #4a5568;
+}
+
+/* ---- Detail View ---- */
+.ecare-detail-header {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.ecare-detail-image img {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.ecare-detail-info h2 {
+    margin: 0 0 8px;
+}
+
+/* ---- Package Options ---- */
+.ecare-package-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 12px 0;
+}
+
+.ecare-package-option {
+    display: block;
+    padding: 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.ecare-package-option:hover {
+    border-color: #4299e1;
+}
+
+.ecare-package-option input:checked + span {
+    color: #2b6cb0;
+    font-weight: 700;
+}
+
+.ecare-package-option input:checked ~ & {
+    border-color: #4299e1;
+    background: #ebf8ff;
+}
+
+/* ---- Forms ---- */
+.ecare-form {
+    max-width: 700px;
+}
+
+.ecare-form-row {
+    margin-bottom: 16px;
+}
+
+.ecare-form-row label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #2d3748;
+}
+
+.ecare-form-row label span {
+    color: #e53e3e;
+}
+
+.ecare-form-row input[type="text"],
+.ecare-form-row input[type="email"],
+.ecare-form-row input[type="number"],
+.ecare-form-row input[type="date"],
+.ecare-form-row input[type="datetime-local"],
+.ecare-form-row select,
+.ecare-form-row textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.ecare-form-row textarea {
+    min-height: 80px;
+}
+
+.ecare-form-row input:focus,
+.ecare-form-row select:focus,
+.ecare-form-row textarea:focus {
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+    outline: none;
+}
+
+.ecare-price-row {
+    display: flex;
+    gap: 16px;
+}
+
+.ecare-price-row > div {
+    flex: 1;
+}
+
+.ecare-form-response {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.ecare-form-response.success {
+    background: #f0fff4;
+    color: #276749;
+    border: 1px solid #c6f6d5;
+}
+
+.ecare-form-response.error {
+    background: #fff5f5;
+    color: #9b2c2c;
+    border: 1px solid #fed7d7;
+}
+
+/* ---- Registration Form ---- */
+.ecare-form-registration {
+    max-width: 800px;
+}
+
+/* ---- Lab Test Card ---- */
+.ecare-lab-test-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
+    transition: transform 0.2s;
+}
+
+.ecare-lab-test-card:hover {
+    transform: translateY(-2px);
+}
+
+.ecare-lab-test-card h3 {
+    margin: 0 0 6px;
+}
+
+.ecare-test-code {
+    font-size: 13px;
+    color: #a0aec0;
+}
+
+.ecare-lab-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2b6cb0;
+    margin: 10px 0;
+}
+
+/* ---- Summary Card ---- */
+.ecare-summary-card {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.ecare-summary-card h3 {
+    margin-top: 0;
+}
+
+.ecare-total-price {
+    font-size: 22px;
+    font-weight: 700;
+    color: #2b6cb0;
+}
+
+/* ---- No Results ---- */
+.ecare-no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: #a0aec0;
+    font-size: 16px;
+}
+
+/* ---- Admin Styles ---- */
+.ecare-admin-wrap h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.ecare-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 30px;
+}
+
+.ecare-kpi-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
+}
+
+.ecare-kpi-number {
+    display: block;
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.ecare-kpi-label {
+    display: block;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #718096;
+    margin-top: 4px;
+}
+
+.ecare-kpi-total .ecare-kpi-number { color: #4299e1; }
+.ecare-kpi-pending .ecare-kpi-number { color: #ed8936; }
+.ecare-kpi-approved .ecare-kpi-number { color: #48bb78; }
+.ecare-kpi-completed .ecare-kpi-number { color: #38a169; }
+.ecare-kpi-cancelled .ecare-kpi-number { color: #f56565; }
+
+/* ---- Status Badges (Admin) ---- */
+.ecare-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.ecare-status-pending { background: #fefcbf; color: #975a16; }
+.ecare-status-approved { background: #c6f6d5; color: #276749; }
+.ecare-status-completed { background: #b2f5ea; color: #234e52; }
+.ecare-status-cancelled { background: #fed7d7; color: #9b2c2c; }
+.ecare-status-dispatched { background: #bee3f8; color: #2a4365; }
+.ecare-status-assigned { background: #e9d8fd; color: #553c9a; }
+.ecare-status-emergency { background: #fed7d7; color: #9b2c2c; animation: ecare-pulse 1.5s infinite; }
+.ecare-status-active { background: #c6f6d5; color: #276749; }
+.ecare-status-inactive { background: #e2e8f0; color: #4a5568; }
+.ecare-status-rejected { background: #fed7d7; color: #9b2c2c; }
+.ecare-status-caregiver { background: #ebf8ff; color: #2b6cb0; }
+.ecare-status-lab { background: #fefcbf; color: #975a16; }
+.ecare-status-ambulance { background: #e6fffa; color: #234e52; }
+
+@keyframes ecare-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .ecare-filters {
+        flex-direction: column;
+    }
+    .ecare-filter-group {
+        min-width: 100%;
+    }
+    .ecare-grid {
+        grid-template-columns: 1fr;
+    }
+    .ecare-detail-header {
+        flex-direction: column;
+    }
+    .ecare-detail-image img {
+        width: 100%;
+        height: auto;
+    }
+    .ecare-price-row {
+        flex-direction: column;
+    }
+    .ecare-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
