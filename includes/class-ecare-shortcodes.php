@@ -117,11 +117,20 @@ class ECare_Shortcodes {
                 <!-- Section: Personal Information -->
                 <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--brand-teal-light);padding-bottom:6px;margin-bottom:20px;">
                     <h3 style="font-size:14px;font-weight:700;color:var(--admin-green);text-transform:uppercase;margin:0;"><?php _e('Personal Information', 'ecare-health-services'); ?></h3>
-                    <!-- Profile Photo box on top right -->
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Profile Photo</span>
-                        <input type="file" name="care_photo" accept="image/*" required style="font-size:12px;" />
-                    </div>
+                    <!-- Profile Photo upload box -->
+                    <label class="ecare-profile-upload">
+                        <span class="ecare-profile-upload-copy">
+                            <span class="ecare-profile-upload-title"><?php _e('Profile Photo', 'ecare-health-services'); ?></span>
+                            <span class="ecare-profile-upload-hint"><?php _e('JPG, PNG up to 2MB', 'ecare-health-services'); ?></span>
+                        </span>
+                        <span class="ecare-profile-upload-btn">
+                            <svg class="ecare-upload-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 3v10m0-10 4 4m-4-4-4 4M5 14.5v3A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span><?php _e('Choose File', 'ecare-health-services'); ?></span>
+                        </span>
+                        <input type="file" name="care_photo" accept="image/*" required />
+                    </label>
                 </div>
 
                 <div class="ecare-form-row">
@@ -273,7 +282,13 @@ class ECare_Shortcodes {
                 
                 <div class="ecare-file-box">
                     <div class="ecare-doc-upload" onclick="document.getElementById('reg_credentials').click()">
-                        <span class="ecare-doc-upload-icon">📄</span>
+                        <span class="ecare-doc-upload-icon" aria-hidden="true">
+                            <svg class="ecare-upload-icon" viewBox="0 0 24 24">
+                                <path d="M8 3.5h6.2L19 8.3V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 7 20V5a1.5 1.5 0 0 1 1.5-1.5Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                                <path d="M14.2 3.5V8.3H19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                                <path d="M12 10.5v6m0-6 2.5 2.5M12 10.5 9.5 13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
                         <p><?php _e('Click to Upload Credentials / Certificates', 'ecare-health-services'); ?></p>
                         <span class="file-hint"><?php _e('Upload certificates, NID copies (Max 2MB per file)', 'ecare-health-services'); ?></span>
                         <input type="file" id="reg_credentials" name="credentials_doc" style="display:none;" required />
