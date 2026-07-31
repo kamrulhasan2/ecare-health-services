@@ -106,14 +106,65 @@ class ECare_CPT {
             'daily_24_price' => get_post_meta($post->ID, '_daily_24_price', true),
             'monthly_12_price' => get_post_meta($post->ID, '_monthly_12_price', true),
             'monthly_24_price' => get_post_meta($post->ID, '_monthly_24_price', true),
+            'photo_url'      => get_post_meta($post->ID, '_photo_url', true),
+            'phone'          => get_post_meta($post->ID, '_phone', true),
+            'email'          => get_post_meta($post->ID, '_email', true),
+            'gender'         => get_post_meta($post->ID, '_gender', true),
+            'address'        => get_post_meta($post->ID, '_address_line', true),
         );
+        $photo_url = esc_url($fields['photo_url']);
         ?>
         <table class="form-table">
+            <tr>
+                <th><label><?php _e('Profile Photo', 'ecare-health-services'); ?></label></th>
+                <td>
+                    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                        <?php if ($photo_url): ?>
+                            <img id="ecare-photo-preview" src="<?php echo $photo_url; ?>" style="width:80px;height:80px;border-radius:8px;object-fit:cover;border:2px solid #E2E8F0;" />
+                        <?php else: ?>
+                            <div id="ecare-photo-placeholder" style="width:80px;height:80px;border-radius:8px;background:#F8FAFC;border:2px dashed #CBD5E1;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;" onclick="document.getElementById('ecare_photo_upload').click();">👤</div>
+                            <img id="ecare-photo-preview" src="" style="width:80px;height:80px;border-radius:8px;object-fit:cover;border:2px solid #E2E8F0;display:none;" />
+                        <?php endif; ?>
+                        <div>
+                            <input type="hidden" name="_photo_url" id="ecare_photo_url_field" value="<?php echo $photo_url; ?>" />
+                            <input type="file" id="ecare_photo_upload" name="_photo_file" accept="image/*" style="display:none;" onchange="ecarePreviewPhoto(this)" />
+                            <button type="button" class="button" onclick="document.getElementById('ecare_photo_upload').click();" style="margin-bottom:6px;display:block;">
+                                <?php echo $photo_url ? __('Change Photo', 'ecare-health-services') : __('Upload Photo', 'ecare-health-services'); ?>
+                            </button>
+                            <?php if ($photo_url): ?>
+                                <button type="button" class="button" onclick="document.getElementById('ecare_photo_url_field').value='';document.getElementById('ecare-photo-preview').src='';document.getElementById('ecare-photo-preview').style.display='none';" style="color:#b91c1c;">
+                                    <?php _e('Remove Photo', 'ecare-health-services'); ?>
+                                </button>
+                            <?php endif; ?>
+                            <p class="description" style="margin-top:6px;"><?php _e('Upload a profile photo for this caregiver. Recommended: 200×200px or larger, square format.', 'ecare-health-services'); ?></p>
+                        </div>
+                    </div>
+                    <script>
+                    function ecarePreviewPhoto(input) {
+                        if (input.files && input.files[0]) {
+                            var reader = new FileReader();
+                            reader.onload = function(e) {
+                                var preview = document.getElementById('ecare-photo-preview');
+                                var placeholder = document.getElementById('ecare-photo-placeholder');
+                                preview.src = e.target.result;
+                                preview.style.display = 'block';
+                                if (placeholder) placeholder.style.display = 'none';
+                            };
+                            reader.readAsDataURL(input.files[0]);
+                        }
+                    }
+                    </script>
+                </td>
+            </tr>
             <tr><th><label>Provider Type</label></th><td><select name="_provider_type"><?php foreach (array('Nurse', 'Senior Care', 'Nanny', 'Physiotherapist') as $t): ?><option value="<?php echo esc_attr($t); ?>" <?php selected($fields['provider_type'], $t); ?>><?php echo esc_html($t); ?></option><?php endforeach; ?></select></td></tr>
+            <tr><th><label>Phone</label></th><td><input type="text" name="_phone" value="<?php echo esc_attr($fields['phone']); ?>" class="regular-text" placeholder="+880..." /></td></tr>
+            <tr><th><label>Email</label></th><td><input type="email" name="_email" value="<?php echo esc_attr($fields['email']); ?>" class="regular-text" /></td></tr>
+            <tr><th><label>Gender</label></th><td><select name="_gender"><option value="Male" <?php selected($fields['gender'], 'Male'); ?>>Male</option><option value="Female" <?php selected($fields['gender'], 'Female'); ?>>Female</option><option value="Other" <?php selected($fields['gender'], 'Other'); ?>>Other</option></select></td></tr>
+            <tr><th><label>Address</label></th><td><input type="text" name="_address_line" value="<?php echo esc_attr($fields['address']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Experience (years)</label></th><td><input type="number" name="_experience" value="<?php echo esc_attr($fields['experience']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Category</label></th><td><input type="text" name="_category" value="<?php echo esc_attr($fields['category']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Skills</label></th><td><textarea name="_skills" class="large-text" rows="3"><?php echo esc_textarea($fields['skills']); ?></textarea></td></tr>
-            <tr><th><label>Education</label></th><td><textarea name="_education" class="large-text" rows="3"><?php echo esc_textarea($fields['education']); ?></textarea></td></tr>
+            <tr><th><label>Education / Bio</label></th><td><textarea name="_education" class="large-text" rows="3"><?php echo esc_textarea($fields['education']); ?></textarea></td></tr>
             <tr><th><label>NID/Passport</label></th><td><input type="text" name="_nid_passport" value="<?php echo esc_attr($fields['nid_passport']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Bank Name</label></th><td><input type="text" name="_bank_name" value="<?php echo esc_attr($fields['bank_name']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Bank Account</label></th><td><input type="text" name="_bank_account" value="<?php echo esc_attr($fields['bank_account']); ?>" class="regular-text" /></td></tr>
@@ -190,11 +241,28 @@ class ECare_CPT {
 
         if ($post_type === 'ecare_caregiver') {
             if (!isset($_POST['ecare_caregiver_meta_nonce']) || !wp_verify_nonce($_POST['ecare_caregiver_meta_nonce'], 'ecare_caregiver_meta')) return;
-            $keys = array('_provider_type', '_experience', '_category', '_skills', '_education', '_nid_passport', '_bank_name', '_bank_account', '_daily_12_price', '_daily_24_price', '_monthly_12_price', '_monthly_24_price', '_provider_status');
+            $keys = array('_provider_type', '_experience', '_category', '_skills', '_education', '_nid_passport', '_bank_name', '_bank_account', '_daily_12_price', '_daily_24_price', '_monthly_12_price', '_monthly_24_price', '_provider_status', '_phone', '_email', '_gender', '_address_line');
             foreach ($keys as $key) {
                 if (isset($_POST[$key])) {
                     update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));
                 }
+            }
+
+            // Handle photo file upload
+            if (!empty($_FILES['_photo_file']['tmp_name'])) {
+                if (!function_exists('wp_handle_upload')) {
+                    require_once ABSPATH . 'wp-admin/includes/file.php';
+                    require_once ABSPATH . 'wp-admin/includes/media.php';
+                    require_once ABSPATH . 'wp-admin/includes/image.php';
+                }
+                $upload = wp_handle_upload($_FILES['_photo_file'], array('test_form' => false));
+                if (!isset($upload['error']) && isset($upload['url'])) {
+                    update_post_meta($post_id, '_photo_url', esc_url_raw($upload['url']));
+                }
+            } elseif (isset($_POST['_photo_url'])) {
+                // Allow clearing the photo (empty string) or keeping existing URL
+                $photo_val = esc_url_raw($_POST['_photo_url']);
+                update_post_meta($post_id, '_photo_url', $photo_val);
             }
         }
 

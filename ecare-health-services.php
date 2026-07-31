@@ -1,10 +1,10 @@
 <?php
 /**
  * Plugin Name:       E-Care Health Services
- * Plugin URI:        https://ecarehealth.com/
+ * Plugin URI:        https://github.com/kamrulhasan2/ecare-health-services
  * Description:       Comprehensive healthcare service booking and management – connects patients with caregivers, lab tests, and ambulance dispatch with WooCommerce payments. Shortcodes: [ecare_caregiver_booking] – filter & book caregivers; [ecare_caregiver_registration] – provider signup; [ecare_lab_tests] – diagnostic catalog; [ecare_ambulance_request] – ambulance dispatch; [ecare_ambulance_registration] – ambulance provider signup.
  * Version:           1.0.0
- * Author:            E-Care Health
+ * Author:            Md. Kamrul Hasan
  * License:           GPL v2 or later
  * Text Domain:       ecare-health-services
  * Domain Path:       /languages
@@ -41,6 +41,8 @@ final class ECare_Health_Services {
         add_action('plugins_loaded', array($this, 'init_plugin'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
+        // Enable multipart form for caregiver photo upload
+        add_action('post_edit_form_tag', array($this, 'caregiver_form_enctype'));
     }
 
     public function activate() {
@@ -88,6 +90,13 @@ final class ECare_Health_Services {
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce'    => wp_create_nonce('ecare_nonce'),
         ));
+    }
+
+    public function caregiver_form_enctype() {
+        global $post;
+        if ($post && $post->post_type === 'ecare_caregiver') {
+            echo ' enctype="multipart/form-data"';
+        }
     }
 }
 

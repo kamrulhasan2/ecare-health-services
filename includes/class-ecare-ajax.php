@@ -67,26 +67,35 @@ class ECare_Ajax {
                 $query->the_post();
                 $id = get_the_ID();
                 $provider_type = get_post_meta($id, '_provider_type', true);
-                
+                $photo_url = get_post_meta($id, '_photo_url', true);
+                $excerpt = get_the_excerpt() ?: 'Professional and dedicated caregiver with exceptional reviews.';
+
                 $html .= '<div class="ecare-cg-card" data-id="' . esc_attr($id) . '">';
                 $html .= '  <div class="ecare-cg-card-header">';
+
+                // Image
                 $html .= '    <div class="ecare-cg-card-image">';
                 if (has_post_thumbnail($id)) {
-                    $html .= get_the_post_thumbnail($id, 'thumbnail');
+                    $html .= get_the_post_thumbnail($id, 'thumbnail', array(
+                        'style' => 'width:100%;height:100%;object-fit:cover;display:block;',
+                    ));
+                } elseif (!empty($photo_url)) {
+                    $html .= '<img src="' . esc_url($photo_url) . '" alt="' . esc_attr(get_the_title()) . '" style="width:100%;height:100%;object-fit:cover;display:block;" />';
                 } else {
-                    $html .= '<span style="font-size:36px;">👤</span>';
+                    $html .= '<span style="font-size:40px;line-height:1;">👤</span>';
                 }
                 $html .= '    </div>';
+
+                // Info: name + bio
                 $html .= '    <div class="ecare-cg-card-info">';
-                $html .= '      <h3>' . get_the_title() . '</h3>';
-                $html .= '      <span class="ecare-badge">' . esc_html($provider_type) . '</span>';
+                $html .= '      <h3 title="' . esc_attr(get_the_title()) . '">' . esc_html(get_the_title()) . '</h3>';
+                $html .= '      <p class="ecare-cg-card-bio">' . esc_html($excerpt) . '</p>';
                 $html .= '    </div>';
+
                 $html .= '  </div>';
-                $html .= '  <div class="ecare-cg-card-body">';
-                $excerpt = get_the_excerpt() ?: 'Professional and dedicated caregiver with exceptional reviews.';
-                $html .= '    <p class="ecare-cg-card-bio">' . esc_html($excerpt) . '</p>';
-                $html .= '    <a href="#" class="ecare-cg-card-btn ecare-view-details" data-id="' . esc_attr($id) . '">Book Now</a>';
-                $html .= '  </div>';
+
+                // Book Now button full width
+                $html .= '  <a href="#" class="ecare-cg-card-btn ecare-view-details" data-id="' . esc_attr($id) . '">' . esc_html__('Book Now', 'ecare-health-services') . '</a>';
                 $html .= '</div>';
             }
             wp_reset_postdata();
@@ -122,6 +131,7 @@ class ECare_Ajax {
             'daily_24_price'   => get_post_meta($id, '_daily_24_price', true),
             'monthly_12_price' => get_post_meta($id, '_monthly_12_price', true),
             'monthly_24_price' => get_post_meta($id, '_monthly_24_price', true),
+            'photo_url'        => get_post_meta($id, '_photo_url', true),
         );
 
         $html = '<div class="ecare-detail-grid">';
@@ -130,6 +140,8 @@ class ECare_Ajax {
         $html .= '<div class="ecare-detail-sidebar">';
         if (has_post_thumbnail($id)) {
             $html .= get_the_post_thumbnail($id, 'thumbnail', array('class' => 'ecare-profile-img'));
+        } elseif (!empty($meta['photo_url'])) {
+            $html .= '<img src="' . esc_url($meta['photo_url']) . '" class="ecare-profile-img" alt="' . esc_attr(get_the_title($id)) . '" />';
         } else {
             $html .= '<div class="ecare-profile-img" style="background:#E2E8F0;display:flex;align-items:center;justify-content:center;font-size:48px;">👤</div>';
         }
