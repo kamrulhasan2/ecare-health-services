@@ -375,14 +375,14 @@ class ECare_Shortcodes {
     public static function render_ambulance_request() {
         ob_start();
         ?>
-        <div class="ecare-container">
+        <div class="ecare-container ecare-ambulance-page">
             <h2 class="ecare-section-title"><?php _e('Ambulance Booking', 'ecare-health-services'); ?></h2>
             <p class="ecare-section-subtitle"><?php _e('Request instant or scheduled medical ambulance transportation dispatch.', 'ecare-health-services'); ?></p>
 
             <div class="ecare-ambulance-layout">
                 <!-- Form Area -->
                 <div class="ecare-amb-form-col">
-                    <form id="ecare-ambulance-form" style="background:#fff;padding:24px;border:1px solid var(--border-light);border-radius:12px;box-shadow:var(--shadow-sm);">
+                    <form id="ecare-ambulance-form" class="ecare-amb-form-card">
                         
                         <label style="font-size:12px;font-weight:700;display:block;margin-bottom:8px;text-transform:uppercase;color:var(--text-muted);"><?php _e('Ambulance Type', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
                         <!-- Large selectable type cards -->
@@ -458,7 +458,7 @@ class ECare_Shortcodes {
                         <div class="ecare-form-row single">
                             <div class="ecare-form-field">
                                 <label><?php _e('Additional Notes', 'ecare-health-services'); ?></label>
-                                <div class="ecare-field-icon-wrap">
+                                <div class="ecare-field-icon-wrap ecare-field-icon-wrap-textarea">
                                     <span class="field-icon">📝</span>
                                     <textarea name="notes" rows="3" placeholder="<?php esc_attr_e('e.g. Patient condition, floor number, special requirements...', 'ecare-health-services'); ?>"></textarea>
                                 </div>
@@ -503,16 +503,16 @@ class ECare_Shortcodes {
 
                         <div class="ecare-summary-row">
                             <span class="label"><?php _e('Status', 'ecare-health-services'); ?></span>
-                            <span class="value" style="color:#D97706;font-weight:700;"><?php _e('Pending Dispatch', 'ecare-health-services'); ?></span>
+                            <span class="value ecare-summary-status"><?php _e('Pending Dispatch', 'ecare-health-services'); ?></span>
                         </div>
 
                         <div class="ecare-summary-warning">
                             ⚠️ <?php _e('Payment will be collected post-service or on invoice.', 'ecare-health-services'); ?>
                         </div>
 
-                        <div style="display:flex;align-items:flex-start;gap:8px;margin-top:16px;">
-                            <input type="checkbox" id="agree-terms" style="width:auto;margin-top:3px;" required />
-                            <label for="agree-terms" style="font-size:11px;color:var(--text-muted);font-weight:600;line-height:1.4;">
+                        <div class="ecare-summary-terms">
+                            <input type="checkbox" id="agree-terms" required />
+                            <label for="agree-terms">
                                 <?php _e('I AGREE TO THE E-CARE AMBULANCE TERMS AND PRIVACY POLICY.', 'ecare-health-services'); ?>
                             </label>
                         </div>

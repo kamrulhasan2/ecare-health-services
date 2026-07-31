@@ -33,6 +33,11 @@
   box-sizing: border-box;
 }
 
+.ecare-ambulance-page {
+  width: 100%;
+  max-width: none;
+}
+
 .ecare-section-title {
   font-size: 24px;
   font-weight: 700;
@@ -784,11 +789,26 @@
    ================================================================ */
 .ecare-ambulance-layout {
   display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr);
+  gap: 28px;
+  align-items: start;
 }
 @media (max-width: 900px) {
   .ecare-ambulance-layout { grid-template-columns: 1fr; }
+}
+
+.ecare-amb-form-col,
+.ecare-amb-sidebar {
+  min-width: 0;
+}
+
+.ecare-amb-form-card {
+  background: #FFFFFF;
+  padding: clamp(20px, 2.2vw, 28px);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
 }
 
 /* Ambulance Type Cards */
@@ -813,6 +833,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
+  min-width: 0;
 }
 .ecare-amb-type-card:hover {
   border-color: var(--admin-green);
@@ -842,6 +863,8 @@
 .ecare-field-icon-wrap {
   position: relative;
   margin-bottom: 16px;
+  width: 100%;
+  min-width: 0;
 }
 .ecare-field-icon-wrap .field-icon {
   position: absolute;
@@ -852,7 +875,7 @@
   font-size: 16px;
   pointer-events: none;
 }
-.ecare-field-icon-wrap textarea ~ .field-icon {
+.ecare-field-icon-wrap-textarea .field-icon {
   top: 16px;
   transform: none;
 }
@@ -860,6 +883,19 @@
 .ecare-field-icon-wrap select,
 .ecare-field-icon-wrap textarea {
   padding-left: 44px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.ecare-field-icon-wrap input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+}
+.ecare-field-icon-wrap textarea {
+  min-height: 118px;
+  resize: vertical;
+  padding-top: 14px;
 }
 
 /* Sidebar Columns */
@@ -873,11 +909,13 @@
 .ecare-amb-features-box {
   display: flex;
   justify-content: space-between;
+  gap: 12px;
   background: var(--bg-main);
   border: 1px solid var(--border-light);
   border-radius: 12px;
   padding: 16px;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
 }
 .ecare-feat-item {
   display: flex;
@@ -885,6 +923,8 @@
   align-items: center;
   text-align: center;
   flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
 }
 .ecare-feat-icon {
   font-size: 24px;
@@ -895,17 +935,20 @@
   font-weight: 700;
   color: var(--text-dark);
   text-transform: uppercase;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 /* Summary Card Sticky */
 .ecare-summary-sticky-card {
   background: var(--bg-main);
   border: 1px solid var(--border-light);
-  border-radius: 12px;
-  padding: 24px;
+  border-radius: 14px;
+  padding: 26px;
   box-shadow: var(--shadow-md);
   position: sticky;
   top: 24px;
+  min-width: 0;
 }
 .ecare-summary-sticky-card h4 {
   font-size: 14px;
@@ -922,13 +965,40 @@
   padding: 10px 0;
   border-bottom: 1px solid var(--border-light);
   font-size: 13px;
+  gap: 16px;
 }
 .ecare-summary-row .label {
   color: var(--text-muted);
+  min-width: 0;
 }
 .ecare-summary-row .value {
   font-weight: 600;
   color: var(--text-dark);
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ecare-summary-status {
+  color: #D97706;
+  font-weight: 700;
+}
+.ecare-summary-terms {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+}
+.ecare-summary-terms input[type="checkbox"] {
+  width: auto;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.ecare-summary-terms label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  line-height: 1.4;
+  min-width: 0;
 }
 .ecare-summary-warning {
   background: #FEF3C7;
@@ -949,6 +1019,7 @@
   font-size: 18px;
   font-weight: 800;
   color: var(--brand-teal);
+  gap: 16px;
 }
 .ecare-confirm-amb-btn {
   display: block;
@@ -1400,12 +1471,15 @@
 /* Flex layout helper for forms */
 .ecare-form-row {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 16px;
 }
 .ecare-form-row.single {
   grid-template-columns: 1fr;
+}
+.ecare-form-row > .ecare-form-field {
+  min-width: 0;
 }
 @media (max-width: 640px) {
   .ecare-form-row { grid-template-columns: 1fr; }
@@ -1455,10 +1529,47 @@
   .ecare-amb-type-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  .ecare-amb-features-box {
+    flex-direction: column;
+  }
+  .ecare-feat-item + .ecare-feat-item {
+    padding-top: 12px;
+    border-top: 1px solid var(--border-light);
+  }
+  .ecare-summary-sticky-card {
+    position: static;
+    top: auto;
+  }
 }
 @media (max-width: 480px) {
   .ecare-amb-type-grid {
     grid-template-columns: 1fr;
+  }
+  .ecare-amb-form-card,
+  .ecare-summary-sticky-card {
+    padding: 18px;
+    border-radius: 14px;
+  }
+  .ecare-summary-row,
+  .ecare-summary-total-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .ecare-summary-row .value,
+  .ecare-summary-total-row {
+    text-align: left;
+  }
+  .ecare-field-icon-wrap {
+    margin-bottom: 12px;
+  }
+  .ecare-field-icon-wrap .field-icon {
+    left: 12px;
+  }
+  .ecare-field-icon-wrap input,
+  .ecare-field-icon-wrap select,
+  .ecare-field-icon-wrap textarea {
+    padding-left: 38px;
+    font-size: 14px;
   }
 }
 
