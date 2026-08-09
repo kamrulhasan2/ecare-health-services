@@ -738,4 +738,74 @@
         }
     });
 
+    // ================================================================
+    // 9. ADMIN ADD CAREGIVER TYPE MODAL HANDLERS
+    // ================================================================
+    $(document).on('click', '#ecare-add-caregiver-type-btn', function() {
+        $('#ecare-add-type-modal').css('display', 'flex');
+    });
+
+    $(document).on('click', '#ecare-close-type-modal', function() {
+        $('#ecare-add-type-modal').hide();
+        $('#ecare-add-type-form')[0].reset();
+        $('#ecare-new-type-image-preview').hide().html('');
+        $('.id-remove-type-image-btn').hide();
+        $('.id-upload-type-image-btn').val('Upload Image');
+    });
+
+    $(document).on('click', '.id-upload-type-image-btn', function(e) {
+        e.preventDefault();
+        var $btn = $(this);
+        var $input = $('#ecare-new-type-image');
+        var $preview = $('#ecare-new-type-image-preview');
+        var $removeBtn = $('.id-remove-type-image-btn');
+
+        var uploader = wp.media({
+            title: 'Choose Caregiver Type Image',
+            button: {
+                text: 'Select Image'
+            },
+            multiple: false
+        }).on('select', function() {
+            var attachment = uploader.state().get('selection').first().toJSON();
+            $input.val(attachment.id);
+            $preview.html('<img src="' + attachment.url + '" style="width:100%;height:100%;object-fit:cover;display:block;" />').css('display', 'flex');
+            $removeBtn.show();
+            $btn.val('Change Image');
+        }).open();
+    });
+
+    $(document).on('click', '.id-remove-type-image-btn', function(e) {
+        e.preventDefault();
+        $('#ecare-new-type-image').val('');
+        $('#ecare-new-type-image-preview').hide().html('');
+        $(this).hide();
+        $('.id-upload-type-image-btn').val('Upload Image');
+    });
+
+    $(document).on('submit', '#ecare-add-type-form', function(e) {
+        e.preventDefault();
+        var $form = $(this);
+        var name = $('#ecare-new-type-name').val();
+        var imageId = $('#ecare-new-type-image').val();
+        var $btn = $form.find('button[type="submit"]');
+
+        $btn.prop('disabled', true).text('Adding...');
+
+        $.post(ecare_ajax.ajax_url, {
+            action: 'ecare_add_caregiver_type',
+            nonce: ecare_ajax.nonce,
+            type_name: name,
+            image_id: imageId
+        }, function(response) {
+            if (response.success) {
+                alert(response.data.message);
+                window.location.reload();
+            } else {
+                alert(response.data.message);
+                $btn.prop('disabled', false).text('Add Type');
+            }
+        });
+    });
+
 })(jQuery);

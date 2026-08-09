@@ -14,6 +14,7 @@ class ECare_Ajax {
             'add_lab_test_to_cart',
             'submit_ambulance_request',
             'submit_ambulance_registration',
+            'add_caregiver_type',
         );
 
         foreach ($actions as $action) {
@@ -985,5 +986,41 @@ class ECare_Ajax {
         $product->save();
 
         return $product->get_id();
+    }
+
+    /**
+     * Add new Caregiver Type (Term) via AJAX
+     */
+    public static function add_caregiver_type() {
+        check_ajax_referer('ecare_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Unauthorized access.'));
+        }
+
+        $type_name = sanitize_text_field($_POST['type_name'] ?? '');
+        $image_id = intval($_POST['image_id'] ?? 0);
+
+        if (empty($type_name)) {
+            wp_send_json_error(array('message' => 'Please enter a name for the Caregiver Type.'));
+        }
+
+        if (term_exists($type_name, 'ecare_caregiver_type')) {
+            wp_send_json_error(array('message' => 'This Caregiver Type already exists.'));
+        }
+
+        $inserted = wp_insert_term($type_name, 'ecare_caregiver_type');
+
+        if (is_wp_error($inserted)) {
+            wp_send_json_error(array('message' => 'Failed to create caregiver type: ' . $inserted->get_error_message()));
+        }
+
+        $term_id = $inserted['term_id'];
+
+        if ($image_id) {
+            update_term_meta($term_id, 'caregiver_type_image', $image_id);
+        }
+
+        wp_send_json_success(array('message' => 'Caregiver Type added successfully!', 'term_id' => $term_id));
     }
 }

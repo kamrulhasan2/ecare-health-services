@@ -371,6 +371,7 @@ class ECare_Admin {
                 <div class="ecare-admin-controls">
                     <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search providers...', 'ecare-health-services'); ?>" />
                     <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
+                    <button type="button" class="ecare-admin-btn-outline" id="ecare-add-caregiver-type-btn">+ <?php _e('Caregiver Type', 'ecare-health-services'); ?></button>
                     <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_caregiver')); ?>" class="ecare-admin-btn-green">+ <?php _e('Register New', 'ecare-health-services'); ?></a>
                 </div>
             </div>
@@ -449,6 +450,35 @@ class ECare_Admin {
                         <?php endif; ?>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Add Caregiver Type Modal -->
+            <div id="ecare-add-type-modal" class="ecare-admin-modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99999; justify-content:center; align-items:center;">
+                <div class="ecare-admin-modal-content" style="background:#fff; padding:30px; border-radius:12px; width:450px; box-shadow:0 10px 25px rgba(0,0,0,0.15); position:relative;">
+                    <h3 style="margin-top:0; font-size:18px; font-weight:700; color:#1E293B; margin-bottom:20px;"><?php _e('Add New Caregiver Type', 'ecare-health-services'); ?></h3>
+                    
+                    <form id="ecare-add-type-form">
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Caregiver Type Name', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
+                            <input type="text" id="ecare-new-type-name" name="type_name" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" placeholder="e.g. Maternity Care" required />
+                        </div>
+
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Type Image / Icon', 'ecare-health-services'); ?></label>
+                            <input type="hidden" id="ecare-new-type-image" name="image_id" value="" />
+                            <div id="ecare-new-type-image-preview" style="margin-bottom:10px; width:60px; height:60px; border-radius:50%; background:#F1F5F9; border:1px dashed #CBD5E1; display:none; align-items:center; justify-content:center; overflow:hidden;"></div>
+                            <p style="margin:0;">
+                                <input type="button" class="button button-secondary id-upload-type-image-btn" value="<?php esc_attr_e('Upload Image', 'ecare-health-services'); ?>" />
+                                <input type="button" class="button button-secondary id-remove-type-image-btn" value="<?php esc_attr_e('Remove', 'ecare-health-services'); ?>" style="display:none;" />
+                            </p>
+                        </div>
+
+                        <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E2E8F0; padding-top:15px;">
+                            <button type="button" id="ecare-close-type-modal" class="button button-secondary" style="padding: 6px 12px; height: auto;"><?php _e('Cancel', 'ecare-health-services'); ?></button>
+                            <button type="submit" class="button button-primary" style="padding: 6px 12px; height: auto; background:#0E9F6E; border-color:#0E9F6E; color:#fff; font-weight:600;"><?php _e('Add Type', 'ecare-health-services'); ?></button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
         <?php
