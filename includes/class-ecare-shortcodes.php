@@ -45,6 +45,16 @@ class ECare_Shortcodes {
                     foreach ($terms as $term):
                         $image_id = get_term_meta($term->term_id, 'caregiver_type_image', true);
                         $image_url = $image_id ? wp_get_attachment_url($image_id) : '';
+                        
+                        // Check for default photo in plugin assets if custom metadata is empty
+                        if (!$image_url) {
+                            $slug = sanitize_title($term->name);
+                            $default_file = ECARE_PLUGIN_DIR . 'assets/images/' . $slug . '.jpg';
+                            if (file_exists($default_file)) {
+                                $image_url = ECARE_PLUGIN_URL . 'assets/images/' . $slug . '.jpg';
+                            }
+                        }
+                        
                         $fallback_emoji = $default_icons[$term->name] ?? '👤';
                         ?>
                         <div class="ecare-type-tab" data-type="<?php echo esc_attr($term->name); ?>">
