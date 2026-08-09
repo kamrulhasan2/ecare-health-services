@@ -57,9 +57,9 @@
 
 /* Caregiver Type tabs */
 .ecare-type-tabs {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
   margin-bottom: 24px;
 }
 .ecare-type-tab {
@@ -75,9 +75,8 @@
   font-size: 13px;
   font-weight: 500;
   color: var(--text-dark);
-  flex: 1 1 140px;
-  min-width: 0;
   box-shadow: var(--shadow-sm);
+  white-space: nowrap;
 }
 .ecare-type-tab:hover {
   border-color: var(--brand-teal);
@@ -156,10 +155,17 @@
   object-fit: cover;
   display: block;
 }
+@media (max-width: 900px) {
+  .ecare-type-tabs {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
 @media (max-width: 600px) {
-  .ecare-type-tabs { gap: 8px; }
+  .ecare-type-tabs {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
   .ecare-type-tab {
-    flex: 1 1 calc(50% - 8px);
     padding: 8px 12px;
     font-size: 12px;
     gap: 8px;
@@ -171,7 +177,9 @@
   }
 }
 @media (max-width: 380px) {
-  .ecare-type-tab { flex: 1 1 100%; }
+  .ecare-type-tabs {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Package Selection Cards */
