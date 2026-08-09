@@ -45,47 +45,28 @@
         if (!$container.length) return;
 
         var html = '';
-        html += '<div class="ecare-package-tab active" data-package="">';
-        html += '  <span class="ecare-pkg-label">All Packages</span>';
-        html += '  <span class="ecare-pkg-price">Show All</span>';
-        html += '</div>';
-
-        var prices = ecare_ajax.prices || {
-            daily_12: 1700,
-            daily_24: 2200,
-            monthly_12: 30000,
-            monthly_24: 50000,
-            physio_regular: 1500,
-            physio_premium: 2000
-        };
-
-        if (type === 'Physiotherapist') {
-            html += '<div class="ecare-package-tab" data-package="daily_12">';
-            html += '  <span class="ecare-pkg-label">Daily Regular (1 Hour)</span>';
-            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(prices.physio_regular).toLocaleString() + '</span>';
-            html += '</div>';
-            html += '<div class="ecare-package-tab" data-package="daily_24">';
-            html += '  <span class="ecare-pkg-label">Daily Premium (1 Hour)</span>';
-            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(prices.physio_premium).toLocaleString() + '</span>';
-            html += '</div>';
+        var packagesMap = ecare_ajax.type_packages || {};
+        var packages = [];
+        
+        if (type && packagesMap[type]) {
+            packages = packagesMap[type];
         } else {
-            html += '<div class="ecare-package-tab" data-package="daily_12">';
-            html += '  <span class="ecare-pkg-label">Daily (12 Hours)</span>';
-            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(prices.daily_12).toLocaleString() + '</span>';
-            html += '</div>';
-            html += '<div class="ecare-package-tab" data-package="daily_24">';
-            html += '  <span class="ecare-pkg-label">Daily (24 Hours)</span>';
-            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(prices.daily_24).toLocaleString() + '</span>';
-            html += '</div>';
-            html += '<div class="ecare-package-tab" data-package="monthly_12">';
-            html += '  <span class="ecare-pkg-label">Monthly (12 Hours)</span>';
-            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(prices.monthly_12).toLocaleString() + '</span>';
-            html += '</div>';
-            html += '<div class="ecare-package-tab" data-package="monthly_24">';
-            html += '  <span class="ecare-pkg-label">Monthly (24 Hours)</span>';
-            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(prices.monthly_24).toLocaleString() + '</span>';
-            html += '</div>';
+            for (var key in packagesMap) {
+                if (packagesMap[key] && packagesMap[key].length > 0) {
+                    packages = packagesMap[key];
+                    break;
+                }
+            }
         }
+
+        $.each(packages, function(i, pkg) {
+            var pkgKey = pkg.label;
+            var activeClass = (i === 0) ? ' active' : '';
+            html += '<div class="ecare-package-tab' + activeClass + '" data-package="' + pkgKey + '">';
+            html += '  <span class="ecare-pkg-label">' + pkg.label + '</span>';
+            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(pkg.price).toLocaleString() + '</span>';
+            html += '</div>';
+        });
 
         $container.html(html);
     }

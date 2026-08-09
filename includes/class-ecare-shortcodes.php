@@ -24,10 +24,6 @@ class ECare_Shortcodes {
             <!-- Caregiver Type Tabs -->
             <label class="ecare-sidebar-label" style="display:block;margin-bottom:10px;"><?php _e('Select Caregiver Type', 'ecare-health-services'); ?></label>
             <div class="ecare-type-tabs" id="ecare-filter-type">
-                <div class="ecare-type-tab active" data-type="">
-                    <div class="ecare-tab-icon">👥</div>
-                    <span><?php _e('All Types', 'ecare-health-services'); ?></span>
-                </div>
                 <?php
                 $terms = get_terms(array(
                     'taxonomy'   => 'ecare_caregiver_type',
@@ -42,6 +38,7 @@ class ECare_Shortcodes {
                 );
 
                 if (!is_wp_error($terms) && !empty($terms)):
+                    $index = 0;
                     foreach ($terms as $term):
                         $image_id = get_term_meta($term->term_id, 'caregiver_type_image', true);
                         $image_url = $image_id ? wp_get_attachment_url($image_id) : '';
@@ -56,8 +53,9 @@ class ECare_Shortcodes {
                         }
                         
                         $fallback_emoji = $default_icons[$term->name] ?? '👤';
+                        $active_class = ($index === 0) ? ' active' : '';
                         ?>
-                        <div class="ecare-type-tab" data-type="<?php echo esc_attr($term->name); ?>">
+                        <div class="ecare-type-tab<?php echo $active_class; ?>" data-type="<?php echo esc_attr($term->name); ?>">
                             <div class="ecare-tab-icon">
                                 <?php if ($image_url): ?>
                                     <img src="<?php echo esc_url($image_url); ?>" alt="<?php echo esc_attr($term->name); ?>" class="ecare-type-icon-img" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" />
@@ -68,6 +66,7 @@ class ECare_Shortcodes {
                             <span><?php echo esc_html($term->name); ?></span>
                         </div>
                         <?php
+                        $index++;
                     endforeach;
                 endif;
                 ?>
