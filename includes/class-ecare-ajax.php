@@ -16,6 +16,8 @@ class ECare_Ajax {
             'submit_ambulance_registration',
             'add_caregiver_type',
             'delete_caregiver',
+            'get_caregiver_types',
+            'delete_caregiver_type',
         );
 
         foreach ($actions as $action) {
@@ -1016,7 +1018,7 @@ class ECare_Ajax {
     }
 
     /**
-     * Add new Caregiver Type (Term) via AJAX
+     * Add or Update Caregiver Type (Term) via AJAX
      */
     public static function add_caregiver_type() {
         check_ajax_referer('ecare_nonce', 'nonce');
@@ -1027,25 +1029,37 @@ class ECare_Ajax {
 
         $type_name = sanitize_text_field($_POST['type_name'] ?? '');
         $image_id = intval($_POST['image_id'] ?? 0);
+        $term_id = intval($_POST['term_id'] ?? 0);
 
         if (empty($type_name)) {
             wp_send_json_error(array('message' => 'Please enter a name for the Caregiver Type.'));
         }
 
-        if (term_exists($type_name, 'ecare_caregiver_type')) {
-            wp_send_json_error(array('message' => 'This Caregiver Type already exists.'));
+        if ($term_id) {
+            $updated = wp_update_term($term_id, 'ecare_caregiver_type', array('name' => $type_name));
+            if (is_wp_error($updated)) {
+                wp_send_json_error(array('message' => 'Failed to update caregiver type: ' . $updated->get_error_message()));
+            }
+        } else {
+            if (term_exists($type_name, 'ecare_caregiver_type')) {
+                wp_send_json_error(array('message' => 'This Caregiver Type already exists.'));
+            }
+
+            $inserted = wp_insert_term($type_name, 'ecare_caregiver_type');
+
+            if (is_wp_error($inserted)) {
+                wp_send_json_error(array('message' => 'Failed to create caregiver type: ' . $inserted->get_error_message()));
+            }
+
+            $term_id = $inserted['term_id'];
         }
-
-        $inserted = wp_insert_term($type_name, 'ecare_caregiver_type');
-
-        if (is_wp_error($inserted)) {
-            wp_send_json_error(array('message' => 'Failed to create caregiver type: ' . $inserted->get_error_message()));
-        }
-
-        $term_id = $inserted['term_id'];
 
         if ($image_id) {
             update_term_meta($term_id, 'caregiver_type_image', $image_id);
+        } else {
+            if (isset($_POST['remove_image']) && $_POST['remove_image'] == '1') {
+                delete_term_meta($term_id, 'caregiver_type_image');
+            }
         }
 
         if (isset($_POST['term_package_labels']) && isset($_POST['term_package_prices'])) {
@@ -1064,9 +1078,12 @@ class ECare_Ajax {
                 }
             }
             update_term_meta($term_id, 'ecare_packages', $packages);
+        } else {
+            update_term_meta($term_id, 'ecare_packages', array());
         }
 
-        wp_send_json_success(array('message' => 'Caregiver Type added successfully!', 'term_id' => $term_id));
+        $message = $_POST['term_id'] ? 'Caregiver Type updated successfully!' : 'Caregiver Type added successfully!';
+        wp_send_json_success(array('message' => $message, 'term_id' => $term_id));
     }
 
     /**
@@ -1090,6 +1107,75 @@ class ECare_Ajax {
             wp_send_json_success(array('message' => 'Provider deleted successfully!'));
         } else {
             wp_send_json_error(array('message' => 'Failed to delete provider.'));
+        }
+    }
+
+    /**
+     * Get all Caregiver Types via AJAX
+     */
+    public static function get_caregiver_types() {
+        check_ajax_referer('ecare_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Unauthorized access.'));
+        }
+
+        $terms = get_terms(array(
+            'taxonomy'   => 'ecare_caregiver_type',
+            'hide_empty' => false,
+        ));
+
+        $types = array();
+        if (!is_wp_error($terms) && !empty($terms)) {
+            foreach ($terms as $term) {
+                $image_id = get_term_meta($term->term_id, 'caregiver_type_image', true);
+                $image_url = $image_id ? wp_get_attachment_url($image_id) : '';
+                
+                // Fallback to default bundled image if empty
+                if (!$image_url) {
+                    $slug = sanitize_title($term->name);
+                    $default_file = ECARE_PLUGIN_DIR . 'assets/images/' . $slug . '.jpg';
+                    if (file_exists($default_file)) {
+                        $image_url = ECARE_PLUGIN_URL . 'assets/images/' . $slug . '.jpg';
+                    }
+                }
+
+                $packages = get_term_meta($term->term_id, 'ecare_packages', true) ?: array();
+
+                $types[] = array(
+                    'term_id'   => $term->term_id,
+                    'name'      => $term->name,
+                    'image_id'  => $image_id,
+                    'image_url' => $image_url,
+                    'packages'  => $packages,
+                );
+            }
+        }
+
+        wp_send_json_success(array('types' => $types));
+    }
+
+    /**
+     * Delete Caregiver Type via AJAX
+     */
+    public static function delete_caregiver_type() {
+        check_ajax_referer('ecare_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Unauthorized access.'));
+        }
+
+        $term_id = intval($_POST['term_id'] ?? 0);
+        if (!$term_id) {
+            wp_send_json_error(array('message' => 'Invalid term ID.'));
+        }
+
+        $deleted = wp_delete_term($term_id, 'ecare_caregiver_type');
+
+        if (is_wp_error($deleted)) {
+            wp_send_json_error(array('message' => 'Failed to delete caregiver type: ' . $deleted->get_error_message()));
+        } else {
+            wp_send_json_success(array('message' => 'Caregiver Type deleted successfully!'));
         }
     }
 }

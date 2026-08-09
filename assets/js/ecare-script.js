@@ -786,16 +786,39 @@
     // ================================================================
     // 9. ADMIN ADD CAREGIVER TYPE MODAL HANDLERS
     // ================================================================
+    function resetTypeForm() {
+        $('#ecare-add-type-form')[0].reset();
+        $('#ecare-edit-term-id').val('');
+        $('#ecare-type-remove-image').val('0');
+        $('#ecare-new-type-image').val('');
+        $('#ecare-new-type-image-preview').hide().html('');
+        $('.id-remove-type-image-btn').hide();
+        $('.id-upload-type-image-btn').val('Upload Image');
+        $('#ecare-type-modal-title').text('Add New Caregiver Type Info');
+        $('#ecare-submit-type-btn').text('Add Type');
+        $('#ecare-cancel-edit-type-btn').hide();
+
+        var defaultRowHtml = '<div class="ecare-modal-package-row" style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">' +
+                             '  <input type="text" name="term_package_labels[]" placeholder="e.g. Daily (12 Hours)" style="flex:2; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px;" required />' +
+                             '  <input type="number" name="term_package_prices[]" placeholder="Price (৳)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px;" required />' +
+                             '  <button type="button" class="button ecare-remove-package-row-btn" style="background:#EF4444; color:#fff; border-color:#EF4444; padding:6px 10px; height:auto; line-height:1;">&times;</button>' +
+                             '</div>';
+        $('#ecare-modal-packages-list').html(defaultRowHtml);
+    }
+
     $(document).on('click', '#ecare-add-caregiver-type-btn', function() {
         $('#ecare-add-type-modal').css('display', 'flex');
     });
 
     $(document).on('click', '#ecare-close-type-modal', function() {
         $('#ecare-add-type-modal').hide();
-        $('#ecare-add-type-form')[0].reset();
-        $('#ecare-new-type-image-preview').hide().html('');
-        $('.id-remove-type-image-btn').hide();
-        $('.id-upload-type-image-btn').val('Upload Image');
+        $('#ecare-manage-types-container').hide();
+        resetTypeForm();
+    });
+
+    $(document).on('click', '#ecare-cancel-edit-type-btn', function(e) {
+        e.preventDefault();
+        resetTypeForm();
     });
 
     $(document).on('click', '.id-upload-type-image-btn', function(e) {
@@ -814,6 +837,7 @@
         }).on('select', function() {
             var attachment = uploader.state().get('selection').first().toJSON();
             $input.val(attachment.id);
+            $('#ecare-type-remove-image').val('0');
             $preview.html('<img src="' + attachment.url + '" style="width:100%;height:100%;object-fit:cover;display:block;" />').css('display', 'flex');
             $removeBtn.show();
             $btn.val('Change Image');
@@ -823,6 +847,7 @@
     $(document).on('click', '.id-remove-type-image-btn', function(e) {
         e.preventDefault();
         $('#ecare-new-type-image').val('');
+        $('#ecare-type-remove-image').val('1');
         $('#ecare-new-type-image-preview').hide().html('');
         $(this).hide();
         $('.id-upload-type-image-btn').val('Upload Image');
@@ -863,9 +888,160 @@
         }
     });
 
+    $(document).on('click', '#ecare-toggle-manage-types-btn', function(e) {
+        e.preventDefault();
+        var $container = $('#ecare-manage-types-container');
+        $container.slideToggle(300, function() {
+            if ($container.is(':visible')) {
+                loadCaregiverTypesList();
+            }
+        });
+    });
+
+    function loadCaregiverTypesList() {
+        var $list = $('#ecare-manage-types-list');
+        $list.html('<p style="text-align:center; color:#94A3B8; font-size:13px; margin: 10px 0;">Loading types...</p>');
+
+        $.post(ecare_ajax.ajax_url, {
+            action: 'ecare_get_caregiver_types',
+            nonce: ecare_ajax.nonce
+        }, function(response) {
+            if (response && response.success && response.data.types) {
+                var types = response.data.types;
+                if (types.length === 0) {
+                    $list.html('<p style="text-align:center; color:#94A3B8; font-size:13px; margin: 10px 0;">No caregiver types found.</p>');
+                    return;
+                }
+
+                var html = '';
+                $.each(types, function(i, type) {
+                    var imgHtml = '';
+                    if (type.image_url) {
+                        imgHtml = '<img src="' + type.image_url + '" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #CBD5E1; display:block;" />';
+                    } else {
+                        imgHtml = '<div style="width:32px; height:32px; border-radius:50%; background:#CBD5E1; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:12px;">CT</div>';
+                    }
+
+                    var pkgsString = JSON.stringify(type.packages);
+
+                    html += '<div style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:#fff; padding:8px 12px; border-radius:8px; border:1px solid #E2E8F0; margin-bottom: 6px;">';
+                    html += '  <div style="display:flex; align-items:center; gap:10px; flex:1;">';
+                    html += '    ' + imgHtml;
+                    html += '    <span style="font-weight:600; color:#1E293B; font-size:13px;">' + type.name + '</span>';
+                    html += '  </div>';
+                    html += '  <div style="display:flex; gap:6px; align-items:center;">';
+                    html += '    <button type="button" class="button ecare-edit-type-item-btn" style="padding:4px 10px; font-size:11px; height:auto; line-height:1; background:#3B82F6; border-color:#3B82F6; color:#fff;" data-id="' + type.term_id + '" data-name="' + type.name + '" data-image-id="' + type.image_id + '" data-image-url="' + type.image_url + '" data-packages=\'' + pkgsString.replace(/'/g, "&apos;") + '\'>Edit</button>';
+                    html += '    <button type="button" class="button ecare-delete-type-item-btn" style="padding:4px 10px; font-size:11px; height:auto; line-height:1; background:#EF4444; border-color:#EF4444; color:#fff;" data-id="' + type.term_id + '" data-name="' + type.name + '">Delete</button>';
+                    html += '  </div>';
+                    html += '</div>';
+                });
+                $list.html(html);
+            } else {
+                $list.html('<p style="text-align:center; color:#EF4444; font-size:13px; margin: 10px 0;">Failed to load caregiver types.</p>');
+            }
+        }).fail(function() {
+            $list.html('<p style="text-align:center; color:#EF4444; font-size:13px; margin: 10px 0;">Server error.</p>');
+        });
+    }
+
+    $(document).on('click', '.ecare-edit-type-item-btn', function(e) {
+        e.preventDefault();
+        var id = $(this).attr('data-id');
+        var name = $(this).attr('data-name');
+        var imageId = $(this).attr('data-image-id');
+        var imageUrl = $(this).attr('data-image-url');
+        var packagesData = $(this).attr('data-packages');
+        
+        var packages = [];
+        try {
+            packages = JSON.parse(packagesData);
+        } catch(err) {
+            packages = [];
+        }
+
+        $('#ecare-edit-term-id').val(id);
+        $('#ecare-new-type-name').val(name);
+        $('#ecare-new-type-image').val(imageId || '');
+        $('#ecare-type-remove-image').val('0');
+        
+        var $preview = $('#ecare-new-type-image-preview');
+        var $removeBtn = $('.id-remove-type-image-btn');
+        var $uploadBtn = $('.id-upload-type-image-btn');
+
+        if (imageUrl) {
+            $preview.html('<img src="' + imageUrl + '" style="width:100%;height:100%;object-fit:cover;display:block;" />').css('display', 'flex');
+            $removeBtn.show();
+            $uploadBtn.val('Change Image');
+        } else {
+            $preview.hide().html('');
+            $removeBtn.hide();
+            $uploadBtn.val('Upload Image');
+        }
+
+        var $list = $('#ecare-modal-packages-list');
+        $list.empty();
+        
+        if (packages && packages.length > 0) {
+            $.each(packages, function(i, pkg) {
+                var rowHtml = '';
+                rowHtml += '<div class="ecare-modal-package-row" style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">';
+                rowHtml += '  <input type="text" name="term_package_labels[]" value="' + pkg.label + '" placeholder="e.g. Daily (12 Hours)" style="flex:2; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px;" required />';
+                rowHtml += '  <input type="number" name="term_package_prices[]" value="' + pkg.price + '" placeholder="Price (৳)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px;" required />';
+                rowHtml += '  <button type="button" class="button ecare-remove-package-row-btn" style="background:#EF4444; color:#fff; border-color:#EF4444; padding:6px 10px; height:auto; line-height:1;">&times;</button>';
+                rowHtml += '</div>';
+                $list.append(rowHtml);
+            });
+        } else {
+            var rowHtml = '';
+            rowHtml += '<div class="ecare-modal-package-row" style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">';
+            rowHtml += '  <input type="text" name="term_package_labels[]" placeholder="e.g. Daily (12 Hours)" style="flex:2; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px;" required />';
+            rowHtml += '  <input type="number" name="term_package_prices[]" placeholder="Price (৳)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px;" required />';
+            rowHtml += '  <button type="button" class="button ecare-remove-package-row-btn" style="background:#EF4444; color:#fff; border-color:#EF4444; padding:6px 10px; height:auto; line-height:1;">&times;</button>';
+            rowHtml += '</div>';
+            $list.append(rowHtml);
+        }
+
+        $('#ecare-type-modal-title').text('Edit Caregiver Type Info');
+        $('#ecare-submit-type-btn').text('Update Type');
+        $('#ecare-cancel-edit-type-btn').show();
+
+        $('.ecare-admin-modal-content').scrollTop(0);
+    });
+
+    $(document).on('click', '.ecare-delete-type-item-btn', function(e) {
+        e.preventDefault();
+        var id = $(this).attr('data-id');
+        var name = $(this).attr('data-name');
+        
+        if (confirm('Are you sure you want to delete Caregiver Type Info "' + name + '"? Caregivers assigned to this type will become uncategorized.')) {
+            var $btn = $(this);
+            $btn.prop('disabled', true).text('...');
+
+            $.post(ecare_ajax.ajax_url, {
+                action: 'ecare_delete_caregiver_type',
+                nonce: ecare_ajax.nonce,
+                term_id: id
+            }, function(response) {
+                if (response && response.success) {
+                    alert(response.data.message);
+                    loadCaregiverTypesList();
+                } else {
+                    var msg = (response && response.data && response.data.message) ? response.data.message : 'Failed to delete caregiver type info.';
+                    alert(msg);
+                    $btn.prop('disabled', false).text('Delete');
+                }
+            }).fail(function() {
+                alert('Server error.');
+                $btn.prop('disabled', false).text('Delete');
+            });
+        }
+    });
+
     $(document).on('submit', '#ecare-add-type-form', function(e) {
         e.preventDefault();
         var $form = $(this);
+        var termId = $('#ecare-edit-term-id').val();
+        var removeImage = $('#ecare-type-remove-image').val();
         var name = $('#ecare-new-type-name').val();
         var imageId = $('#ecare-new-type-image').val();
         var $btn = $form.find('button[type="submit"]');
@@ -879,11 +1055,13 @@
             prices.push($(this).val());
         });
 
-        $btn.prop('disabled', true).text('Adding...');
+        $btn.prop('disabled', true).text(termId ? 'Updating...' : 'Adding...');
 
         $.post(ecare_ajax.ajax_url, {
             action: 'ecare_add_caregiver_type',
             nonce: ecare_ajax.nonce,
+            term_id: termId,
+            remove_image: removeImage,
             type_name: name,
             image_id: imageId,
             term_package_labels: labels,
@@ -894,7 +1072,7 @@
                 window.location.reload();
             } else {
                 alert(response.data.message);
-                $btn.prop('disabled', false).text('Add Type');
+                $btn.prop('disabled', false).text(termId ? 'Update Type' : 'Add Type');
             }
         });
     });

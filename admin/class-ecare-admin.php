@@ -371,7 +371,7 @@ class ECare_Admin {
                 <div class="ecare-admin-controls">
                     <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search providers...', 'ecare-health-services'); ?>" />
                     <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
-                    <button type="button" class="ecare-admin-btn-outline" id="ecare-add-caregiver-type-btn">+ <?php _e('Caregiver Type', 'ecare-health-services'); ?></button>
+                    <button type="button" class="button ecare-admin-btn-outline" id="ecare-add-caregiver-type-btn">+ <?php _e('Caregiver Type Info', 'ecare-health-services'); ?></button>
                     <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_caregiver')); ?>" class="ecare-admin-btn-green">+ <?php _e('Register New', 'ecare-health-services'); ?></a>
                 </div>
             </div>
@@ -456,9 +456,13 @@ class ECare_Admin {
             <!-- Add Caregiver Type Modal -->
             <div id="ecare-add-type-modal" class="ecare-admin-modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99999; justify-content:center; align-items:center;">
                 <div class="ecare-admin-modal-content" style="background:#fff; padding:30px; border-radius:12px; width:500px; max-height:85vh; overflow-y:auto; box-shadow:0 10px 25px rgba(0,0,0,0.15); position:relative;">
-                    <h3 style="margin-top:0; font-size:18px; font-weight:700; color:#1E293B; margin-bottom:20px;"><?php _e('Add New Caregiver Type', 'ecare-health-services'); ?></h3>
+                    <h3 id="ecare-type-modal-title" style="margin-top:0; font-size:18px; font-weight:700; color:#1E293B; margin-bottom:20px;"><?php _e('Add New Caregiver Type Info', 'ecare-health-services'); ?></h3>
                     
                     <form id="ecare-add-type-form">
+                        <!-- Hidden inputs for state management -->
+                        <input type="hidden" id="ecare-edit-term-id" name="term_id" value="" />
+                        <input type="hidden" id="ecare-type-remove-image" name="remove_image" value="0" />
+
                         <div style="margin-bottom:15px;">
                             <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Caregiver Type Name', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
                             <input type="text" id="ecare-new-type-name" name="type_name" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" placeholder="e.g. Maternity Care" required />
@@ -487,10 +491,22 @@ class ECare_Admin {
                         </div>
 
                         <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E2E8F0; padding-top:15px;">
+                            <button type="button" id="ecare-cancel-edit-type-btn" class="button button-secondary" style="padding: 6px 12px; height: auto; display:none; border-color:#EF4444; color:#EF4444;"><?php _e('Cancel Edit', 'ecare-health-services'); ?></button>
                             <button type="button" id="ecare-close-type-modal" class="button button-secondary" style="padding: 6px 12px; height: auto;"><?php _e('Cancel', 'ecare-health-services'); ?></button>
-                            <button type="submit" class="button button-primary" style="padding: 6px 12px; height: auto; background:#0E9F6E; border-color:#0E9F6E; color:#fff; font-weight:600;"><?php _e('Add Type', 'ecare-health-services'); ?></button>
+                            <button type="submit" id="ecare-submit-type-btn" class="button button-primary" style="padding: 6px 12px; height: auto; background:#0E9F6E; border-color:#0E9F6E; color:#fff; font-weight:600;"><?php _e('Add Type', 'ecare-health-services'); ?></button>
                         </div>
                     </form>
+
+                    <!-- Add Type info list panel -->
+                    <div style="border-top:1px solid #E2E8F0; margin-top:20px; padding-top:15px; text-align:center;">
+                        <button type="button" id="ecare-toggle-manage-types-btn" class="button button-secondary" style="width:100%; font-weight:600; color:#475569; background:#F8FAFC; border-color:#CBD5E1;"><?php _e('📋 View / Manage Caregiver Types Info', 'ecare-health-services'); ?></button>
+                    </div>
+                    
+                    <div id="ecare-manage-types-container" style="display:none; margin-top:15px; border:1px solid #E2E8F0; border-radius:8px; padding:10px; max-height:250px; overflow-y:auto; background:#F8FAFC;">
+                        <div id="ecare-manage-types-list" style="display:flex; flex-direction:column; gap:8px;">
+                            <!-- Loaded dynamically via AJAX -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
