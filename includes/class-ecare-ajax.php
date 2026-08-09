@@ -15,6 +15,7 @@ class ECare_Ajax {
             'submit_ambulance_request',
             'submit_ambulance_registration',
             'add_caregiver_type',
+            'save_default_package_prices',
         );
 
         foreach ($actions as $action) {
@@ -43,14 +44,26 @@ class ECare_Ajax {
             $meta_query[] = array('key' => '_provider_type', 'value' => $type);
         }
 
-        // Filter caregivers who have a price set for the requested package
+        // Filter caregivers who have a price set for the requested package (custom rate > 0 OR fallback to default rate)
         if (!empty($package)) {
             $price_key = '_' . $package . '_price';
             $meta_query[] = array(
-                'key'     => $price_key,
-                'value'   => 0,
-                'compare' => '>',
-                'type'    => 'NUMERIC'
+                'relation' => 'OR',
+                array(
+                    'key'     => $price_key,
+                    'value'   => 0,
+                    'compare' => '>',
+                    'type'    => 'NUMERIC'
+                ),
+                array(
+                    'key'     => $price_key,
+                    'compare' => 'NOT EXISTS'
+                ),
+                array(
+                    'key'     => $price_key,
+                    'value'   => '',
+                    'compare' => '='
+                )
             );
         }
 
@@ -128,10 +141,10 @@ class ECare_Ajax {
             'skills'           => get_post_meta($id, '_skills', true),
             'education'        => get_post_meta($id, '_education', true),
             'experience'       => get_post_meta($id, '_experience', true),
-            'daily_12_price'   => get_post_meta($id, '_daily_12_price', true),
-            'daily_24_price'   => get_post_meta($id, '_daily_24_price', true),
-            'monthly_12_price' => get_post_meta($id, '_monthly_12_price', true),
-            'monthly_24_price' => get_post_meta($id, '_monthly_24_price', true),
+            'daily_12_price'   => get_post_meta($id, '_daily_12_price', true) ?: get_option('ecare_default_daily_12_price', 1700),
+            'daily_24_price'   => get_post_meta($id, '_daily_24_price', true) ?: get_option('ecare_default_daily_24_price', 2200),
+            'monthly_12_price' => get_post_meta($id, '_monthly_12_price', true) ?: get_option('ecare_default_monthly_12_price', 30000),
+            'monthly_24_price' => get_post_meta($id, '_monthly_24_price', true) ?: get_option('ecare_default_monthly_24_price', 50000),
             'photo_url'        => get_post_meta($id, '_photo_url', true),
         );
 
@@ -354,6 +367,17 @@ class ECare_Ajax {
         );
         if (isset($price_map[$package_type])) {
             $price = floatval(get_post_meta($caregiver_id, $price_map[$package_type], true));
+            if (!$price) {
+                $option_map = array(
+                    'daily_12'   => 'ecare_default_daily_12_price',
+                    'daily_24'   => 'ecare_default_daily_24_price',
+                    'monthly_12' => 'ecare_default_monthly_12_price',
+                    'monthly_24' => 'ecare_default_monthly_24_price',
+                );
+                if (isset($option_map[$package_type])) {
+                    $price = floatval(get_option($option_map[$package_type], 0));
+                }
+            }
         }
 
         // File upload using standard WordPress media_handle_upload
@@ -1022,5 +1046,28 @@ class ECare_Ajax {
         }
 
         wp_send_json_success(array('message' => 'Caregiver Type added successfully!', 'term_id' => $term_id));
+    }
+
+    /**
+     * Save Default Package Prices via AJAX
+     */
+    public static function save_default_package_prices() {
+        check_ajax_referer('ecare_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Unauthorized access.'));
+        }
+
+        $daily_12   = floatval($_POST['daily_12'] ?? 1700);
+        $daily_24   = floatval($_POST['daily_24'] ?? 2200);
+        $monthly_12 = floatval($_POST['monthly_12'] ?? 30000);
+        $monthly_24 = floatval($_POST['monthly_24'] ?? 50000);
+
+        update_option('ecare_default_daily_12_price', $daily_12);
+        update_option('ecare_default_daily_24_price', $daily_24);
+        update_option('ecare_default_monthly_12_price', $monthly_12);
+        update_option('ecare_default_monthly_24_price', $monthly_24);
+
+        wp_send_json_success(array('message' => 'Default package prices updated successfully!'));
     }
 }

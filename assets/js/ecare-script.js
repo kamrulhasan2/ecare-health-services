@@ -808,4 +808,48 @@
         });
     });
 
+    // ================================================================
+    // 10. ADMIN EDIT DEFAULT PACKAGES MODAL
+    // ================================================================
+    $(document).on('click', '#ecare-edit-packages-btn', function() {
+        $('#ecare-edit-packages-modal').css('display', 'flex');
+    });
+
+    $(document).on('click', '#ecare-close-packages-modal', function() {
+        $('#ecare-edit-packages-modal').hide();
+    });
+
+    $(document).on('submit', '#ecare-edit-packages-form', function(e) {
+        e.preventDefault();
+        var $form = $(this);
+        var daily_12 = $('#ecare-pkg-daily-12').val();
+        var daily_24 = $('#ecare-pkg-daily-24').val();
+        var monthly_12 = $('#ecare-pkg-monthly-12').val();
+        var monthly_24 = $('#ecare-pkg-monthly-24').val();
+        var $btn = $form.find('button[type="submit"]');
+
+        $btn.prop('disabled', true).text('Saving...');
+
+        $.post(ecare_ajax.ajax_url, {
+            action: 'ecare_save_default_package_prices',
+            nonce: ecare_ajax.nonce,
+            daily_12: daily_12,
+            daily_24: daily_24,
+            monthly_12: monthly_12,
+            monthly_24: monthly_24
+        }, function(response) {
+            if (response && response.success) {
+                alert(response.data.message);
+                window.location.reload();
+            } else {
+                var msg = (response && response.data && response.data.message) ? response.data.message : 'Error: Nonce verification failed or request rejected.';
+                alert(msg);
+                $btn.prop('disabled', false).text('Save Prices');
+            }
+        }).fail(function() {
+            alert('Server error occurred.');
+            $btn.prop('disabled', false).text('Save Prices');
+        });
+    });
+
 })(jQuery);

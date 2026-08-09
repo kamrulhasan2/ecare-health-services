@@ -372,6 +372,7 @@ class ECare_Admin {
                     <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search providers...', 'ecare-health-services'); ?>" />
                     <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
                     <button type="button" class="ecare-admin-btn-outline" id="ecare-add-caregiver-type-btn">+ <?php _e('Caregiver Type', 'ecare-health-services'); ?></button>
+                    <button type="button" class="ecare-admin-btn-outline" id="ecare-edit-packages-btn">⚙️ <?php _e('Edit Packages', 'ecare-health-services'); ?></button>
                     <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_caregiver')); ?>" class="ecare-admin-btn-green">+ <?php _e('Register New', 'ecare-health-services'); ?></a>
                 </div>
             </div>
@@ -476,6 +477,37 @@ class ECare_Admin {
                         <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E2E8F0; padding-top:15px;">
                             <button type="button" id="ecare-close-type-modal" class="button button-secondary" style="padding: 6px 12px; height: auto;"><?php _e('Cancel', 'ecare-health-services'); ?></button>
                             <button type="submit" class="button button-primary" style="padding: 6px 12px; height: auto; background:#0E9F6E; border-color:#0E9F6E; color:#fff; font-weight:600;"><?php _e('Add Type', 'ecare-health-services'); ?></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Edit Packages Modal -->
+            <div id="ecare-edit-packages-modal" class="ecare-admin-modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99999; justify-content:center; align-items:center;">
+                <div class="ecare-admin-modal-content" style="background:#fff; padding:30px; border-radius:12px; width:450px; box-shadow:0 10px 25px rgba(0,0,0,0.15); position:relative;">
+                    <h3 style="margin-top:0; font-size:18px; font-weight:700; color:#1E293B; margin-bottom:20px;"><?php _e('Edit Default Package Prices', 'ecare-health-services'); ?></h3>
+                    
+                    <form id="ecare-edit-packages-form">
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Daily (12 Hours) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
+                            <input type="number" id="ecare-pkg-daily-12" name="daily_12" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_daily_12_price', 1700)); ?>" required />
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Daily (24 Hours) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
+                            <input type="number" id="ecare-pkg-daily-24" name="daily_24" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_daily_24_price', 2200)); ?>" required />
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Monthly (12 Hours) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
+                            <input type="number" id="ecare-pkg-monthly-12" name="monthly_12" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_monthly_12_price', 30000)); ?>" required />
+                        </div>
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Monthly (24 Hours) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
+                            <input type="number" id="ecare-pkg-monthly-24" name="monthly_24" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_monthly_24_price', 50000)); ?>" required />
+                        </div>
+
+                        <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E2E8F0; padding-top:15px;">
+                            <button type="button" id="ecare-close-packages-modal" class="button button-secondary" style="padding: 6px 12px; height: auto;"><?php _e('Cancel', 'ecare-health-services'); ?></button>
+                            <button type="submit" class="button button-primary" style="padding: 6px 12px; height: auto; background:#0E9F6E; border-color:#0E9F6E; color:#fff; font-weight:600;"><?php _e('Save Prices', 'ecare-health-services'); ?></button>
                         </div>
                     </form>
                 </div>
