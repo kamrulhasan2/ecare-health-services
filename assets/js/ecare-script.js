@@ -40,10 +40,63 @@
         });
     }
 
+    function renderPackageTabs(type) {
+        var $container = $('#ecare-filter-package');
+        if (!$container.length) return;
+
+        var html = '';
+        html += '<div class="ecare-package-tab active" data-package="">';
+        html += '  <span class="ecare-pkg-label">All Packages</span>';
+        html += '  <span class="ecare-pkg-price">Show All</span>';
+        html += '</div>';
+
+        var prices = ecare_ajax.prices || {
+            daily_12: 1700,
+            daily_24: 2200,
+            monthly_12: 30000,
+            monthly_24: 50000,
+            physio_regular: 1500,
+            physio_premium: 2000
+        };
+
+        if (type === 'Physiotherapist') {
+            html += '<div class="ecare-package-tab" data-package="daily_12">';
+            html += '  <span class="ecare-pkg-label">Daily Regular (1 Hour)</span>';
+            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(prices.physio_regular).toLocaleString() + '</span>';
+            html += '</div>';
+            html += '<div class="ecare-package-tab" data-package="daily_24">';
+            html += '  <span class="ecare-pkg-label">Daily Premium (1 Hour)</span>';
+            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(prices.physio_premium).toLocaleString() + '</span>';
+            html += '</div>';
+        } else {
+            html += '<div class="ecare-package-tab" data-package="daily_12">';
+            html += '  <span class="ecare-pkg-label">Daily (12 Hours)</span>';
+            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(prices.daily_12).toLocaleString() + '</span>';
+            html += '</div>';
+            html += '<div class="ecare-package-tab" data-package="daily_24">';
+            html += '  <span class="ecare-pkg-label">Daily (24 Hours)</span>';
+            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(prices.daily_24).toLocaleString() + '</span>';
+            html += '</div>';
+            html += '<div class="ecare-package-tab" data-package="monthly_12">';
+            html += '  <span class="ecare-pkg-label">Monthly (12 Hours)</span>';
+            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(prices.monthly_12).toLocaleString() + '</span>';
+            html += '</div>';
+            html += '<div class="ecare-package-tab" data-package="monthly_24">';
+            html += '  <span class="ecare-pkg-label">Monthly (24 Hours)</span>';
+            html += '  <span class="ecare-pkg-price">Total ৳ ' + parseFloat(prices.monthly_24).toLocaleString() + '</span>';
+            html += '</div>';
+        }
+
+        $container.html(html);
+    }
+
     // Type tabs click
     $(document).on('click', '#ecare-filter-type .ecare-type-tab', function() {
         $('#ecare-filter-type .ecare-type-tab').removeClass('active');
         $(this).addClass('active');
+        
+        var type = $(this).data('type') || '';
+        renderPackageTabs(type);
         loadCaregivers();
     });
 
@@ -56,6 +109,8 @@
 
     // Load initial caregiver list on page load
     if ($('#ecare-caregiver-grid').length) {
+        var initialType = $('#ecare-filter-type .ecare-type-tab.active').data('type') || '';
+        renderPackageTabs(initialType);
         loadCaregivers();
     }
 
@@ -90,14 +145,16 @@
             if (response.success) {
                 $('#ecare-caregiver-detail-content').html(response.data.html);
                 
-                // Trigger click on active filter package in the modal details if available
+                // Retrieve preselected package from the outside filter
                 var preselectedPkg = $('#ecare-filter-package .ecare-package-tab.active').data('package');
-                if (preselectedPkg) {
-                    var $matchedRadioTab = $('.ecare-detail-main .ecare-package-tab[data-package="' + preselectedPkg + '"]');
-                    if ($matchedRadioTab.length) {
-                        $matchedRadioTab.trigger('click');
-                    }
+                
+                // If "All Packages" is selected, fallback to the first available package for this Caregiver Type
+                if (!preselectedPkg) {
+                    var type = $('#ecare-filter-type .ecare-type-tab.active').data('type') || '';
+                    preselectedPkg = 'daily_12'; 
                 }
+                
+                $('#ecare-booking-package-val').val(preselectedPkg);
             } else {
                 $('#ecare-caregiver-detail-content').html('<p class="error" style="color:#b91c1c;text-align:center;padding:40px;">Failed to load details.</p>');
             }
@@ -111,18 +168,6 @@
     $(document).on('click', '#ecare-caregiver-detail-modal', function(e) {
         if ($(e.target).is('#ecare-caregiver-detail-modal')) {
             $(this).fadeOut(200);
-        }
-    });
-
-    // Package radio selection in detail view
-    $(document).on('click', '.ecare-detail-main .ecare-package-tab', function() {
-        var $radio = $(this).find('input[type="radio"]');
-        if ($radio.length) {
-            $radio.prop('checked', true);
-            var price = $radio.data('price');
-            $('#ecare-price-display').text(price ? parseFloat(price).toLocaleString() : '0');
-            $(this).closest('.ecare-package-tabs').find('.ecare-package-tab').removeClass('active');
-            $(this).addClass('active');
         }
     });
 
@@ -826,6 +871,8 @@
         var daily_24 = $('#ecare-pkg-daily-24').val();
         var monthly_12 = $('#ecare-pkg-monthly-12').val();
         var monthly_24 = $('#ecare-pkg-monthly-24').val();
+        var physio_regular = $('#ecare-pkg-physio-regular').val();
+        var physio_premium = $('#ecare-pkg-physio-premium').val();
         var $btn = $form.find('button[type="submit"]');
 
         $btn.prop('disabled', true).text('Saving...');
@@ -836,7 +883,9 @@
             daily_12: daily_12,
             daily_24: daily_24,
             monthly_12: monthly_12,
-            monthly_24: monthly_24
+            monthly_24: monthly_24,
+            physio_regular: physio_regular,
+            physio_premium: physio_premium
         }, function(response) {
             if (response && response.success) {
                 alert(response.data.message);

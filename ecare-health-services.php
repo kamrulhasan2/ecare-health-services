@@ -80,6 +80,14 @@ final class ECare_Health_Services {
         wp_localize_script('ecare-admin-script', 'ecare_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce'    => wp_create_nonce('ecare_nonce'),
+            'prices'   => array(
+                'daily_12'        => get_option('ecare_default_daily_12_price', 1700),
+                'daily_24'        => get_option('ecare_default_daily_24_price', 2200),
+                'monthly_12'      => get_option('ecare_default_monthly_12_price', 30000),
+                'monthly_24'      => get_option('ecare_default_monthly_24_price', 50000),
+                'physio_regular'  => get_option('ecare_default_physio_regular_price', 1500),
+                'physio_premium'  => get_option('ecare_default_physio_premium_price', 2000),
+            )
         ));
     }
 
@@ -90,6 +98,14 @@ final class ECare_Health_Services {
         wp_localize_script('ecare-frontend-script', 'ecare_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce'    => wp_create_nonce('ecare_nonce'),
+            'prices'   => array(
+                'daily_12'        => get_option('ecare_default_daily_12_price', 1700),
+                'daily_24'        => get_option('ecare_default_daily_24_price', 2200),
+                'monthly_12'      => get_option('ecare_default_monthly_12_price', 30000),
+                'monthly_24'      => get_option('ecare_default_monthly_24_price', 50000),
+                'physio_regular'  => get_option('ecare_default_physio_regular_price', 1500),
+                'physio_premium'  => get_option('ecare_default_physio_premium_price', 2000),
+            )
         ));
     }
 

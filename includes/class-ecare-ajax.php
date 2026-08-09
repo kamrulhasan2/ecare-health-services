@@ -136,15 +136,28 @@ class ECare_Ajax {
             wp_send_json_error(array('message' => 'Caregiver not found.'));
         }
 
+        $provider_type = get_post_meta($id, '_provider_type', true);
+        if ($provider_type === 'Physiotherapist') {
+            $daily_12_fallback = get_option('ecare_default_physio_regular_price', 1500);
+            $daily_24_fallback = get_option('ecare_default_physio_premium_price', 2000);
+            $monthly_12_fallback = 0;
+            $monthly_24_fallback = 0;
+        } else {
+            $daily_12_fallback = get_option('ecare_default_daily_12_price', 1700);
+            $daily_24_fallback = get_option('ecare_default_daily_24_price', 2200);
+            $monthly_12_fallback = get_option('ecare_default_monthly_12_price', 30000);
+            $monthly_24_fallback = get_option('ecare_default_monthly_24_price', 50000);
+        }
+
         $meta = array(
-            'provider_type'    => get_post_meta($id, '_provider_type', true),
+            'provider_type'    => $provider_type,
             'skills'           => get_post_meta($id, '_skills', true),
             'education'        => get_post_meta($id, '_education', true),
             'experience'       => get_post_meta($id, '_experience', true),
-            'daily_12_price'   => get_post_meta($id, '_daily_12_price', true) ?: get_option('ecare_default_daily_12_price', 1700),
-            'daily_24_price'   => get_post_meta($id, '_daily_24_price', true) ?: get_option('ecare_default_daily_24_price', 2200),
-            'monthly_12_price' => get_post_meta($id, '_monthly_12_price', true) ?: get_option('ecare_default_monthly_12_price', 30000),
-            'monthly_24_price' => get_post_meta($id, '_monthly_24_price', true) ?: get_option('ecare_default_monthly_24_price', 50000),
+            'daily_12_price'   => get_post_meta($id, '_daily_12_price', true) ?: $daily_12_fallback,
+            'daily_24_price'   => get_post_meta($id, '_daily_24_price', true) ?: $daily_24_fallback,
+            'monthly_12_price' => get_post_meta($id, '_monthly_12_price', true) ?: $monthly_12_fallback,
+            'monthly_24_price' => get_post_meta($id, '_monthly_24_price', true) ?: $monthly_24_fallback,
             'photo_url'        => get_post_meta($id, '_photo_url', true),
         );
 
@@ -270,37 +283,7 @@ class ECare_Ajax {
         $html .= '      <textarea name="disease" placeholder="Describe symptoms or diseases if any..."></textarea>';
         $html .= '    </div>';
         
-        // Package Duration Selector inside Modal
-        $html .= '    <div class="ecare-form-field full-width" style="margin-top:10px;">';
-        $html .= '      <label>Select Duration Package</label>';
-        $html .= '      <div class="ecare-package-tabs">';
-        
-        $packages = array(
-            'daily_12'   => array('label' => 'Daily (12 Hours)', 'price' => $meta['daily_12_price']),
-            'daily_24'   => array('label' => 'Daily (24 Hours)', 'price' => $meta['daily_24_price']),
-            'monthly_12' => array('label' => 'Monthly (12 Hours)', 'price' => $meta['monthly_12_price']),
-            'monthly_24' => array('label' => 'Monthly (24 Hours)', 'price' => $meta['monthly_24_price']),
-        );
-        
-        $first_key = '';
-        $first_price = 0;
-        foreach ($packages as $key => $pkg) {
-            if ($pkg['price']) {
-                $is_active = empty($first_key) ? 'active' : '';
-                if ($is_active) {
-                    $first_key = $key;
-                    $first_price = $pkg['price'];
-                }
-                
-                $html .= '      <div class="ecare-package-tab ' . $is_active . '" data-package="' . esc_attr($key) . '">';
-                $html .= '        <input type="radio" name="package_type" value="' . esc_attr($key) . '" data-price="' . esc_attr($pkg['price']) . '" ' . checked($is_active, 'active', false) . ' style="display:none;" />';
-                $html .= '        <span class="ecare-pkg-label">' . esc_html($pkg['label']) . '</span>';
-                $html .= '        <span class="ecare-pkg-price">৳ ' . esc_html(number_format($pkg['price'])) . '</span>';
-                $html .= '      </div>';
-            }
-        }
-        $html .= '      </div>'; // End package row
-        $html .= '    </div>'; // End field
+        $html .= '  <input type="hidden" name="package_type" id="ecare-booking-package-val" value="" />';
         
         $html .= '  </div>'; // End info-grid
         
@@ -315,12 +298,8 @@ class ECare_Ajax {
         $html .= '    </div>';
         $html .= '  </div>';
         
-        // Cost details and Book button
-        $html .= '  <div style="display:flex;align-items:center;justify-content:space-between;border-top:1.5px solid var(--border-light);padding-top:18px;margin-top:24px;">';
-        $html .= '    <div>';
-        $html .= '      <span style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;">Estimated Pricing</span>';
-        $html .= '      <span style="font-size:20px;font-weight:800;color:var(--brand-teal);">৳ <span id="ecare-price-display">' . esc_html(number_format($first_price)) . '</span></span>';
-        $html .= '    </div>';
+        // Book button
+        $html .= '  <div style="display:flex;justify-content:flex-end;border-top:1.5px solid var(--border-light);padding-top:18px;margin-top:24px;">';
         $html .= '    <button type="submit" class="ecare-submit-booking-btn">Book Caregiver</button>';
         $html .= '  </div>';
         
@@ -368,12 +347,20 @@ class ECare_Ajax {
         if (isset($price_map[$package_type])) {
             $price = floatval(get_post_meta($caregiver_id, $price_map[$package_type], true));
             if (!$price) {
-                $option_map = array(
-                    'daily_12'   => 'ecare_default_daily_12_price',
-                    'daily_24'   => 'ecare_default_daily_24_price',
-                    'monthly_12' => 'ecare_default_monthly_12_price',
-                    'monthly_24' => 'ecare_default_monthly_24_price',
-                );
+                $provider_type = get_post_meta($caregiver_id, '_provider_type', true);
+                if ($provider_type === 'Physiotherapist') {
+                    $option_map = array(
+                        'daily_12' => 'ecare_default_physio_regular_price',
+                        'daily_24' => 'ecare_default_physio_premium_price',
+                    );
+                } else {
+                    $option_map = array(
+                        'daily_12'   => 'ecare_default_daily_12_price',
+                        'daily_24'   => 'ecare_default_daily_24_price',
+                        'monthly_12' => 'ecare_default_monthly_12_price',
+                        'monthly_24' => 'ecare_default_monthly_24_price',
+                    );
+                }
                 if (isset($option_map[$package_type])) {
                     $price = floatval(get_option($option_map[$package_type], 0));
                 }
@@ -1062,11 +1049,15 @@ class ECare_Ajax {
         $daily_24   = floatval($_POST['daily_24'] ?? 2200);
         $monthly_12 = floatval($_POST['monthly_12'] ?? 30000);
         $monthly_24 = floatval($_POST['monthly_24'] ?? 50000);
+        $physio_reg  = floatval($_POST['physio_regular'] ?? 1500);
+        $physio_prem = floatval($_POST['physio_premium'] ?? 2000);
 
         update_option('ecare_default_daily_12_price', $daily_12);
         update_option('ecare_default_daily_24_price', $daily_24);
         update_option('ecare_default_monthly_12_price', $monthly_12);
         update_option('ecare_default_monthly_24_price', $monthly_24);
+        update_option('ecare_default_physio_regular_price', $physio_reg);
+        update_option('ecare_default_physio_premium_price', $physio_prem);
 
         wp_send_json_success(array('message' => 'Default package prices updated successfully!'));
     }

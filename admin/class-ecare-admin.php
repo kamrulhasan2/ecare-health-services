@@ -504,6 +504,17 @@ class ECare_Admin {
                             <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Monthly (24 Hours) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
                             <input type="number" id="ecare-pkg-monthly-24" name="monthly_24" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_monthly_24_price', 50000)); ?>" required />
                         </div>
+                        <div style="margin-bottom:15px; border-top: 1px dashed #E2E8F0; padding-top: 15px;">
+                            <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:10px;"><?php _e('Physiotherapist Packages', 'ecare-health-services'); ?></label>
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Daily Regular (1 Hour) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
+                            <input type="number" id="ecare-pkg-physio-regular" name="physio_regular" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_physio_regular_price', 1500)); ?>" required />
+                        </div>
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Daily Premium (1 Hour) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
+                            <input type="number" id="ecare-pkg-physio-premium" name="physio_premium" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_physio_premium_price', 2000)); ?>" required />
+                        </div>
 
                         <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E2E8F0; padding-top:15px;">
                             <button type="button" id="ecare-close-packages-modal" class="button button-secondary" style="padding: 6px 12px; height: auto;"><?php _e('Cancel', 'ecare-health-services'); ?></button>
