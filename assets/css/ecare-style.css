@@ -90,6 +90,48 @@
   font-weight: 600;
   box-shadow: 0 4px 12px rgba(24, 184, 163, 0.15);
 }
+/* Dynamic tab active styling treatments matching mockup */
+.ecare-type-tab[data-type="Nurse"].active {
+  background-color: #FEF3C7;
+  border-color: #F59E0B;
+  color: #D97706;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+.ecare-type-tab[data-type="Nurse"].active .ecare-tab-icon {
+  background: #FFFBEB;
+  color: #D97706;
+}
+.ecare-type-tab[data-type="Senior Care"].active {
+  background-color: #E0F2FE;
+  border-color: #0284C7;
+  color: #0369A1;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
+}
+.ecare-type-tab[data-type="Senior Care"].active .ecare-tab-icon {
+  background: #F0F9FF;
+  color: #0369A1;
+}
+.ecare-type-tab[data-type="Nanny"].active {
+  background-color: #FCE7F3;
+  border-color: #DB2777;
+  color: #BE185D;
+  box-shadow: 0 4px 12px rgba(219, 39, 119, 0.15);
+}
+.ecare-type-tab[data-type="Nanny"].active .ecare-tab-icon {
+  background: #FDF2F8;
+  color: #BE185D;
+}
+.ecare-type-tab[data-type="Physiotherapist"].active {
+  background-color: #E6F7F5;
+  border-color: #18B8A3;
+  color: #0F8A7A;
+  box-shadow: 0 4px 12px rgba(24, 184, 163, 0.15);
+}
+.ecare-type-tab[data-type="Physiotherapist"].active .ecare-tab-icon {
+  background: #F0FDFA;
+  color: #0F8A7A;
+}
+
 .ecare-type-tab .ecare-tab-icon {
   width: 34px;
   height: 34px;
@@ -101,6 +143,7 @@
   font-size: 17px;
   flex-shrink: 0;
   transition: all 0.25s ease;
+  overflow: hidden;
 }
 .ecare-type-tab.active .ecare-tab-icon {
   background: var(--bg-main);

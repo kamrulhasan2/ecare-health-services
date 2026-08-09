@@ -189,18 +189,28 @@
             contentType: false,
             success: function(response) {
                 if (response.success) {
-                    $('#ecare-booking-form').html(
-                        '<div class="ecare-form-response success" style="margin-top:20px;">' + 
-                        '  <strong>Success!</strong> ' + response.data.message + 
-                        '</div>'
-                    );
-                    
-                    // Redirect back to list after 3 seconds as required by specification
-                    setTimeout(function() {
-                        $('#ecare-caregiver-detail-modal').fadeOut(200, function() {
-                            loadCaregivers();
-                        });
-                    }, 3000);
+                    if (response.data.checkout_url) {
+                        $('#ecare-booking-form').html(
+                            '<div class="ecare-form-response success" style="margin-top:20px;">' + 
+                            '  <strong>Success!</strong> ' + response.data.message + '<br>Redirecting to checkout...' + 
+                            '</div>'
+                        );
+                        setTimeout(function() {
+                            window.location.href = response.data.checkout_url;
+                        }, 2000);
+                    } else {
+                        $('#ecare-booking-form').html(
+                            '<div class="ecare-form-response success" style="margin-top:20px;">' + 
+                            '  <strong>Success!</strong> ' + response.data.message + 
+                            '</div>'
+                        );
+                        // Redirect back to list after 3 seconds as required by specification
+                        setTimeout(function() {
+                            $('#ecare-caregiver-detail-modal').fadeOut(200, function() {
+                                loadCaregivers();
+                            });
+                        }, 3000);
+                    }
                 } else {
                     alert(response.data.message);
                     $btn.prop('disabled', false).text(origText);
@@ -577,6 +587,155 @@
                 alert(response.data.message);
             }
         });
+    });
+
+    // ================================================================
+    // 7. TAXONOMY MEDIA UPLOADER (Caregiver Type Image)
+    // ================================================================
+    $(document).on('click', '.ecare_upload_media_btn', function(e) {
+        e.preventDefault();
+        var $btn = $(this);
+        var $input = $('#caregiver_type_image');
+        var $preview = $('#caregiver_type_image_preview');
+        var $removeBtn = $('.ecare_remove_media_btn');
+
+        var uploader = wp.media({
+            title: 'Choose Caregiver Type Image',
+            button: {
+                text: 'Select Image'
+            },
+            multiple: false
+        }).on('select', function() {
+            var attachment = uploader.state().get('selection').first().toJSON();
+            $input.val(attachment.id);
+            $preview.html('<img src="' + attachment.url + '" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:1px solid #ddd;display:block;" />');
+            $removeBtn.show();
+            $btn.val('Change Image');
+        }).open();
+    });
+
+    $(document).on('click', '.ecare_remove_media_btn', function(e) {
+        e.preventDefault();
+        $('#caregiver_type_image').val('');
+        $('#caregiver_type_image_preview').html('');
+        $(this).hide();
+        $('.ecare_upload_media_btn').val('Upload Image');
+    });
+
+    // ================================================================
+    // 8. ADMIN CASCADING DROPDOWNS (Lab Test Edit Locations)
+    // ================================================================
+    if ($('#ecare-admin-division').length) {
+        var selectedDiv = $('#ecare-admin-division').data('selected');
+        var selectedDist = $('#ecare-admin-district').data('selected');
+        var selectedArea = $('#ecare-admin-area').data('selected');
+        var selectedProv = $('#ecare-admin-provider').data('selected');
+
+        // Load divisions
+        $.post(ecare_ajax.ajax_url, {
+            action: 'ecare_get_locations',
+            nonce: ecare_ajax.nonce,
+            location_type: 'division',
+            parent_id: 0
+        }, function(response) {
+            if (response.success) {
+                var $select = $('#ecare-admin-division');
+                $.each(response.data.locations, function(i, loc) {
+                    var selectedAttr = (loc.name === selectedDiv) ? ' selected' : '';
+                    $select.append('<option value="' + loc.name.replace(/"/g, '&quot;') + '" data-id="' + loc.id + '"' + selectedAttr + '>' + loc.name + '</option>');
+                });
+                if (selectedDiv) {
+                    $select.trigger('change');
+                }
+            }
+        });
+    }
+
+    $(document).on('change', '#ecare-admin-division', function() {
+        var $opt = $(this).find('option:selected');
+        var parentId = $opt.data('id');
+        var selectedDist = $('#ecare-admin-district').data('selected');
+        
+        $('#ecare-admin-district').html('<option value="">Select District</option>').prop('disabled', true);
+        $('#ecare-admin-area').html('<option value="">Select Area</option>').prop('disabled', true);
+        $('#ecare-admin-provider').html('<option value="">Select Provider</option>').prop('disabled', true);
+
+        if (parentId) {
+            $.post(ecare_ajax.ajax_url, {
+                action: 'ecare_get_locations',
+                nonce: ecare_ajax.nonce,
+                location_type: 'district',
+                parent_id: parentId
+            }, function(response) {
+                if (response.success) {
+                    var $select = $('#ecare-admin-district');
+                    $.each(response.data.locations, function(i, loc) {
+                        var selectedAttr = (loc.name === selectedDist) ? ' selected' : '';
+                        $select.append('<option value="' + loc.name.replace(/"/g, '&quot;') + '" data-id="' + loc.id + '"' + selectedAttr + '>' + loc.name + '</option>');
+                    });
+                    $select.prop('disabled', false);
+                    if (selectedDist) {
+                        $select.trigger('change');
+                    }
+                }
+            });
+        }
+    });
+
+    $(document).on('change', '#ecare-admin-district', function() {
+        var $opt = $(this).find('option:selected');
+        var parentId = $opt.data('id');
+        var selectedArea = $('#ecare-admin-area').data('selected');
+        
+        $('#ecare-admin-area').html('<option value="">Select Area</option>').prop('disabled', true);
+        $('#ecare-admin-provider').html('<option value="">Select Provider</option>').prop('disabled', true);
+
+        if (parentId) {
+            $.post(ecare_ajax.ajax_url, {
+                action: 'ecare_get_locations',
+                nonce: ecare_ajax.nonce,
+                location_type: 'area',
+                parent_id: parentId
+            }, function(response) {
+                if (response.success) {
+                    var $select = $('#ecare-admin-area');
+                    $.each(response.data.locations, function(i, loc) {
+                        var selectedAttr = (loc.name === selectedArea) ? ' selected' : '';
+                        $select.append('<option value="' + loc.name.replace(/"/g, '&quot;') + '" data-id="' + loc.id + '"' + selectedAttr + '>' + loc.name + '</option>');
+                    });
+                    $select.prop('disabled', false);
+                    if (selectedArea) {
+                        $select.trigger('change');
+                    }
+                }
+            });
+        }
+    });
+
+    $(document).on('change', '#ecare-admin-area', function() {
+        var $opt = $(this).find('option:selected');
+        var parentId = $opt.data('id');
+        var selectedProv = $('#ecare-admin-provider').data('selected');
+        
+        $('#ecare-admin-provider').html('<option value="">Select Provider</option>').prop('disabled', true);
+
+        if (parentId) {
+            $.post(ecare_ajax.ajax_url, {
+                action: 'ecare_get_locations',
+                nonce: ecare_ajax.nonce,
+                location_type: 'lab_provider',
+                parent_id: parentId
+            }, function(response) {
+                if (response.success) {
+                    var $select = $('#ecare-admin-provider');
+                    $.each(response.data.locations, function(i, loc) {
+                        var selectedAttr = (loc.name === selectedProv) ? ' selected' : '';
+                        $select.append('<option value="' + loc.name.replace(/"/g, '&quot;') + '" data-id="' + loc.id + '"' + selectedAttr + '>' + loc.name + '</option>');
+                    });
+                    $select.prop('disabled', false);
+                }
+            });
+        }
     });
 
 })(jQuery);

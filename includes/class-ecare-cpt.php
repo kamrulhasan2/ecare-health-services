@@ -5,6 +5,7 @@ class ECare_CPT {
 
     public static function init() {
         add_action('init', array(__CLASS__, 'register_caregiver_cpt'));
+        add_action('init', array(__CLASS__, 'register_caregiver_type_taxonomy'));
         add_action('init', array(__CLASS__, 'register_lab_test_cpt'));
         add_action('init', array(__CLASS__, 'register_ambulance_provider_cpt'));
 
@@ -34,6 +35,35 @@ class ECare_CPT {
             'show_in_menu' => false,
             'rewrite'      => array('slug' => 'care-provider'),
         ));
+    }
+
+    public static function register_caregiver_type_taxonomy() {
+        register_taxonomy('ecare_caregiver_type', 'ecare_caregiver', array(
+            'labels' => array(
+                'name'              => __('Caregiver Types', 'ecare-health-services'),
+                'singular_name'     => __('Caregiver Type', 'ecare-health-services'),
+                'search_items'      => __('Search Caregiver Types', 'ecare-health-services'),
+                'all_items'         => __('All Caregiver Types', 'ecare-health-services'),
+                'edit_item'         => __('Edit Caregiver Type', 'ecare-health-services'),
+                'update_item'       => __('Update Caregiver Type', 'ecare-health-services'),
+                'add_new_item'      => __('Add New Caregiver Type', 'ecare-health-services'),
+                'new_item_name'     => __('New Caregiver Type Name', 'ecare-health-services'),
+                'menu_name'         => __('Caregiver Types', 'ecare-health-services'),
+            ),
+            'hierarchical'      => true,
+            'show_ui'           => true,
+            'show_admin_column' => true,
+            'query_var'         => true,
+            'rewrite'           => array('slug' => 'caregiver-type'),
+        ));
+
+        // Seed default terms
+        $default_types = array('Nurse', 'Senior Care', 'Nanny', 'Physiotherapist');
+        foreach ($default_types as $type) {
+            if (!term_exists($type, 'ecare_caregiver_type')) {
+                wp_insert_term($type, 'ecare_caregiver_type');
+            }
+        }
     }
 
     public static function register_lab_test_cpt() {
@@ -198,10 +228,38 @@ class ECare_CPT {
             <tr><th><label>Category</label></th><td><input type="text" name="_test_category" value="<?php echo esc_attr($fields['category']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Sample Type</label></th><td><input type="text" name="_sample_type" value="<?php echo esc_attr($fields['sample_type']); ?>" class="regular-text" placeholder="Blood, Urine, etc." /></td></tr>
             <tr><th><label>Turnaround Days</label></th><td><input type="number" name="_turnaround_days" value="<?php echo esc_attr($fields['turnaround_days']); ?>" class="regular-text" /></td></tr>
-            <tr><th><label>Lab Provider</label></th><td><input type="text" name="_lab_provider" value="<?php echo esc_attr($fields['lab_provider']); ?>" class="regular-text" /></td></tr>
-            <tr><th><label>Division</label></th><td><input type="text" name="_division" value="<?php echo esc_attr($fields['division']); ?>" class="regular-text" /></td></tr>
-            <tr><th><label>District</label></th><td><input type="text" name="_district" value="<?php echo esc_attr($fields['district']); ?>" class="regular-text" /></td></tr>
-            <tr><th><label>Area</label></th><td><input type="text" name="_area" value="<?php echo esc_attr($fields['area']); ?>" class="regular-text" /></td></tr>
+            <tr>
+                <th><label>Division</label></th>
+                <td>
+                    <select name="_division" id="ecare-admin-division" class="regular-text" data-selected="<?php echo esc_attr($fields['division']); ?>">
+                        <option value="">Select Division</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th><label>District</label></th>
+                <td>
+                    <select name="_district" id="ecare-admin-district" class="regular-text" data-selected="<?php echo esc_attr($fields['district']); ?>" disabled>
+                        <option value="">Select District</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th><label>Area</label></th>
+                <td>
+                    <select name="_area" id="ecare-admin-area" class="regular-text" data-selected="<?php echo esc_attr($fields['area']); ?>" disabled>
+                        <option value="">Select Area</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th><label>Lab Provider</label></th>
+                <td>
+                    <select name="_lab_provider" id="ecare-admin-provider" class="regular-text" data-selected="<?php echo esc_attr($fields['lab_provider']); ?>" disabled>
+                        <option value="">Select Provider</option>
+                    </select>
+                </td>
+            </tr>
             <tr><th><label>Status</label></th><td><select name="_test_status"><option value="active" <?php selected($fields['status'], 'active'); ?>>Active</option><option value="inactive" <?php selected($fields['status'], 'inactive'); ?>>Inactive</option></select></td></tr>
         </table>
         <?php
@@ -245,6 +303,13 @@ class ECare_CPT {
             foreach ($keys as $key) {
                 if (isset($_POST[$key])) {
                     update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));
+                }
+            }
+            if (isset($_POST['_provider_type'])) {
+                $term_name = sanitize_text_field($_POST['_provider_type']);
+                $term = get_term_by('name', $term_name, 'ecare_caregiver_type');
+                if ($term) {
+                    wp_set_post_terms($post_id, array($term->term_id), 'ecare_caregiver_type');
                 }
             }
 

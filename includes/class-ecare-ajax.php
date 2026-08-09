@@ -340,8 +340,8 @@ class ECare_Ajax {
         
         $patient_booking_name = $patient_name ?: $family_member;
 
-        if (!$caregiver_id || !$required_date || !$address || !$contact_phone) {
-            wp_send_json_error(array('message' => 'Please fill in all required fields.'));
+        if (!$caregiver_id || !$required_date || !$address || !$contact_phone || !$package_type) {
+            wp_send_json_error(array('message' => 'Please fill in all required fields, including duration package.'));
         }
 
         $price = 0;
@@ -355,12 +355,18 @@ class ECare_Ajax {
             $price = floatval(get_post_meta($caregiver_id, $price_map[$package_type], true));
         }
 
-        // File upload
+        // File upload using standard WordPress media_handle_upload
         $file_urls = '';
         if (!empty($_FILES['booking_file']) && !empty($_FILES['booking_file']['name'])) {
-            $uploaded = self::handle_file_upload($_FILES['booking_file']);
-            if ($uploaded) {
-                $file_urls = esc_url($uploaded);
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+
+            $doc_id = media_handle_upload('booking_file', 0);
+            if (!is_wp_error($doc_id)) {
+                $file_urls = wp_get_attachment_url($doc_id);
+            } else {
+                wp_send_json_error(array('message' => 'File upload failed: ' . $doc_id->get_error_message()));
             }
         }
 
@@ -436,18 +442,33 @@ class ECare_Ajax {
         $monthly_12    = floatval($_POST['monthly_12_price'] ?? 0);
         $monthly_24    = floatval($_POST['monthly_24_price'] ?? 0);
 
+        $password      = $_POST['password'] ?? '';
+        $confirm_pass  = $_POST['confirm_password'] ?? '';
+
         if (!$full_name || !$email || !$phone || !$provider_type || !$nid_passport) {
             wp_send_json_error(array('message' => 'Please fill in all required fields.'));
         }
 
-        // Handle profile photo
-        $photo_id = 0;
-        if (!empty($_FILES['care_photo']) && !empty($_FILES['care_photo']['name'])) {
-            $photo_url = self::handle_file_upload($_FILES['care_photo']);
-            if ($photo_url) {
-                // Insert as attachment to set as featured image
-                $photo_id = self::insert_attachment_from_url($photo_url);
-            }
+        if (empty($password) || $password !== $confirm_pass) {
+            wp_send_json_error(array('message' => 'Passwords do not match or are empty.'));
+        }
+
+        if (email_exists($email)) {
+            wp_send_json_error(array('message' => 'This email address is already registered.'));
+        }
+
+        // Create standard WordPress subscriber user
+        $user_id = wp_insert_user(array(
+            'user_login'   => $email,
+            'user_email'   => $email,
+            'user_pass'    => $password,
+            'display_name' => $full_name,
+            'first_name'   => $full_name,
+            'role'         => 'subscriber'
+        ));
+
+        if (is_wp_error($user_id)) {
+            wp_send_json_error(array('message' => 'Registration failed: ' . $user_id->get_error_message()));
         }
 
         $post_id = wp_insert_post(array(
@@ -455,14 +476,31 @@ class ECare_Ajax {
             'post_type'    => 'ecare_caregiver',
             'post_status'  => 'publish',
             'post_content' => $education,
+            'post_author'  => $user_id,
         ));
 
         if (is_wp_error($post_id)) {
             wp_send_json_error(array('message' => 'Registration failed. Please try again.'));
         }
 
+        update_post_meta($post_id, '_user_id', $user_id);
+
+        // Handle profile photo using media_handle_upload
+        $photo_id = 0;
+        if (!empty($_FILES['care_photo']) && !empty($_FILES['care_photo']['name'])) {
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+
+            $photo_id = media_handle_upload('care_photo', $post_id);
+            if (is_wp_error($photo_id)) {
+                $photo_id = 0;
+            }
+        }
+
         if ($photo_id) {
             set_post_thumbnail($post_id, $photo_id);
+            update_post_meta($post_id, '_photo_url', wp_get_attachment_url($photo_id));
         }
 
         update_post_meta($post_id, '_provider_type', $provider_type);
@@ -484,12 +522,22 @@ class ECare_Ajax {
         update_post_meta($post_id, '_email', $email);
         update_post_meta($post_id, '_phone', $phone);
 
-        // Upload verification document
+        // Upload verification document using standard media library
         if (!empty($_FILES['credentials_doc']) && !empty($_FILES['credentials_doc']['name'])) {
-            $doc_url = self::handle_file_upload($_FILES['credentials_doc']);
-            if ($doc_url) {
-                update_post_meta($post_id, '_verification_doc', esc_url($doc_url));
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+
+            $doc_id = media_handle_upload('credentials_doc', $post_id);
+            if (!is_wp_error($doc_id)) {
+                update_post_meta($post_id, '_verification_doc', wp_get_attachment_url($doc_id));
             }
+        }
+
+        // Synchronize ecare_caregiver_type taxonomy
+        $term = get_term_by('name', $provider_type, 'ecare_caregiver_type');
+        if ($term) {
+            wp_set_post_terms($post_id, array($term->term_id), 'ecare_caregiver_type');
         }
 
         wp_send_json_success(array('message' => 'Caregiver Registration submitted successfully! We will review your application and approve it.'));
@@ -713,8 +761,33 @@ class ECare_Ajax {
         $ambulance_type = sanitize_text_field($_POST['ambulance_type'] ?? '');
         $base_price     = floatval($_POST['base_price'] ?? 0);
 
+        $password       = $_POST['password'] ?? '';
+        $confirm_pass   = $_POST['confirm_password'] ?? '';
+
         if (!$provider_name || !$email || !$phone || !$license_plate || !$driver_name || !$driver_license) {
             wp_send_json_error(array('message' => 'Please fill in all required fields.'));
+        }
+
+        if (empty($password) || $password !== $confirm_pass) {
+            wp_send_json_error(array('message' => 'Passwords do not match or are empty.'));
+        }
+
+        if (email_exists($email)) {
+            wp_send_json_error(array('message' => 'This email address is already registered.'));
+        }
+
+        // Create standard WordPress subscriber user
+        $user_id = wp_insert_user(array(
+            'user_login'   => $email,
+            'user_email'   => $email,
+            'user_pass'    => $password,
+            'display_name' => $provider_name,
+            'first_name'   => $provider_name,
+            'role'         => 'subscriber'
+        ));
+
+        if (is_wp_error($user_id)) {
+            wp_send_json_error(array('message' => 'Registration failed: ' . $user_id->get_error_message()));
         }
 
         $post_id = wp_insert_post(array(
@@ -722,11 +795,14 @@ class ECare_Ajax {
             'post_type'    => 'ecare_ambulance',
             'post_status'  => 'publish',
             'post_content' => '',
+            'post_author'  => $user_id,
         ));
 
         if (is_wp_error($post_id)) {
             wp_send_json_error(array('message' => 'Registration failed.'));
         }
+
+        update_post_meta($post_id, '_user_id', $user_id);
 
         update_post_meta($post_id, '_license_plate', $license_plate);
         update_post_meta($post_id, '_vehicle_model', $vehicle_model);
@@ -739,11 +815,15 @@ class ECare_Ajax {
         update_post_meta($post_id, '_email', $email);
         update_post_meta($post_id, '_phone', $phone);
 
-        // File upload
+        // File upload using standard media_handle_upload
         if (!empty($_FILES['credentials_doc']) && !empty($_FILES['credentials_doc']['name'])) {
-            $doc_url = self::handle_file_upload($_FILES['credentials_doc']);
-            if ($doc_url) {
-                update_post_meta($post_id, '_verification_doc', esc_url($doc_url));
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+
+            $doc_id = media_handle_upload('credentials_doc', $post_id);
+            if (!is_wp_error($doc_id)) {
+                update_post_meta($post_id, '_verification_doc', wp_get_attachment_url($doc_id));
             }
         }
 
@@ -858,7 +938,14 @@ class ECare_Ajax {
         $product_id = wc_get_product_id_by_sku($sku);
 
         if ($product_id) {
-            return wc_get_product($product_id);
+            $product = wc_get_product($product_id);
+            if ($product && (floatval($product->get_price()) !== floatval($price) || $product->get_name() !== $name)) {
+                $product->set_name($name);
+                $product->set_price($price);
+                $product->set_regular_price($price);
+                $product->save();
+            }
+            return $product;
         }
 
         $product = new WC_Product_Simple();
@@ -878,6 +965,13 @@ class ECare_Ajax {
         $product_id = wc_get_product_id_by_sku($sku);
 
         if ($product_id) {
+            $product = wc_get_product($product_id);
+            if ($product && (floatval($product->get_price()) !== floatval($price) || $product->get_name() !== $title)) {
+                $product->set_name($title);
+                $product->set_price($price);
+                $product->set_regular_price($price);
+                $product->save();
+            }
             return $product_id;
         }
 

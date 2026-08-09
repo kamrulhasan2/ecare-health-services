@@ -73,6 +73,7 @@ final class ECare_Health_Services {
     }
 
     public function admin_enqueue_scripts($hook) {
+        wp_enqueue_media();
         wp_enqueue_style('google-font-inter', 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap', array(), null);
         wp_enqueue_style('ecare-admin-style', ECARE_PLUGIN_URL . 'assets/css/ecare-style.css', array(), ECARE_VERSION);
         wp_enqueue_script('ecare-admin-script', ECARE_PLUGIN_URL . 'assets/js/ecare-script.js', array('jquery'), ECARE_VERSION, true);

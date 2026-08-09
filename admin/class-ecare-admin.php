@@ -6,6 +6,14 @@ class ECare_Admin {
     public static function init() {
         add_action('admin_menu', array(__CLASS__, 'add_admin_menus'), 20);
         add_action('admin_post_ecare_export_bookings', array(__CLASS__, 'export_bookings_csv'));
+
+        // Caregiver Type Term Image meta hooks
+        add_action('ecare_caregiver_type_add_form_fields', array(__CLASS__, 'add_caregiver_type_image_field'), 10, 2);
+        add_action('ecare_caregiver_type_edit_form_fields', array(__CLASS__, 'edit_caregiver_type_image_field'), 10, 2);
+        add_action('created_ecare_caregiver_type', array(__CLASS__, 'save_caregiver_type_image'));
+        add_action('edited_ecare_caregiver_type', array(__CLASS__, 'save_caregiver_type_image'));
+        add_filter('manage_edit-ecare_caregiver_type_columns', array(__CLASS__, 'add_caregiver_type_columns'));
+        add_filter('manage_ecare_caregiver_type_custom_column', array(__CLASS__, 'render_caregiver_type_column_content'), 10, 3);
     }
 
     public static function add_admin_menus() {
@@ -825,5 +833,72 @@ class ECare_Admin {
 
         fclose($output);
         exit;
+    }
+
+    public static function add_caregiver_type_image_field($taxonomy) {
+        ?>
+        <div class="form-field term-group">
+            <label for="caregiver_type_image"><?php _e('Type Image / Icon', 'ecare-health-services'); ?></label>
+            <input type="hidden" id="caregiver_type_image" name="caregiver_type_image" value="" />
+            <div id="caregiver_type_image_preview" style="margin-bottom: 10px;"></div>
+            <p>
+                <input type="button" class="button button-secondary ecare_upload_media_btn" value="<?php esc_attr_e('Upload Image', 'ecare-health-services'); ?>" />
+                <input type="button" class="button button-secondary ecare_remove_media_btn" value="<?php esc_attr_e('Remove Image', 'ecare-health-services'); ?>" style="display:none;" />
+            </p>
+        </div>
+        <?php
+    }
+
+    public static function edit_caregiver_type_image_field($term, $taxonomy) {
+        $image_id = get_term_meta($term->term_id, 'caregiver_type_image', true);
+        $image_url = $image_id ? wp_get_attachment_url($image_id) : '';
+        ?>
+        <tr class="form-field term-group-wrap">
+            <th scope="row"><label for="caregiver_type_image"><?php _e('Type Image / Icon', 'ecare-health-services'); ?></label></th>
+            <td>
+                <input type="hidden" id="caregiver_type_image" name="caregiver_type_image" value="<?php echo esc_attr($image_id); ?>" />
+                <div id="caregiver_type_image_preview" style="margin-bottom: 10px;">
+                    <?php if ($image_url): ?>
+                        <img src="<?php echo esc_url($image_url); ?>" style="width: 80px; height: 80px; display: block; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;" />
+                    <?php endif; ?>
+                </div>
+                <p>
+                    <input type="button" class="button button-secondary ecare_upload_media_btn" value="<?php esc_attr_e('Upload / Change Image', 'ecare-health-services'); ?>" />
+                    <input type="button" class="button button-secondary ecare_remove_media_btn" value="<?php esc_attr_e('Remove Image', 'ecare-health-services'); ?>" <?php echo $image_url ? '' : 'style="display:none;"'; ?> />
+                </p>
+            </td>
+        </tr>
+        <?php
+    }
+
+    public static function save_caregiver_type_image($term_id) {
+        if (isset($_POST['caregiver_type_image'])) {
+            update_term_meta($term_id, 'caregiver_type_image', sanitize_text_field($_POST['caregiver_type_image']));
+        }
+    }
+
+    public static function add_caregiver_type_columns($columns) {
+        $new_columns = array();
+        foreach ($columns as $key => $value) {
+            if ($key === 'name') {
+                $new_columns['image'] = __('Image', 'ecare-health-services');
+            }
+            $new_columns[$key] = $value;
+        }
+        return $new_columns;
+    }
+
+    public static function render_caregiver_type_column_content($content, $column_name, $term_id) {
+        if ($column_name === 'image') {
+            $image_id = get_term_meta($term_id, 'caregiver_type_image', true);
+            if ($image_id) {
+                $image_url = wp_get_attachment_url($image_id);
+                if ($image_url) {
+                    return '<img src="' . esc_url($image_url) . '" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" />';
+                }
+            }
+            return '<span style="font-size: 20px; color: #ccc;">👤</span>';
+        }
+        return $content;
     }
 }

@@ -28,22 +28,39 @@ class ECare_Shortcodes {
                     <div class="ecare-tab-icon">👥</div>
                     <span><?php _e('All Types', 'ecare-health-services'); ?></span>
                 </div>
-                <div class="ecare-type-tab" data-type="Nurse">
-                    <div class="ecare-tab-icon">🩺</div>
-                    <span><?php _e('Nurse', 'ecare-health-services'); ?></span>
-                </div>
-                <div class="ecare-type-tab" data-type="Senior Care">
-                    <div class="ecare-tab-icon">👵</div>
-                    <span><?php _e('Senior Care', 'ecare-health-services'); ?></span>
-                </div>
-                <div class="ecare-type-tab" data-type="Nanny">
-                    <div class="ecare-tab-icon">👶</div>
-                    <span><?php _e('Nanny', 'ecare-health-services'); ?></span>
-                </div>
-                <div class="ecare-type-tab" data-type="Physiotherapist">
-                    <div class="ecare-tab-icon">🏋️</div>
-                    <span><?php _e('Physiotherapist', 'ecare-health-services'); ?></span>
-                </div>
+                <?php
+                $terms = get_terms(array(
+                    'taxonomy'   => 'ecare_caregiver_type',
+                    'hide_empty' => false,
+                ));
+
+                $default_icons = array(
+                    'Nurse'            => '🩺',
+                    'Senior Care'      => '👵',
+                    'Nanny'            => '👶',
+                    'Physiotherapist'  => '🏋️'
+                );
+
+                if (!is_wp_error($terms) && !empty($terms)):
+                    foreach ($terms as $term):
+                        $image_id = get_term_meta($term->term_id, 'caregiver_type_image', true);
+                        $image_url = $image_id ? wp_get_attachment_url($image_id) : '';
+                        $fallback_emoji = $default_icons[$term->name] ?? '👤';
+                        ?>
+                        <div class="ecare-type-tab" data-type="<?php echo esc_attr($term->name); ?>">
+                            <div class="ecare-tab-icon">
+                                <?php if ($image_url): ?>
+                                    <img src="<?php echo esc_url($image_url); ?>" alt="<?php echo esc_attr($term->name); ?>" class="ecare-type-icon-img" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" />
+                                <?php else: ?>
+                                    <?php echo esc_html($fallback_emoji); ?>
+                                <?php endif; ?>
+                            </div>
+                            <span><?php echo esc_html($term->name); ?></span>
+                        </div>
+                        <?php
+                    endforeach;
+                endif;
+                ?>
             </div>
 
             <!-- Package Selection Cards -->
