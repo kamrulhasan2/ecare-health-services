@@ -198,10 +198,6 @@ class ECare_CPT {
             <tr><th><label>NID/Passport</label></th><td><input type="text" name="_nid_passport" value="<?php echo esc_attr($fields['nid_passport']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Bank Name</label></th><td><input type="text" name="_bank_name" value="<?php echo esc_attr($fields['bank_name']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Bank Account</label></th><td><input type="text" name="_bank_account" value="<?php echo esc_attr($fields['bank_account']); ?>" class="regular-text" /></td></tr>
-            <tr><th><label>Daily 12H Price (৳)</label></th><td><input type="number" step="0.01" name="_daily_12_price" value="<?php echo esc_attr($fields['daily_12_price']); ?>" class="regular-text" /></td></tr>
-            <tr><th><label>Daily 24H Price (৳)</label></th><td><input type="number" step="0.01" name="_daily_24_price" value="<?php echo esc_attr($fields['daily_24_price']); ?>" class="regular-text" /></td></tr>
-            <tr><th><label>Monthly 12H Price (৳)</label></th><td><input type="number" step="0.01" name="_monthly_12_price" value="<?php echo esc_attr($fields['monthly_12_price']); ?>" class="regular-text" /></td></tr>
-            <tr><th><label>Monthly 24H Price (৳)</label></th><td><input type="number" step="0.01" name="_monthly_24_price" value="<?php echo esc_attr($fields['monthly_24_price']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Status</label></th><td><select name="_provider_status"><option value="pending" <?php selected($fields['status'], 'pending'); ?>>Pending</option><option value="approved" <?php selected($fields['status'], 'approved'); ?>>Approved</option><option value="rejected" <?php selected($fields['status'], 'rejected'); ?>>Rejected</option></select></td></tr>
         </table>
         <?php
@@ -299,7 +295,7 @@ class ECare_CPT {
 
         if ($post_type === 'ecare_caregiver') {
             if (!isset($_POST['ecare_caregiver_meta_nonce']) || !wp_verify_nonce($_POST['ecare_caregiver_meta_nonce'], 'ecare_caregiver_meta')) return;
-            $keys = array('_provider_type', '_experience', '_category', '_skills', '_education', '_nid_passport', '_bank_name', '_bank_account', '_daily_12_price', '_daily_24_price', '_monthly_12_price', '_monthly_24_price', '_provider_status', '_phone', '_email', '_gender', '_address_line');
+            $keys = array('_provider_type', '_experience', '_category', '_skills', '_education', '_nid_passport', '_bank_name', '_bank_account', '_provider_status', '_phone', '_email', '_gender', '_address_line');
             foreach ($keys as $key) {
                 if (isset($_POST[$key])) {
                     update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));

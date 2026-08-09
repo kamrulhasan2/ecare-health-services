@@ -828,6 +828,41 @@
         $('.id-upload-type-image-btn').val('Upload Image');
     });
 
+    // Add row in modal
+    $(document).on('click', '#ecare-modal-add-package-row-btn', function() {
+        var rowHtml = '';
+        rowHtml += '<div class="ecare-modal-package-row" style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">';
+        rowHtml += '  <input type="text" name="term_package_labels[]" placeholder="e.g. Daily (12 Hours)" style="flex:2; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px;" required />';
+        rowHtml += '  <input type="number" name="term_package_prices[]" placeholder="Price (৳)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px;" required />';
+        rowHtml += '  <button type="button" class="button ecare-remove-package-row-btn" style="background:#EF4444; color:#fff; border-color:#EF4444; padding:6px 10px; height:auto; line-height:1;">&times;</button>';
+        rowHtml += '</div>';
+        $('#ecare-modal-packages-list').append(rowHtml);
+    });
+
+    // Add row in admin screen (taxonomy edit/create pages)
+    $(document).on('click', '#ecare-add-package-row-btn', function(e) {
+        e.preventDefault();
+        var rowHtml = '';
+        rowHtml += '<div class="ecare-term-package-row" style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">';
+        rowHtml += '  <input type="text" name="term_package_labels[]" placeholder="Duration (e.g. Daily (12 Hours))" style="flex:2;" required />';
+        rowHtml += '  <input type="number" name="term_package_prices[]" placeholder="Price (৳)" style="flex:1;" required />';
+        rowHtml += '  <button type="button" class="button ecare-remove-package-row-btn" style="background:#EF4444; color:#fff; border-color:#EF4444; padding:4px 8px; line-height:1.2;">&times;</button>';
+        rowHtml += '</div>';
+        $('#ecare-term-packages-list').append(rowHtml);
+    });
+
+    // Remove row in both modal and admin screen
+    $(document).on('click', '.ecare-remove-package-row-btn', function(e) {
+        e.preventDefault();
+        var $list = $(this).closest('#ecare-term-packages-list, #ecare-modal-packages-list');
+        var count = $list.find('.ecare-term-package-row, .ecare-modal-package-row').length;
+        if (count > 1) {
+            $(this).parent().remove();
+        } else {
+            alert('At least one package is required.');
+        }
+    });
+
     $(document).on('submit', '#ecare-add-type-form', function(e) {
         e.preventDefault();
         var $form = $(this);
@@ -835,13 +870,24 @@
         var imageId = $('#ecare-new-type-image').val();
         var $btn = $form.find('button[type="submit"]');
 
+        var labels = [];
+        var prices = [];
+        $form.find('input[name="term_package_labels[]"]').each(function() {
+            labels.push($(this).val());
+        });
+        $form.find('input[name="term_package_prices[]"]').each(function() {
+            prices.push($(this).val());
+        });
+
         $btn.prop('disabled', true).text('Adding...');
 
         $.post(ecare_ajax.ajax_url, {
             action: 'ecare_add_caregiver_type',
             nonce: ecare_ajax.nonce,
             type_name: name,
-            image_id: imageId
+            image_id: imageId,
+            term_package_labels: labels,
+            term_package_prices: prices
         }, function(response) {
             if (response.success) {
                 alert(response.data.message);
@@ -854,51 +900,32 @@
     });
 
     // ================================================================
-    // 10. ADMIN EDIT DEFAULT PACKAGES MODAL
+    // 10. ADMIN DELETE CAREGIVER ACTION
     // ================================================================
-    $(document).on('click', '#ecare-edit-packages-btn', function() {
-        $('#ecare-edit-packages-modal').css('display', 'flex');
-    });
-
-    $(document).on('click', '#ecare-close-packages-modal', function() {
-        $('#ecare-edit-packages-modal').hide();
-    });
-
-    $(document).on('submit', '#ecare-edit-packages-form', function(e) {
-        e.preventDefault();
-        var $form = $(this);
-        var daily_12 = $('#ecare-pkg-daily-12').val();
-        var daily_24 = $('#ecare-pkg-daily-24').val();
-        var monthly_12 = $('#ecare-pkg-monthly-12').val();
-        var monthly_24 = $('#ecare-pkg-monthly-24').val();
-        var physio_regular = $('#ecare-pkg-physio-regular').val();
-        var physio_premium = $('#ecare-pkg-physio-premium').val();
-        var $btn = $form.find('button[type="submit"]');
-
-        $btn.prop('disabled', true).text('Saving...');
-
-        $.post(ecare_ajax.ajax_url, {
-            action: 'ecare_save_default_package_prices',
-            nonce: ecare_ajax.nonce,
-            daily_12: daily_12,
-            daily_24: daily_24,
-            monthly_12: monthly_12,
-            monthly_24: monthly_24,
-            physio_regular: physio_regular,
-            physio_premium: physio_premium
-        }, function(response) {
-            if (response && response.success) {
-                alert(response.data.message);
-                window.location.reload();
-            } else {
-                var msg = (response && response.data && response.data.message) ? response.data.message : 'Error: Nonce verification failed or request rejected.';
-                alert(msg);
-                $btn.prop('disabled', false).text('Save Prices');
-            }
-        }).fail(function() {
-            alert('Server error occurred.');
-            $btn.prop('disabled', false).text('Save Prices');
-        });
+    $(document).on('click', '.ecare-delete-provider', function() {
+        var id = $(this).data('id');
+        if (confirm('Are you sure you want to delete this provider? This action is permanent.')) {
+            var $btn = $(this);
+            $btn.prop('disabled', true);
+            
+            $.post(ecare_ajax.ajax_url, {
+                action: 'ecare_delete_caregiver',
+                nonce: ecare_ajax.nonce,
+                provider_id: id
+            }, function(response) {
+                if (response && response.success) {
+                    alert(response.data.message);
+                    window.location.reload();
+                } else {
+                    var msg = (response && response.data && response.data.message) ? response.data.message : 'Failed to delete provider.';
+                    alert(msg);
+                    $btn.prop('disabled', false);
+                }
+            }).fail(function() {
+                alert('Server error occurred.');
+                $btn.prop('disabled', false);
+            });
+        }
     });
 
 })(jQuery);

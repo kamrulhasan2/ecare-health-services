@@ -15,7 +15,7 @@ class ECare_Ajax {
             'submit_ambulance_request',
             'submit_ambulance_registration',
             'add_caregiver_type',
-            'save_default_package_prices',
+            'delete_caregiver',
         );
 
         foreach ($actions as $action) {
@@ -40,31 +40,47 @@ class ECare_Ajax {
         $meta_query = array('relation' => 'AND');
         $meta_query[] = array('key' => '_provider_status', 'value' => 'approved');
 
-        if (!empty($type)) {
-            $meta_query[] = array('key' => '_provider_type', 'value' => $type);
-        }
-
-        // Filter caregivers who have a price set for the requested package (custom rate > 0 OR fallback to default rate)
         if (!empty($package)) {
-            $price_key = '_' . $package . '_price';
-            $meta_query[] = array(
-                'relation' => 'OR',
-                array(
-                    'key'     => $price_key,
-                    'value'   => 0,
-                    'compare' => '>',
-                    'type'    => 'NUMERIC'
-                ),
-                array(
-                    'key'     => $price_key,
-                    'compare' => 'NOT EXISTS'
-                ),
-                array(
-                    'key'     => $price_key,
-                    'value'   => '',
-                    'compare' => '='
-                )
-            );
+            $matching_terms = array();
+            $terms = get_terms(array(
+                'taxonomy'   => 'ecare_caregiver_type',
+                'hide_empty' => false,
+            ));
+            if (!is_wp_error($terms) && !empty($terms)) {
+                foreach ($terms as $term) {
+                    $pkgs = get_term_meta($term->term_id, 'ecare_packages', true);
+                    if (is_array($pkgs)) {
+                        foreach ($pkgs as $pkg) {
+                            if ($pkg['label'] === $package && floatval($pkg['price']) > 0) {
+                                $matching_terms[] = $term->name;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (!empty($matching_terms)) {
+                if (!empty($type)) {
+                    if (in_array($type, $matching_terms)) {
+                        $meta_query[] = array('key' => '_provider_type', 'value' => $type);
+                    } else {
+                        $meta_query[] = array('key' => '_provider_type', 'value' => 'non_existent_type');
+                    }
+                } else {
+                    $meta_query[] = array(
+                        'key'     => '_provider_type',
+                        'value'   => $matching_terms,
+                        'compare' => 'IN'
+                    );
+                }
+            } else {
+                $meta_query[] = array('key' => '_provider_type', 'value' => 'non_existent_type');
+            }
+        } else {
+            if (!empty($type)) {
+                $meta_query[] = array('key' => '_provider_type', 'value' => $type);
+            }
         }
 
         $args = array(
@@ -1032,33 +1048,48 @@ class ECare_Ajax {
             update_term_meta($term_id, 'caregiver_type_image', $image_id);
         }
 
+        if (isset($_POST['term_package_labels']) && isset($_POST['term_package_prices'])) {
+            $labels = $_POST['term_package_labels'];
+            $prices = $_POST['term_package_prices'];
+            $packages = array();
+
+            for ($i = 0; $i < count($labels); $i++) {
+                $label = sanitize_text_field($labels[$i]);
+                $price = floatval($prices[$i]);
+                if (!empty($label)) {
+                    $packages[] = array(
+                        'label' => $label,
+                        'price' => $price
+                    );
+                }
+            }
+            update_term_meta($term_id, 'ecare_packages', $packages);
+        }
+
         wp_send_json_success(array('message' => 'Caregiver Type added successfully!', 'term_id' => $term_id));
     }
 
     /**
-     * Save Default Package Prices via AJAX
+     * Delete Caregiver via AJAX
      */
-    public static function save_default_package_prices() {
+    public static function delete_caregiver() {
         check_ajax_referer('ecare_nonce', 'nonce');
 
         if (!current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Unauthorized access.'));
         }
 
-        $daily_12   = floatval($_POST['daily_12'] ?? 1700);
-        $daily_24   = floatval($_POST['daily_24'] ?? 2200);
-        $monthly_12 = floatval($_POST['monthly_12'] ?? 30000);
-        $monthly_24 = floatval($_POST['monthly_24'] ?? 50000);
-        $physio_reg  = floatval($_POST['physio_regular'] ?? 1500);
-        $physio_prem = floatval($_POST['physio_premium'] ?? 2000);
+        $id = intval($_POST['provider_id'] ?? 0);
+        if (!$id) {
+            wp_send_json_error(array('message' => 'Invalid provider ID.'));
+        }
 
-        update_option('ecare_default_daily_12_price', $daily_12);
-        update_option('ecare_default_daily_24_price', $daily_24);
-        update_option('ecare_default_monthly_12_price', $monthly_12);
-        update_option('ecare_default_monthly_24_price', $monthly_24);
-        update_option('ecare_default_physio_regular_price', $physio_reg);
-        update_option('ecare_default_physio_premium_price', $physio_prem);
+        $deleted = wp_delete_post($id, true);
 
-        wp_send_json_success(array('message' => 'Default package prices updated successfully!'));
+        if ($deleted) {
+            wp_send_json_success(array('message' => 'Provider deleted successfully!'));
+        } else {
+            wp_send_json_error(array('message' => 'Failed to delete provider.'));
+        }
     }
 }

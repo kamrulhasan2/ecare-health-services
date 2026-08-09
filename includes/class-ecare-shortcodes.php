@@ -74,34 +74,9 @@ class ECare_Shortcodes {
             </div>
 
             <!-- Package Selection Cards -->
-            <?php
-            $daily_12_price   = get_option('ecare_default_daily_12_price', 1700);
-            $daily_24_price   = get_option('ecare_default_daily_24_price', 2200);
-            $monthly_12_price = get_option('ecare_default_monthly_12_price', 30000);
-            $monthly_24_price = get_option('ecare_default_monthly_24_price', 50000);
-            ?>
             <label class="ecare-sidebar-label" style="display:block;margin-bottom:10px;"><?php _e('Select Package', 'ecare-health-services'); ?></label>
             <div class="ecare-package-tabs" id="ecare-filter-package">
-                <div class="ecare-package-tab active" data-package="">
-                    <span class="ecare-pkg-label"><?php _e('All Packages', 'ecare-health-services'); ?></span>
-                    <span class="ecare-pkg-price"><?php _e('Show All', 'ecare-health-services'); ?></span>
-                </div>
-                <div class="ecare-package-tab" data-package="daily_12">
-                    <span class="ecare-pkg-label"><?php _e('Daily (12 Hours)', 'ecare-health-services'); ?></span>
-                    <span class="ecare-pkg-price"><?php _e('Total', 'ecare-health-services'); ?> ৳ <?php echo number_format($daily_12_price); ?></span>
-                </div>
-                <div class="ecare-package-tab" data-package="daily_24">
-                    <span class="ecare-pkg-label"><?php _e('Daily (24 Hours)', 'ecare-health-services'); ?></span>
-                    <span class="ecare-pkg-price"><?php _e('Total', 'ecare-health-services'); ?> ৳ <?php echo number_format($daily_24_price); ?></span>
-                </div>
-                <div class="ecare-package-tab" data-package="monthly_12">
-                    <span class="ecare-pkg-label"><?php _e('Monthly (12 Hours)', 'ecare-health-services'); ?></span>
-                    <span class="ecare-pkg-price"><?php _e('Total', 'ecare-health-services'); ?> ৳ <?php echo number_format($monthly_12_price); ?></span>
-                </div>
-                <div class="ecare-package-tab" data-package="monthly_24">
-                    <span class="ecare-pkg-label"><?php _e('Monthly (24 Hours)', 'ecare-health-services'); ?></span>
-                    <span class="ecare-pkg-price"><?php _e('Total', 'ecare-health-services'); ?> ৳ <?php echo number_format($monthly_24_price); ?></span>
-                </div>
+                <!-- Loaded dynamically by Javascript based on selected Caregiver Type -->
             </div>
 
             <!-- Active filter states line matching PDF Page 1 -->

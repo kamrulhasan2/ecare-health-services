@@ -372,7 +372,6 @@ class ECare_Admin {
                     <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search providers...', 'ecare-health-services'); ?>" />
                     <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
                     <button type="button" class="ecare-admin-btn-outline" id="ecare-add-caregiver-type-btn">+ <?php _e('Caregiver Type', 'ecare-health-services'); ?></button>
-                    <button type="button" class="ecare-admin-btn-outline" id="ecare-edit-packages-btn">⚙️ <?php _e('Edit Packages', 'ecare-health-services'); ?></button>
                     <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_caregiver')); ?>" class="ecare-admin-btn-green">+ <?php _e('Register New', 'ecare-health-services'); ?></a>
                 </div>
             </div>
@@ -437,7 +436,8 @@ class ECare_Admin {
                                     </td>
                                     <td>
                                         <div style="display:flex;gap:4px;">
-                                            <a href="<?php echo esc_url(get_edit_post_link($p->ID)); ?>" class="ecare-admin-btn-outline" style="padding:4px 8px;font-size:11px;">✏️</a>
+                                            <a href="<?php echo esc_url(get_edit_post_link($p->ID)); ?>" class="ecare-admin-btn-outline" style="padding:4px 8px;font-size:11px;" title="<?php esc_attr_e('Edit Provider', 'ecare-health-services'); ?>">✏️</a>
+                                            <button type="button" class="ecare-admin-btn-outline ecare-delete-provider" data-id="<?php echo intval($p->ID); ?>" style="padding:4px 8px;font-size:11px;border-color:#EF4444;color:#EF4444;" title="<?php esc_attr_e('Delete Provider', 'ecare-health-services'); ?>">🗑️</button>
                                             <?php if ($status === 'pending'): ?>
                                                 <button class="ecare-admin-btn-green ecare-approve-provider" data-id="<?php echo intval($p->ID); ?>" style="padding:4px 8px;font-size:11px;">✓</button>
                                                 <button class="ecare-admin-btn-outline ecare-reject-provider" data-id="<?php echo intval($p->ID); ?>" style="padding:4px 8px;font-size:11px;border-color:#EF4444;color:#EF4444;">✕</button>
@@ -455,7 +455,7 @@ class ECare_Admin {
 
             <!-- Add Caregiver Type Modal -->
             <div id="ecare-add-type-modal" class="ecare-admin-modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99999; justify-content:center; align-items:center;">
-                <div class="ecare-admin-modal-content" style="background:#fff; padding:30px; border-radius:12px; width:450px; box-shadow:0 10px 25px rgba(0,0,0,0.15); position:relative;">
+                <div class="ecare-admin-modal-content" style="background:#fff; padding:30px; border-radius:12px; width:500px; max-height:85vh; overflow-y:auto; box-shadow:0 10px 25px rgba(0,0,0,0.15); position:relative;">
                     <h3 style="margin-top:0; font-size:18px; font-weight:700; color:#1E293B; margin-bottom:20px;"><?php _e('Add New Caregiver Type', 'ecare-health-services'); ?></h3>
                     
                     <form id="ecare-add-type-form">
@@ -474,51 +474,21 @@ class ECare_Admin {
                             </p>
                         </div>
 
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Duration Packages', 'ecare-health-services'); ?></label>
+                            <div id="ecare-modal-packages-list" style="margin-bottom:10px;">
+                                <div class="ecare-modal-package-row" style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">
+                                    <input type="text" name="term_package_labels[]" placeholder="e.g. Daily (12 Hours)" style="flex:2; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px;" required />
+                                    <input type="number" name="term_package_prices[]" placeholder="Price (৳)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px;" required />
+                                    <button type="button" class="button ecare-remove-package-row-btn" style="background:#EF4444; color:#fff; border-color:#EF4444; padding:6px 10px; height:auto; line-height:1;">&times;</button>
+                                </div>
+                            </div>
+                            <button type="button" id="ecare-modal-add-package-row-btn" class="button button-secondary" style="font-size:12px; padding:4px 8px; height:auto;">+ Add New Field</button>
+                        </div>
+
                         <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E2E8F0; padding-top:15px;">
                             <button type="button" id="ecare-close-type-modal" class="button button-secondary" style="padding: 6px 12px; height: auto;"><?php _e('Cancel', 'ecare-health-services'); ?></button>
                             <button type="submit" class="button button-primary" style="padding: 6px 12px; height: auto; background:#0E9F6E; border-color:#0E9F6E; color:#fff; font-weight:600;"><?php _e('Add Type', 'ecare-health-services'); ?></button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Edit Packages Modal -->
-            <div id="ecare-edit-packages-modal" class="ecare-admin-modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99999; justify-content:center; align-items:center;">
-                <div class="ecare-admin-modal-content" style="background:#fff; padding:30px; border-radius:12px; width:450px; box-shadow:0 10px 25px rgba(0,0,0,0.15); position:relative;">
-                    <h3 style="margin-top:0; font-size:18px; font-weight:700; color:#1E293B; margin-bottom:20px;"><?php _e('Edit Default Package Prices', 'ecare-health-services'); ?></h3>
-                    
-                    <form id="ecare-edit-packages-form">
-                        <div style="margin-bottom:15px;">
-                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Daily (12 Hours) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
-                            <input type="number" id="ecare-pkg-daily-12" name="daily_12" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_daily_12_price', 1700)); ?>" required />
-                        </div>
-                        <div style="margin-bottom:15px;">
-                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Daily (24 Hours) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
-                            <input type="number" id="ecare-pkg-daily-24" name="daily_24" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_daily_24_price', 2200)); ?>" required />
-                        </div>
-                        <div style="margin-bottom:15px;">
-                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Monthly (12 Hours) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
-                            <input type="number" id="ecare-pkg-monthly-12" name="monthly_12" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_monthly_12_price', 30000)); ?>" required />
-                        </div>
-                        <div style="margin-bottom:20px;">
-                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Monthly (24 Hours) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
-                            <input type="number" id="ecare-pkg-monthly-24" name="monthly_24" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_monthly_24_price', 50000)); ?>" required />
-                        </div>
-                        <div style="margin-bottom:15px; border-top: 1px dashed #E2E8F0; padding-top: 15px;">
-                            <label style="display:block; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:10px;"><?php _e('Physiotherapist Packages', 'ecare-health-services'); ?></label>
-                        </div>
-                        <div style="margin-bottom:15px;">
-                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Daily Regular (1 Hour) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
-                            <input type="number" id="ecare-pkg-physio-regular" name="physio_regular" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_physio_regular_price', 1500)); ?>" required />
-                        </div>
-                        <div style="margin-bottom:20px;">
-                            <label style="display:block; font-weight:600; font-size:13px; color:#475569; margin-bottom:6px;"><?php _e('Daily Premium (1 Hour) Price (৳)', 'ecare-health-services'); ?> <span style="color:#EF4444;">*</span></label>
-                            <input type="number" id="ecare-pkg-physio-premium" name="physio_premium" style="width:100%; padding:10px; border-radius:6px; border:1px solid #CBD5E1; font-size:14px;" value="<?php echo esc_attr(get_option('ecare_default_physio_premium_price', 2000)); ?>" required />
-                        </div>
-
-                        <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E2E8F0; padding-top:15px;">
-                            <button type="button" id="ecare-close-packages-modal" class="button button-secondary" style="padding: 6px 12px; height: auto;"><?php _e('Cancel', 'ecare-health-services'); ?></button>
-                            <button type="submit" class="button button-primary" style="padding: 6px 12px; height: auto; background:#0E9F6E; border-color:#0E9F6E; color:#fff; font-weight:600;"><?php _e('Save Prices', 'ecare-health-services'); ?></button>
                         </div>
                     </form>
                 </div>
@@ -919,12 +889,29 @@ class ECare_Admin {
                 <input type="button" class="button button-secondary ecare_remove_media_btn" value="<?php esc_attr_e('Remove Image', 'ecare-health-services'); ?>" style="display:none;" />
             </p>
         </div>
+        <div class="form-field term-group">
+            <label><?php _e('Duration Packages', 'ecare-health-services'); ?></label>
+            <div id="ecare-term-packages-list" style="margin-bottom: 10px;">
+                <div class="ecare-term-package-row" style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">
+                    <input type="text" name="term_package_labels[]" placeholder="Duration (e.g. Daily (12 Hours))" style="flex:2;" required />
+                    <input type="number" name="term_package_prices[]" placeholder="Price (৳)" style="flex:1;" required />
+                    <button type="button" class="button ecare-remove-package-row-btn" style="background:#EF4444; color:#fff; border-color:#EF4444; padding: 4px 8px; line-height: 1.2;">&times;</button>
+                </div>
+            </div>
+            <p>
+                <button type="button" id="ecare-add-package-row-btn" class="button button-secondary">+ <?php _e('Add New Field', 'ecare-health-services'); ?></button>
+            </p>
+        </div>
         <?php
     }
 
     public static function edit_caregiver_type_image_field($term, $taxonomy) {
         $image_id = get_term_meta($term->term_id, 'caregiver_type_image', true);
         $image_url = $image_id ? wp_get_attachment_url($image_id) : '';
+        $packages = get_term_meta($term->term_id, 'ecare_packages', true);
+        if (!is_array($packages)) {
+            $packages = array();
+        }
         ?>
         <tr class="form-field term-group-wrap">
             <th scope="row"><label for="caregiver_type_image"><?php _e('Type Image / Icon', 'ecare-health-services'); ?></label></th>
@@ -941,12 +928,57 @@ class ECare_Admin {
                 </p>
             </td>
         </tr>
+        <tr class="form-field term-group-wrap">
+            <th scope="row"><label><?php _e('Duration Packages', 'ecare-health-services'); ?></label></th>
+            <td>
+                <div id="ecare-term-packages-list" style="margin-bottom: 10px; max-width: 600px;">
+                    <?php if (!empty($packages)): ?>
+                        <?php foreach ($packages as $pkg): ?>
+                            <div class="ecare-term-package-row" style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">
+                                <input type="text" name="term_package_labels[]" value="<?php echo esc_attr($pkg['label']); ?>" placeholder="Duration (e.g. Daily (12 Hours))" style="flex:2;" required />
+                                <input type="number" name="term_package_prices[]" value="<?php echo esc_attr($pkg['price']); ?>" placeholder="Price (৳)" style="flex:1;" required />
+                                <button type="button" class="button ecare-remove-package-row-btn" style="background:#EF4444; color:#fff; border-color:#EF4444; padding: 4px 8px; line-height: 1.2;">&times;</button>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="ecare-term-package-row" style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">
+                            <input type="text" name="term_package_labels[]" placeholder="Duration (e.g. Daily (12 Hours))" style="flex:2;" required />
+                            <input type="number" name="term_package_prices[]" placeholder="Price (৳)" style="flex:1;" required />
+                            <button type="button" class="button ecare-remove-package-row-btn" style="background:#EF4444; color:#fff; border-color:#EF4444; padding: 4px 8px; line-height: 1.2;">&times;</button>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <button type="button" id="ecare-add-package-row-btn" class="button button-secondary">+ <?php _e('Add New Field', 'ecare-health-services'); ?></button>
+            </td>
+        </tr>
         <?php
     }
 
     public static function save_caregiver_type_image($term_id) {
         if (isset($_POST['caregiver_type_image'])) {
             update_term_meta($term_id, 'caregiver_type_image', sanitize_text_field($_POST['caregiver_type_image']));
+        }
+
+        if (isset($_POST['term_package_labels']) && isset($_POST['term_package_prices'])) {
+            $labels = $_POST['term_package_labels'];
+            $prices = $_POST['term_package_prices'];
+            $packages = array();
+
+            for ($i = 0; $i < count($labels); $i++) {
+                $label = sanitize_text_field($labels[$i]);
+                $price = floatval($prices[$i]);
+                if (!empty($label)) {
+                    $packages[] = array(
+                        'label' => $label,
+                        'price' => $price
+                    );
+                }
+            }
+            update_term_meta($term_id, 'ecare_packages', $packages);
+        } else {
+            if (isset($_POST['action']) && ($_POST['action'] === 'editedtag' || $_POST['action'] === 'ecare_add_caregiver_type')) {
+                update_term_meta($term_id, 'ecare_packages', array());
+            }
         }
     }
 
