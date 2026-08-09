@@ -1140,7 +1140,23 @@ class ECare_Ajax {
                     }
                 }
 
-                $packages = get_term_meta($term->term_id, 'ecare_packages', true) ?: array();
+                $packages = get_term_meta($term->term_id, 'ecare_packages', true);
+                if (empty($packages) || !is_array($packages)) {
+                    if ($term->name === 'Physiotherapist') {
+                        $packages = array(
+                            array('label' => 'Daily Regular (1 Hour)', 'price' => get_option('ecare_default_physio_regular_price', 1500)),
+                            array('label' => 'Daily Premium (1 Hour)', 'price' => get_option('ecare_default_physio_premium_price', 2000)),
+                        );
+                    } else {
+                        $packages = array(
+                            array('label' => 'Daily (12 Hours)', 'price' => get_option('ecare_default_daily_12_price', 1700)),
+                            array('label' => 'Daily (24 Hours)', 'price' => get_option('ecare_default_daily_24_price', 2200)),
+                            array('label' => 'Monthly (12 Hours)', 'price' => get_option('ecare_default_monthly_12_price', 30000)),
+                            array('label' => 'Monthly (24 Hours)', 'price' => get_option('ecare_default_monthly_24_price', 50000)),
+                        );
+                    }
+                    update_term_meta($term->term_id, 'ecare_packages', $packages);
+                }
 
                 $types[] = array(
                     'term_id'   => $term->term_id,

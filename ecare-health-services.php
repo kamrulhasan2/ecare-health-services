@@ -86,7 +86,23 @@ final class ECare_Health_Services {
         if (!is_wp_error($terms) && !empty($terms)) {
             foreach ($terms as $term) {
                 $pkgs = get_term_meta($term->term_id, 'ecare_packages', true);
-                $type_packages[$term->name] = is_array($pkgs) ? $pkgs : array();
+                if (empty($pkgs) || !is_array($pkgs)) {
+                    if ($term->name === 'Physiotherapist') {
+                        $pkgs = array(
+                            array('label' => 'Daily Regular (1 Hour)', 'price' => get_option('ecare_default_physio_regular_price', 1500)),
+                            array('label' => 'Daily Premium (1 Hour)', 'price' => get_option('ecare_default_physio_premium_price', 2000)),
+                        );
+                    } else {
+                        $pkgs = array(
+                            array('label' => 'Daily (12 Hours)', 'price' => get_option('ecare_default_daily_12_price', 1700)),
+                            array('label' => 'Daily (24 Hours)', 'price' => get_option('ecare_default_daily_24_price', 2200)),
+                            array('label' => 'Monthly (12 Hours)', 'price' => get_option('ecare_default_monthly_12_price', 30000)),
+                            array('label' => 'Monthly (24 Hours)', 'price' => get_option('ecare_default_monthly_24_price', 50000)),
+                        );
+                    }
+                    update_term_meta($term->term_id, 'ecare_packages', $pkgs);
+                }
+                $type_packages[$term->name] = $pkgs;
             }
         }
 
@@ -110,7 +126,23 @@ final class ECare_Health_Services {
         if (!is_wp_error($terms) && !empty($terms)) {
             foreach ($terms as $term) {
                 $pkgs = get_term_meta($term->term_id, 'ecare_packages', true);
-                $type_packages[$term->name] = is_array($pkgs) ? $pkgs : array();
+                if (empty($pkgs) || !is_array($pkgs)) {
+                    if ($term->name === 'Physiotherapist') {
+                        $pkgs = array(
+                            array('label' => 'Daily Regular (1 Hour)', 'price' => get_option('ecare_default_physio_regular_price', 1500)),
+                            array('label' => 'Daily Premium (1 Hour)', 'price' => get_option('ecare_default_physio_premium_price', 2000)),
+                        );
+                    } else {
+                        $pkgs = array(
+                            array('label' => 'Daily (12 Hours)', 'price' => get_option('ecare_default_daily_12_price', 1700)),
+                            array('label' => 'Daily (24 Hours)', 'price' => get_option('ecare_default_daily_24_price', 2200)),
+                            array('label' => 'Monthly (12 Hours)', 'price' => get_option('ecare_default_monthly_12_price', 30000)),
+                            array('label' => 'Monthly (24 Hours)', 'price' => get_option('ecare_default_monthly_24_price', 50000)),
+                        );
+                    }
+                    update_term_meta($term->term_id, 'ecare_packages', $pkgs);
+                }
+                $type_packages[$term->name] = $pkgs;
             }
         }
 
