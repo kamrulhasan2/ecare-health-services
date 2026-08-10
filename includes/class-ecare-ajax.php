@@ -356,31 +356,18 @@ class ECare_Ajax {
         }
 
         $price = 0;
-        $price_map = array(
-            'daily_12'   => '_daily_12_price',
-            'daily_24'   => '_daily_24_price',
-            'monthly_12' => '_monthly_12_price',
-            'monthly_24' => '_monthly_24_price',
-        );
-        if (isset($price_map[$package_type])) {
-            $price = floatval(get_post_meta($caregiver_id, $price_map[$package_type], true));
-            if (!$price) {
-                $provider_type = get_post_meta($caregiver_id, '_provider_type', true);
-                if ($provider_type === 'Physiotherapist') {
-                    $option_map = array(
-                        'daily_12' => 'ecare_default_physio_regular_price',
-                        'daily_24' => 'ecare_default_physio_premium_price',
-                    );
-                } else {
-                    $option_map = array(
-                        'daily_12'   => 'ecare_default_daily_12_price',
-                        'daily_24'   => 'ecare_default_daily_24_price',
-                        'monthly_12' => 'ecare_default_monthly_12_price',
-                        'monthly_24' => 'ecare_default_monthly_24_price',
-                    );
-                }
-                if (isset($option_map[$package_type])) {
-                    $price = floatval(get_option($option_map[$package_type], 0));
+        $provider_type = get_post_meta($caregiver_id, '_provider_type', true);
+        if ($provider_type) {
+            $term = get_term_by('name', $provider_type, 'ecare_caregiver_type');
+            if ($term) {
+                $pkgs = get_term_meta($term->term_id, 'ecare_packages', true);
+                if (is_array($pkgs)) {
+                    foreach ($pkgs as $pkg) {
+                        if ($pkg['label'] === $package_type) {
+                            $price = floatval($pkg['price']);
+                            break;
+                        }
+                    }
                 }
             }
         }
