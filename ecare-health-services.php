@@ -75,8 +75,12 @@ final class ECare_Health_Services {
     public function admin_enqueue_scripts($hook) {
         wp_enqueue_media();
         wp_enqueue_style('google-font-inter', 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap', array(), null);
-        wp_enqueue_style('ecare-admin-style', ECARE_PLUGIN_URL . 'assets/css/ecare-style.css', array(), ECARE_VERSION);
-        wp_enqueue_script('ecare-admin-script', ECARE_PLUGIN_URL . 'assets/js/ecare-script.js', array('jquery'), ECARE_VERSION, true);
+        
+        $style_ver  = file_exists(ECARE_PLUGIN_DIR . 'assets/css/ecare-style.css') ? filemtime(ECARE_PLUGIN_DIR . 'assets/css/ecare-style.css') : ECARE_VERSION;
+        $script_ver = file_exists(ECARE_PLUGIN_DIR . 'assets/js/ecare-script.js') ? filemtime(ECARE_PLUGIN_DIR . 'assets/js/ecare-script.js') : ECARE_VERSION;
+
+        wp_enqueue_style('ecare-admin-style', ECARE_PLUGIN_URL . 'assets/css/ecare-style.css', array(), $style_ver);
+        wp_enqueue_script('ecare-admin-script', ECARE_PLUGIN_URL . 'assets/js/ecare-script.js', array('jquery'), $script_ver, true);
         
         $type_packages = array();
         $terms = get_terms(array(
@@ -115,8 +119,12 @@ final class ECare_Health_Services {
 
     public function frontend_enqueue_scripts() {
         wp_enqueue_style('google-font-inter', 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap', array(), null);
-        wp_enqueue_style('ecare-frontend-style', ECARE_PLUGIN_URL . 'assets/css/ecare-style.css', array(), ECARE_VERSION);
-        wp_enqueue_script('ecare-frontend-script', ECARE_PLUGIN_URL . 'assets/js/ecare-script.js', array('jquery'), ECARE_VERSION, true);
+        
+        $style_ver  = file_exists(ECARE_PLUGIN_DIR . 'assets/css/ecare-style.css') ? filemtime(ECARE_PLUGIN_DIR . 'assets/css/ecare-style.css') : ECARE_VERSION;
+        $script_ver = file_exists(ECARE_PLUGIN_DIR . 'assets/js/ecare-script.js') ? filemtime(ECARE_PLUGIN_DIR . 'assets/js/ecare-script.js') : ECARE_VERSION;
+
+        wp_enqueue_style('ecare-frontend-style', ECARE_PLUGIN_URL . 'assets/css/ecare-style.css', array(), $style_ver);
+        wp_enqueue_script('ecare-frontend-script', ECARE_PLUGIN_URL . 'assets/js/ecare-script.js', array('jquery'), $script_ver, true);
         
         $type_packages = array();
         $terms = get_terms(array(
