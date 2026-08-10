@@ -95,12 +95,7 @@
         loadCaregivers();
     }
 
-    // Open caregiver details modal
-    $(document).on('click', '.ecare-view-details, .ecare-cg-card-btn', function(e) {
-        e.preventDefault();
-        var id = $(this).data('id');
-
-        // Create backdrop modal if not exists
+    function loadCaregiverDetails(id, activeIndex) {
         if (!$('#ecare-caregiver-detail-modal').length) {
             $('body').append(
                 '<div id="ecare-caregiver-detail-modal" class="ecare-modal-backdrop" style="display:none;">' +
@@ -131,15 +126,28 @@
                 
                 // If "All Packages" is selected, fallback to the first available package for this Caregiver Type
                 if (!preselectedPkg) {
-                    var type = $('#ecare-filter-type .ecare-type-tab.active').data('type') || '';
                     preselectedPkg = 'daily_12'; 
                 }
                 
                 $('#ecare-booking-package-val').val(preselectedPkg);
+
+                if (typeof activeIndex !== 'undefined' && activeIndex !== null) {
+                    var $row = $('.ecare-family-option-row[data-index="' + activeIndex + '"]');
+                    if ($row.length) {
+                        $row.trigger('click');
+                    }
+                }
             } else {
                 $('#ecare-caregiver-detail-content').html('<p class="error" style="color:#b91c1c;text-align:center;padding:40px;">Failed to load details.</p>');
             }
         });
+    }
+
+    // Open caregiver details modal
+    $(document).on('click', '.ecare-view-details, .ecare-cg-card-btn', function(e) {
+        e.preventDefault();
+        var id = $(this).data('id');
+        loadCaregiverDetails(id);
     });
 
     // Close modal
@@ -165,7 +173,9 @@
         }
     });
 
-    $(document).on('click', '.ecare-family-option-row', function() {
+    $(document).on('click', '.ecare-family-option-row', function(e) {
+        if ($(e.target).hasClass('ecare-family-edit-btn')) return;
+
         var $row = $(this);
         $row.siblings().removeClass('selected');
         $row.addClass('selected');
@@ -176,19 +186,142 @@
         var email = $row.data('email');
         var gender = $row.data('gender');
         var age = $row.data('age');
+        var weight = $row.data('weight');
+        var height = $row.data('height');
+        var index = $row.data('index');
 
         // Update selected box details
         $('.ecare-family-name').text(name);
         $('.ecare-family-badge').text(relation);
         
+        // Update active index
+        $('.ecare-family-details').attr('data-active-index', index);
+        
         // Update meta items
-        $('.ecare-family-phone-val').text(phone);
-        $('.ecare-family-email-val').text(email);
-        $('.ecare-family-gender-age-val').text(gender + ' | ' + age);
+        $('.ecare-family-phone-val').text(phone || '--');
+        $('.ecare-family-email-val').text(email || '--');
+        $('.ecare-family-gender-age-val').text(gender + (age ? ' | ' + age : ''));
+        $('.ecare-family-height-val').text(height);
+        $('.ecare-family-weight-val').text(weight);
+
+        // Update booking form fields
+        $('#ecare-booking-patient-name-val').val(name);
+        $('#ecare-booking-patient-relation-val').val(relation);
+        $('#ecare-booking-patient-phone-val').val(phone);
 
         // Hide select list
         $('.ecare-family-select-list').slideUp(200);
         $('.ecare-change-family-link').text('Change Family Member');
+    });
+
+    function openEditFamilyMemberModal($row) {
+        var name = $row.attr('data-name') || '';
+        var relation = $row.attr('data-relation') || '';
+        var phone = $row.attr('data-phone') || '';
+        var email = $row.attr('data-email') || '';
+        var gender = $row.attr('data-gender') || '';
+        var dob = $row.attr('data-dob') || '';
+        var weight = $row.attr('data-weight') || '';
+        var heightFt = $row.attr('data-height-ft') || '';
+        var heightIn = $row.attr('data-height-in') || '';
+        var index = $row.attr('data-index') || '';
+
+        var $form = $('#ecare-create-family-form');
+        $form.find('input[name="member_name"]').val(name);
+        $form.find('input[name="member_phone"]').val(phone);
+        $form.find('input[name="member_email"]').val(email);
+        $form.find('select[name="member_gender"]').val(gender);
+        $form.find('select[name="member_relation"]').val(relation);
+        
+        var numericWeight = weight.replace(/[^\d]/g, '');
+        $form.find('input[name="member_weight"]').val(numericWeight);
+        
+        $form.find('input[name="member_height_ft"]').val(heightFt);
+        $form.find('input[name="member_height_in"]').val(heightIn);
+        
+        $form.find('#ecare-member-index-val').val(index);
+
+        if (dob) {
+            var parts = dob.split('-');
+            if (parts.length === 3) {
+                $form.find('select[name="member_dob_year"]').val(parts[0]);
+                $form.find('select[name="member_dob_month"]').val(parts[1]);
+                $form.find('select[name="member_dob_day"]').val(parts[2]);
+            }
+        } else {
+            $form.find('select[name="member_dob_year"]').val('');
+            $form.find('select[name="member_dob_month"]').val('');
+            $form.find('select[name="member_dob_day"]').val('');
+        }
+
+        $('#ecare-create-family-modal h3').text('Edit Family Member');
+        $('#ecare-create-family-modal button[type="submit"]').text('Save Changes');
+
+        $('#ecare-create-family-modal').css('display', 'flex');
+    }
+
+    // Open/Close Create Family Member Modal
+    $(document).on('click', '#ecare-open-create-family-btn', function(e) {
+        e.preventDefault();
+        var $form = $('#ecare-create-family-form');
+        $form[0].reset();
+        $form.find('#ecare-member-index-val').val('');
+        
+        $('#ecare-create-family-modal h3').text('Create Family Member');
+        $('#ecare-create-family-modal button[type="submit"]').text('Add Member');
+        
+        $('#ecare-create-family-modal').css('display', 'flex');
+    });
+
+    $(document).on('click', '#ecare-close-create-family-modal', function(e) {
+        e.preventDefault();
+        $('#ecare-create-family-modal').hide();
+    });
+
+    $(document).on('click', '.ecare-family-edit-btn', function(e) {
+        e.stopPropagation();
+        var $row = $(this).closest('.ecare-family-option-row');
+        openEditFamilyMemberModal($row);
+    });
+
+    $(document).on('click', '.ecare-edit-active-family-link', function(e) {
+        e.preventDefault();
+        var activeIndex = $('.ecare-family-details').attr('data-active-index') || '0';
+        var $row = $('.ecare-family-option-row[data-index="' + activeIndex + '"]');
+        if ($row.length) {
+            openEditFamilyMemberModal($row);
+        }
+    });
+
+    // Submit Create Family Member Form
+    $(document).on('submit', '#ecare-create-family-form', function(e) {
+        e.preventDefault();
+        var $form = $(this);
+        var formData = $form.serializeArray();
+        
+        var postData = {
+            action: 'ecare_create_family_member',
+            nonce: ecare_ajax.nonce
+        };
+        $.each(formData, function(i, field) {
+            postData[field.name] = field.value;
+        });
+
+        $.post(ecare_ajax.ajax_url, postData, function(response) {
+            if (response.success) {
+                var index = response.data.index;
+                var caregiverId = $('#ecare-booking-form input[name="caregiver_id"]').val();
+                
+                $('#ecare-create-family-modal').hide();
+                $form[0].reset();
+
+                if (caregiverId) {
+                    loadCaregiverDetails(caregiverId, index);
+                }
+            } else {
+                alert(response.data.message || 'Failed to save family member details.');
+            }
+        });
     });
 
     // Submit caregiver booking form

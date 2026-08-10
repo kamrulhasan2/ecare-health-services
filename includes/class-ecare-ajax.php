@@ -18,6 +18,7 @@ class ECare_Ajax {
             'delete_caregiver',
             'get_caregiver_types',
             'delete_caregiver_type',
+            'create_family_member',
         );
 
         foreach ($actions as $action) {
@@ -213,40 +214,97 @@ class ECare_Ajax {
         // Right Column Form
         $html .= '<div class="ecare-detail-main">';
         
+        $user_id = get_current_user_id();
+        $members = self::get_user_family_members($user_id);
+        
+        $active_member = $members[0] ?? array();
+        
+        $age_str = '';
+        if (!empty($active_member['dob'])) {
+            $birthDate = new DateTime($active_member['dob']);
+            $today = new DateTime('today');
+            $age = $birthDate->diff($today)->y;
+            $age_str = $age . ' Years';
+        }
+        
+        $height_str = '';
+        if (!empty($active_member['height_ft'])) {
+            $height_str .= $active_member['height_ft'] . ' ft';
+            if (!empty($active_member['height_in'])) {
+                $height_str .= ' ' . $active_member['height_in'] . ' in';
+            }
+        } else {
+            $height_str = '--';
+        }
+        
+        $weight_str = !empty($active_member['weight']) ? $active_member['weight'] . ' kg' : '--';
+
+        // Right Column Form
+        $html .= '<div class="ecare-detail-main">';
+        
         // Family Members Box
         $html .= '<div class="ecare-family-card">';
-        $html .= '  <h4>Family Members</h4>';
-        $html .= '  <div class="ecare-family-details">';
-        $html .= '    <div class="ecare-family-header">';
-        $html .= '      <div class="ecare-family-name-wrap">';
-        $html .= '        <span class="ecare-family-icon">👤</span>';
-        $html .= '        <span class="ecare-family-name">KH01 ER</span>';
-        $html .= '        <span class="ecare-family-badge">Self</span>';
+        $html .= '  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">';
+        $html .= '    <h4 style="margin:0; font-size:15px; font-weight:700; color:#1E293B;">Family Members</h4>';
+        $html .= '    <button type="button" id="ecare-open-create-family-btn" class="button" style="background:#22D3EE; color:#fff; border-color:#22D3EE; font-size:12px; padding:6px 12px; height:auto; line-height:1.2; font-weight:600; border-radius:6px; cursor:pointer;">Create Family Member</button>';
+        $html .= '  </div>';
+        
+        // Active patient details
+        $html .= '  <div class="ecare-family-details" data-active-index="0" style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:15px; margin-bottom:12px;">';
+        $html .= '    <div class="ecare-family-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">';
+        $html .= '      <div class="ecare-family-name-wrap" style="display:flex; align-items:center; gap:8px;">';
+        $html .= '        <span class="ecare-family-icon" style="font-size:18px;">👤</span>';
+        $html .= '        <span class="ecare-family-name" style="font-weight:700; color:#1E293B; font-size:14px;">' . esc_html($active_member['name']) . '</span>';
+        $html .= '        <span class="ecare-family-badge" style="background:#E0F2FE; color:#0369A1; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600;">' . esc_html($active_member['relation']) . '</span>';
         $html .= '      </div>';
         $html .= '    </div>';
-        $html .= '    <div class="ecare-family-meta">';
-        $html .= '      <div class="ecare-family-meta-item">📞 <span class="ecare-family-phone-val">+8801700000000</span></div>';
-        $html .= '      <div class="ecare-family-meta-item">✉️ <span class="ecare-family-email-val">patient@example.com</span></div>';
-        $html .= '      <div class="ecare-family-meta-item">📅 <span class="ecare-family-gender-age-val">Male | 32 Years</span></div>';
+        
+        $html .= '    <div class="ecare-family-meta" style="display:flex; flex-wrap:wrap; gap:15px; font-size:13px; color:#475569;">';
+        $html .= '      <div class="ecare-family-meta-item">📞 <span class="ecare-family-phone-val">' . esc_html($active_member['phone'] ?: '--') . '</span></div>';
+        $html .= '      <div class="ecare-family-meta-item">✉️ <span class="ecare-family-email-val">' . esc_html($active_member['email'] ?: '--') . '</span></div>';
+        $html .= '      <div class="ecare-family-meta-item">📅 <span class="ecare-family-gender-age-val">' . esc_html($active_member['gender']) . ($age_str ? ' | ' . $age_str : '') . '</span></div>';
+        $html .= '      <div class="ecare-family-meta-item">📏 Height: <span class="ecare-family-height-val">' . esc_html($height_str) . '</span></div>';
+        $html .= '      <div class="ecare-family-meta-item">⚖️ Weight: <span class="ecare-family-weight-val">' . esc_html($weight_str) . '</span></div>';
         $html .= '    </div>';
         $html .= '  </div>';
-        $html .= '  <a href="#" class="ecare-change-family-link">Change Family Member</a>';
         
-        // Dynamic picker list
-        $html .= '  <div class="ecare-family-select-list" style="display:none;">';
+        $html .= '  <div style="display:flex; gap:15px; align-items:center;">';
+        $html .= '    <a href="#" class="ecare-change-family-link" style="font-weight:600; color:#22D3EE; font-size:13px; text-decoration:none;">Change Family Member</a>';
+        $html .= '    <span style="color:#CBD5E1;">|</span>';
+        $html .= '    <a href="#" class="ecare-edit-active-family-link" style="font-weight:600; color:#475569; font-size:13px; text-decoration:none;">Edit Active Details</a>';
+        $html .= '  </div>';
         
-        $members = array(
-            array('name' => 'KH01 ER', 'relation' => 'Self', 'phone' => '+8801700000000', 'email' => 'patient@example.com', 'gender' => 'Male', 'age' => '32 Years'),
-            array('name' => 'Mst. Rabeya Begum', 'relation' => 'Parent', 'phone' => '+8801811111111', 'email' => 'mother@example.com', 'gender' => 'Female', 'age' => '65 Years'),
-            array('name' => 'Md. Abul Kashem', 'relation' => 'Parent', 'phone' => '+8801922222222', 'email' => 'father@example.com', 'gender' => 'Male', 'age' => '70 Years'),
-            array('name' => 'Nusrat Jahan', 'relation' => 'Spouse', 'phone' => '+8801533333333', 'email' => 'spouse@example.com', 'gender' => 'Female', 'age' => '28 Years'),
-        );
+        // Dynamic list wrapper
+        $html .= '  <div class="ecare-family-select-list" style="display:none; margin-top:10px; border:1px solid #E2E8F0; border-radius:8px; background:#fff; overflow:hidden;">';
         
+        $idx = 0;
         foreach ($members as $m) {
-            $html .= '    <div class="ecare-family-option-row" data-name="' . esc_attr($m['name']) . '" data-relation="' . esc_attr($m['relation']) . '" data-phone="' . esc_attr($m['phone']) . '" data-email="' . esc_attr($m['email']) . '" data-gender="' . esc_attr($m['gender']) . '" data-age="' . esc_attr($m['age']) . '">';
-            $html .= '      <span>👥 ' . esc_html($m['name']) . ' (' . esc_html($m['relation']) . ')</span>';
-            $html .= '      <span style="font-size:11px;color:var(--brand-teal);">Select</span>';
+            $m_age_str = '';
+            if (!empty($m['dob'])) {
+                $m_birthDate = new DateTime($m['dob']);
+                $m_today = new DateTime('today');
+                $m_age = $m_birthDate->diff($m_today)->y;
+                $m_age_str = $m_age . ' Years';
+            }
+            $m_height_str = '';
+            if (!empty($m['height_ft'])) {
+                $m_height_str .= $m['height_ft'] . ' ft';
+                if (!empty($m['height_in'])) {
+                    $m_height_str .= ' ' . $m['height_in'] . ' in';
+                }
+            } else {
+                $m_height_str = '--';
+            }
+            $m_weight_str = !empty($m['weight']) ? $m['weight'] . ' kg' : '--';
+
+            $html .= '    <div class="ecare-family-option-row" style="display:flex; align-items:center; justify-content:space-between; padding:10px 15px; border-bottom:1px solid #F1F5F9; cursor:pointer;" data-index="' . $idx . '" data-name="' . esc_attr($m['name']) . '" data-relation="' . esc_attr($m['relation']) . '" data-phone="' . esc_attr($m['phone']) . '" data-email="' . esc_attr($m['email']) . '" data-gender="' . esc_attr($m['gender']) . '" data-dob="' . esc_attr($m['dob']) . '" data-age="' . esc_attr($m_age_str) . '" data-weight="' . esc_attr($m_weight_str) . '" data-height-ft="' . esc_attr($m['height_ft'] ?? '') . '" data-height-in="' . esc_attr($m['height_in'] ?? '') . '" data-height="' . esc_attr($m_height_str) . '">';
+            $html .= '      <span style="font-weight:600; font-size:13px; color:#1E293B;">👤 ' . esc_html($m['name']) . ' (' . esc_html($m['relation']) . ')</span>';
+            $html .= '      <div style="display:flex; gap:12px; align-items:center;">';
+            $html .= '        <span class="ecare-family-edit-btn" style="font-size:12px; color:#22D3EE; font-weight:600; cursor:pointer;">Edit</span>';
+            $html .= '        <span class="ecare-family-select-action" style="font-size:12px; color:#0E9F6E; font-weight:600; cursor:pointer;">Select</span>';
+            $html .= '      </div>';
             $html .= '    </div>';
+            $idx++;
         }
         $html .= '  </div>'; // End list
         $html .= '</div>'; // End family card
@@ -255,6 +313,10 @@ class ECare_Ajax {
         $html .= '<form id="ecare-booking-form">';
         $html .= '  <input type="hidden" name="caregiver_id" value="' . esc_attr($id) . '" />';
         
+        // Hidden inputs for patient details
+        $html .= '  <input type="hidden" name="patient_name" id="ecare-booking-patient-name-val" value="' . esc_attr($active_member['name']) . '" />';
+        $html .= '  <input type="hidden" name="patient_relation" id="ecare-booking-patient-relation-val" value="' . esc_attr($active_member['relation']) . '" />';
+
         $html .= '  <div class="ecare-info-grid">';
         
         // Patient Type Dropdown
@@ -286,7 +348,7 @@ class ECare_Ajax {
         // Contact Number
         $html .= '    <div class="ecare-form-field">';
         $html .= '      <label>Contact Number <span>*</span></label>';
-        $html .= '      <input type="text" name="contact_phone" placeholder="+8801XXXXXXXXX" value="+8801700000000" required />';
+        $html .= '      <input type="text" name="contact_phone" id="ecare-booking-patient-phone-val" placeholder="+8801XXXXXXXXX" value="' . esc_attr($active_member['phone']) . '" required />';
         $html .= '    </div>';
         
         // Address Textarea
@@ -323,6 +385,102 @@ class ECare_Ajax {
         
         $html .= '</form>';
         $html .= '</div>'; // End detail-main
+        
+        // Append Create Family Member Modal Container here!
+        $html .= '<!-- Create Family Member Modal -->';
+        $html .= '<div id="ecare-create-family-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:100000; justify-content:center; align-items:center;">';
+        $html .= '  <div style="background:#fff; padding:30px; border-radius:12px; width:95%; max-width:600px; box-shadow:0 10px 25px rgba(0,0,0,0.15); position:relative; box-sizing:border-box;">';
+        $html .= '    <h3 style="margin-top:0; font-size:18px; font-weight:700; color:#1E293B; margin-bottom:20px; border-bottom:1px solid #E2E8F0; padding-bottom:10px; text-align:left;">Create Family Member</h3>';
+        $html .= '    <button type="button" id="ecare-close-create-family-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#94A3B8; line-height:1;">&times;</button>';
+        
+        $html .= '    <form id="ecare-create-family-form" style="text-align:left;">';
+        $html .= '      <input type="hidden" name="member_index" id="ecare-member-index-val" value="" />';
+        $html .= '      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">';
+        
+        $html .= '        <div>';
+        $html .= '          <label style="display:block; font-weight:600; font-size:12px; color:#475569; margin-bottom:6px; text-align:left;">Name <span style="color:#EF4444;">*</span></label>';
+        $html .= '          <input type="text" name="member_name" placeholder="e.g., Jack" style="width:100%; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px; box-sizing:border-box;" required />';
+        $html .= '        </div>';
+        
+        $html .= '        <div>';
+        $html .= '          <label style="display:block; font-weight:600; font-size:12px; color:#475569; margin-bottom:6px; text-align:left;">Mobile</label>';
+        $html .= '          <input type="text" name="member_phone" placeholder="e.g., +8801XXXXXXXXX" style="width:100%; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px; box-sizing:border-box;" />';
+        $html .= '        </div>';
+        
+        $html .= '        <div>';
+        $html .= '          <label style="display:block; font-weight:600; font-size:12px; color:#475569; margin-bottom:6px; text-align:left;">Email</label>';
+        $html .= '          <input type="email" name="member_email" placeholder="e.g., abc@gmail.com" style="width:100%; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px; box-sizing:border-box;" />';
+        $html .= '        </div>';
+        
+        $html .= '        <div>';
+        $html .= '          <label style="display:block; font-weight:600; font-size:12px; color:#475569; margin-bottom:6px; text-align:left;">Gender <span style="color:#EF4444;">*</span></label>';
+        $html .= '          <select name="member_gender" style="width:100%; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px; box-sizing:border-box;" required>';
+        $html .= '            <option value="">Select Gender</option>';
+        $html .= '            <option value="Male">Male</option>';
+        $html .= '            <option value="Female">Female</option>';
+        $html .= '            <option value="Other">Other</option>';
+        $html .= '          </select>';
+        $html .= '        </div>';
+        
+        $html .= '        <div>';
+        $html .= '          <label style="display:block; font-weight:600; font-size:12px; color:#475569; margin-bottom:6px; text-align:left;">Date of Birth <span style="color:#EF4444;">*</span></label>';
+        $html .= '          <div style="display:flex; gap:5px;">';
+        $html .= '            <select name="member_dob_year" style="flex:1.2; padding:6px; border-radius:6px; border:1px solid #CBD5E1; font-size:12px; box-sizing:border-box;" required>';
+        $html .= '              <option value="">Year</option>';
+        for($y = intval(date('Y')); $y >= 1900; $y--) {
+            $html .= '          <option value="' . $y . '">' . $y . '</option>';
+        }
+        $html .= '            </select>';
+        $html .= '            <select name="member_dob_month" style="flex:1.2; padding:6px; border-radius:6px; border:1px solid #CBD5E1; font-size:12px; box-sizing:border-box;" required>';
+        $html .= '              <option value="">Month</option>';
+        for($m = 1; $m <= 12; $m++) {
+            $html .= '          <option value="' . sprintf('%02d', $m) . '">' . date('M', mktime(0,0,0,$m,1)) . '</option>';
+        }
+        $html .= '            </select>';
+        $html .= '            <select name="member_dob_day" style="flex:1; padding:6px; border-radius:6px; border:1px solid #CBD5E1; font-size:12px; box-sizing:border-box;" required>';
+        $html .= '              <option value="">Day</option>';
+        for($d = 1; $d <= 31; $d++) {
+            $html .= '          <option value="' . sprintf('%02d', $d) . '">' . sprintf('%02d', $d) . '</option>';
+        }
+        $html .= '            </select>';
+        $html .= '          </div>';
+        $html .= '        </div>';
+        
+        $html .= '        <div>';
+        $html .= '          <label style="display:block; font-weight:600; font-size:12px; color:#475569; margin-bottom:6px; text-align:left;">Relationship <span style="color:#EF4444;">*</span></label>';
+        $html .= '          <select name="member_relation" style="width:100%; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px; box-sizing:border-box;" required>';
+        $html .= '            <option value="">Select relationship</option>';
+        $html .= '            <option value="Self">Self</option>';
+        $html .= '            <option value="Parent">Parent</option>';
+        $html .= '            <option value="Spouse">Spouse</option>';
+        $html .= '            <option value="Child">Child</option>';
+        $html .= '            <option value="Sibling">Sibling</option>';
+        $html .= '            <option value="Other">Other</option>';
+        $html .= '          </select>';
+        $html .= '        </div>';
+        
+        $html .= '        <div>';
+        $html .= '          <label style="display:block; font-weight:600; font-size:12px; color:#475569; margin-bottom:6px; text-align:left;">Weight (kg)</label>';
+        $html .= '          <input type="number" name="member_weight" placeholder="e.g., 70" style="width:100%; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px; box-sizing:border-box;" />';
+        $html .= '        </div>';
+        
+        $html .= '        <div>';
+        $html .= '          <label style="display:block; font-weight:600; font-size:12px; color:#475569; margin-bottom:6px; text-align:left;">Height (Feet and Inches)</label>';
+        $html .= '          <div style="display:flex; gap:10px;">';
+        $html .= '            <input type="number" name="member_height_ft" placeholder="Feet" style="flex:1; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px; box-sizing:border-box;" />';
+        $html .= '            <input type="number" name="member_height_in" placeholder="Inches" style="flex:1; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px; box-sizing:border-box;" />';
+        $html .= '          </div>';
+        $html .= '        </div>';
+        
+        $html .= '      </div>';
+        
+        $html .= '      <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E2E8F0; padding-top:15px; margin-top:10px;">';
+        $html .= '        <button type="submit" style="padding:10px 20px; font-size:14px; background:#22D3EE; border:1px solid #22D3EE; color:#fff; font-weight:600; border-radius:6px; cursor:pointer; line-height:1.2;">Add Member</button>';
+        $html .= '      </div>';
+        $html .= '    </form>';
+        $html .= '  </div>';
+        $html .= '</div>';
+        
         $html .= '</div>'; // End detail-grid
 
         wp_send_json_success(array('html' => $html));
@@ -1180,5 +1338,125 @@ class ECare_Ajax {
         } else {
             wp_send_json_success(array('message' => 'Caregiver Type deleted successfully!'));
         }
+    }
+
+    /**
+     * Get user's family members list
+     */
+    private static function get_user_family_members($user_id) {
+        $members = array();
+        if ($user_id) {
+            $members = get_user_meta($user_id, 'ecare_family_members', true);
+        } else {
+            if (!session_id() && !headers_sent()) {
+                session_start();
+            }
+            if (isset($_SESSION['ecare_family_members'])) {
+                $members = $_SESSION['ecare_family_members'];
+            }
+        }
+
+        if (!is_array($members) || empty($members)) {
+            $current_user = wp_get_current_user();
+            $members = array(
+                array(
+                    'name'      => $user_id ? ($current_user->display_name ?: $current_user->user_login) : 'Guest Patient',
+                    'relation'  => 'Self',
+                    'phone'     => '+8801700000000',
+                    'email'     => $user_id ? $current_user->user_email : 'patient@example.com',
+                    'gender'    => 'Male',
+                    'dob'       => '1995-08-30',
+                    'weight'    => '70',
+                    'height_ft' => '5',
+                    'height_in' => '5'
+                )
+            );
+            if ($user_id) {
+                update_user_meta($user_id, 'ecare_family_members', $members);
+            } else {
+                if (!session_id() && !headers_sent()) {
+                    session_start();
+                }
+                $_SESSION['ecare_family_members'] = $members;
+            }
+        }
+
+        return $members;
+    }
+
+    /**
+     * Create/Edit family member via AJAX
+     */
+    public static function create_family_member() {
+        check_ajax_referer('ecare_nonce', 'nonce');
+
+        $user_id = get_current_user_id();
+        $index     = isset($_POST['member_index']) && $_POST['member_index'] !== '' ? intval($_POST['member_index']) : -1;
+        $name      = sanitize_text_field($_POST['member_name'] ?? '');
+        $phone     = sanitize_text_field($_POST['member_phone'] ?? '');
+        $email     = sanitize_email($_POST['member_email'] ?? '');
+        $gender    = sanitize_text_field($_POST['member_gender'] ?? '');
+        $relation  = sanitize_text_field($_POST['member_relation'] ?? '');
+        $weight    = sanitize_text_field($_POST['member_weight'] ?? '');
+        $height_ft = sanitize_text_field($_POST['member_height_ft'] ?? '');
+        $height_in = sanitize_text_field($_POST['member_height_in'] ?? '');
+
+        $dob_year  = sanitize_text_field($_POST['member_dob_year'] ?? '');
+        $dob_month = sanitize_text_field($_POST['member_dob_month'] ?? '');
+        $dob_day   = sanitize_text_field($_POST['member_dob_day'] ?? '');
+        $dob       = '';
+        if ($dob_year && $dob_month && $dob_day) {
+            $dob = $dob_year . '-' . $dob_month . '-' . $dob_day;
+        }
+
+        if (empty($name) || empty($gender) || empty($relation) || empty($dob)) {
+            wp_send_json_error(array('message' => 'Please fill in all required fields (Name, Gender, Relationship, Date of Birth).'));
+        }
+
+        $new_member = array(
+            'name'      => $name,
+            'relation'  => $relation,
+            'phone'     => $phone,
+            'email'     => $email,
+            'gender'    => $gender,
+            'dob'       => $dob,
+            'weight'    => $weight,
+            'height_ft' => $height_ft,
+            'height_in' => $height_in
+        );
+
+        $members = self::get_user_family_members($user_id);
+        
+        $target_index = -1;
+        if ($index >= 0 && isset($members[$index])) {
+            $members[$index] = $new_member;
+            $target_index = $index;
+        } else {
+            if ($relation === 'Self') {
+                foreach ($members as $key => $m) {
+                    if ($m['relation'] === 'Self') {
+                        unset($members[$key]);
+                    }
+                }
+                $members = array_values($members);
+            }
+            $members[] = $new_member;
+            $target_index = count($members) - 1;
+        }
+
+        if ($user_id) {
+            update_user_meta($user_id, 'ecare_family_members', $members);
+        } else {
+            if (!session_id() && !headers_sent()) {
+                session_start();
+            }
+            $_SESSION['ecare_family_members'] = $members;
+        }
+
+        wp_send_json_success(array(
+            'message' => 'Family member details updated successfully!',
+            'member'  => $new_member,
+            'index'   => $target_index
+        ));
     }
 }
