@@ -754,40 +754,55 @@
     height: 42px !important;
     border: 1.5px solid var(--border-light) !important;
     border-radius: 8px !important;
-    background-color: #ffffff !important;
-    display: flex !important;
-    align-items: center !important;
-    padding-left: 8px !important;
+    background: #ffffff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") no-repeat right 12px center !important;
+    background-size: 20px 20px !important;
     font-size: 13.5px !important;
     font-family: 'Inter', sans-serif !important;
     font-weight: 500 !important;
     color: var(--text-dark) !important;
     outline: none !important;
     transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
-.select2-container--default .select2-selection--single .select2-selection__rendered {
+.select2-container--default .select2-selection--single .select2-selection__rendered,
+.select2-selection--single .select2-selection__rendered {
     color: var(--text-dark) !important;
-    padding-right: 20px !important;
+    line-height: normal !important;
+    padding-left: 32px !important;
+    padding-right: 32px !important;
+    text-align: center !important;
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 40px !important;
-    right: 8px !important;
+.select2-container--default .select2-selection--single .select2-selection__clear {
+    position: absolute !important;
+    right: 36px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    line-height: 1 !important;
+    margin: 0 !important;
 }
 
-.select2-container--default .select2-selection--single .select2-selection__arrow b {
-    border-color: var(--text-muted) transparent transparent transparent !important;
-    border-width: 5px 4px 0 4px !important;
+/* Hide Select2 default arrow container and triangle completely across all themes to prevent double arrows */
+.select2-selection--single .select2-selection__arrow {
+    display: none !important;
 }
 
 .select2-container--default.select2-container--open .select2-selection--single {
     border-color: var(--brand-teal) !important;
     box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15) !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
 }
 
 .select2-dropdown {
-    border: 1px solid var(--border-light) !important;
+    border: 1.5px solid var(--brand-teal) !important;
     border-radius: 8px !important;
     box-shadow: var(--shadow-lg) !important;
     font-size: 13.5px !important;
@@ -795,16 +810,39 @@
     overflow: hidden !important;
 }
 
+.select2-container--open .select2-dropdown--below {
+    margin-top: -3px !important;
+    border-top: none !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+}
+
+.select2-container--open .select2-dropdown--above {
+    margin-bottom: -3px !important;
+    border-bottom: none !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.select2-search--dropdown {
+    padding: 8px 12px 6px 12px !important;
+    background-color: #ffffff !important;
+    display: block !important;
+}
+
 .select2-container--default .select2-search--dropdown .select2-search__field {
     border: 1.5px solid var(--border-light) !important;
     border-radius: 6px !important;
-    padding: 8px !important;
+    padding: 8px 12px !important;
     outline: none !important;
     font-size: 13px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
 .select2-container--default .select2-search--dropdown .select2-search__field:focus {
     border-color: var(--brand-teal) !important;
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15) !important;
 }
 
 .select2-container--default .select2-results__option--highlighted[aria-selected] {
@@ -814,6 +852,16 @@
 
 .select2-container--default .select2-results__option {
     padding: 8px 12px !important;
+    text-align: center !important;
+}
+
+.select2-hidden-accessible {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
 }
 
 /* Search input for tests */
