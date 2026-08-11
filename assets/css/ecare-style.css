@@ -749,6 +749,73 @@
   letter-spacing: 0.5px;
 }
 
+/* Select2 Custom Styles for E-Care Shukhee Theme */
+.select2-container--default .select2-selection--single {
+    height: 42px !important;
+    border: 1.5px solid var(--border-light) !important;
+    border-radius: 8px !important;
+    background-color: #ffffff !important;
+    display: flex !important;
+    align-items: center !important;
+    padding-left: 8px !important;
+    font-size: 13.5px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-weight: 500 !important;
+    color: var(--text-dark) !important;
+    outline: none !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: var(--text-dark) !important;
+    padding-right: 20px !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 40px !important;
+    right: 8px !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: var(--text-muted) transparent transparent transparent !important;
+    border-width: 5px 4px 0 4px !important;
+}
+
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: var(--brand-teal) !important;
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15) !important;
+}
+
+.select2-dropdown {
+    border: 1px solid var(--border-light) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--shadow-lg) !important;
+    font-size: 13.5px !important;
+    font-family: 'Inter', sans-serif !important;
+    overflow: hidden !important;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1.5px solid var(--border-light) !important;
+    border-radius: 6px !important;
+    padding: 8px !important;
+    outline: none !important;
+    font-size: 13px !important;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field:focus {
+    border-color: var(--brand-teal) !important;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: var(--brand-teal) !important;
+    color: #ffffff !important;
+}
+
+.select2-container--default .select2-results__option {
+    padding: 8px 12px !important;
+}
+
 /* Search input for tests */
 .ecare-test-search-wrap {
   position: relative;

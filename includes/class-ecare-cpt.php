@@ -227,33 +227,29 @@ class ECare_CPT {
             <tr>
                 <th><label>Division</label></th>
                 <td>
-                    <select name="_division" id="ecare-admin-division" class="regular-text" data-selected="<?php echo esc_attr($fields['division']); ?>">
-                        <option value="">Select Division</option>
-                    </select>
+                    <input type="text" name="_division" id="ecare-admin-division" class="regular-text" value="<?php echo esc_attr($fields['division']); ?>" placeholder="e.g., Dhaka, Rangpur, Barishal" />
+                    <p class="description">Enter division names separated by commas.</p>
                 </td>
             </tr>
             <tr>
                 <th><label>District</label></th>
                 <td>
-                    <select name="_district" id="ecare-admin-district" class="regular-text" data-selected="<?php echo esc_attr($fields['district']); ?>" disabled>
-                        <option value="">Select District</option>
-                    </select>
+                    <input type="text" name="_district" id="ecare-admin-district" class="regular-text" value="<?php echo esc_attr($fields['district']); ?>" placeholder="e.g., Dhaka, Rangpur" />
+                    <p class="description">Enter district names separated by commas.</p>
                 </td>
             </tr>
             <tr>
                 <th><label>Area</label></th>
                 <td>
-                    <select name="_area" id="ecare-admin-area" class="regular-text" data-selected="<?php echo esc_attr($fields['area']); ?>" disabled>
-                        <option value="">Select Area</option>
-                    </select>
+                    <input type="text" name="_area" id="ecare-admin-area" class="regular-text" value="<?php echo esc_attr($fields['area']); ?>" placeholder="e.g., Mirpur, Uttara, Banani" />
+                    <p class="description">Enter area names separated by commas.</p>
                 </td>
             </tr>
             <tr>
                 <th><label>Lab Provider</label></th>
                 <td>
-                    <select name="_lab_provider" id="ecare-admin-provider" class="regular-text" data-selected="<?php echo esc_attr($fields['lab_provider']); ?>" disabled>
-                        <option value="">Select Provider</option>
-                    </select>
+                    <input type="text" name="_lab_provider" id="ecare-admin-provider" class="regular-text" value="<?php echo esc_attr($fields['lab_provider']); ?>" placeholder="e.g., LabAid, Popular" />
+                    <p class="description">Enter lab provider names separated by commas.</p>
                 </td>
             </tr>
             <tr><th><label>Status</label></th><td><select name="_test_status"><option value="active" <?php selected($fields['status'], 'active'); ?>>Active</option><option value="inactive" <?php selected($fields['status'], 'inactive'); ?>>Inactive</option></select></td></tr>

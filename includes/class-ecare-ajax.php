@@ -719,27 +719,78 @@ class ECare_Ajax {
     }
 
     /**
-     * Get locations for cascading dropdowns
+     * Get locations for cascading dropdowns from comma-separated post meta values
      */
     public static function get_locations() {
         check_ajax_referer('ecare_nonce', 'nonce');
 
-        global $wpdb;
-        $table = $wpdb->prefix . 'ecare_locations';
-
         $type     = sanitize_text_field($_POST['location_type'] ?? 'division');
-        $parent   = intval($_POST['parent_id'] ?? 0);
+        $division = sanitize_text_field($_POST['division'] ?? '');
+        $district = sanitize_text_field($_POST['district'] ?? '');
+        $area     = sanitize_text_field($_POST['area'] ?? '');
 
-        $where = $wpdb->prepare('location_type = %s', $type);
-        if ($parent) {
-            $where .= $wpdb->prepare(' AND parent_id = %d', $parent);
-        } else {
-            $where .= ' AND parent_id IS NULL';
+        $args = array(
+            'post_type'      => 'ecare_lab_test',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'meta_query'     => array(
+                'relation' => 'AND',
+                array(
+                    'key'   => '_test_status',
+                    'value' => 'active'
+                )
+            )
+        );
+
+        if ($type === 'district' || $type === 'area' || $type === 'lab_provider') {
+            if (!empty($division)) {
+                $args['meta_query'][] = array(
+                    'key'     => '_division',
+                    'value'   => $division,
+                    'compare' => 'LIKE'
+                );
+            }
+        }
+        if ($type === 'area' || $type === 'lab_provider') {
+            if (!empty($district)) {
+                $args['meta_query'][] = array(
+                    'key'     => '_district',
+                    'value'   => $district,
+                    'compare' => 'LIKE'
+                );
+            }
+        }
+        if ($type === 'lab_provider') {
+            if (!empty($area)) {
+                $args['meta_query'][] = array(
+                    'key'     => '_area',
+                    'value'   => $area,
+                    'compare' => 'LIKE'
+                );
+            }
         }
 
-        $results = $wpdb->get_results("SELECT id, name FROM {$table} WHERE {$where} ORDER BY name ASC");
+        $posts = get_posts($args);
+        $unique_values = array();
 
-        wp_send_json_success(array('locations' => $results));
+        $meta_key = '_' . $type;
+        foreach ($posts as $p) {
+            $val = get_post_meta($p->ID, $meta_key, true);
+            if (!empty($val)) {
+                $parts = explode(',', $val);
+                foreach ($parts as $part) {
+                    $trimmed = trim($part);
+                    if ($trimmed !== '') {
+                        $unique_values[] = $trimmed;
+                    }
+                }
+            }
+        }
+
+        $unique_values = array_unique($unique_values);
+        sort($unique_values);
+
+        wp_send_json_success(array('locations' => array_values($unique_values)));
     }
 
     /**
@@ -757,11 +808,10 @@ class ECare_Ajax {
         $meta_query = array('relation' => 'AND');
         $meta_query[] = array('key' => '_test_status', 'value' => 'active');
 
-        // Location hierarchy check
-        if (!empty($division)) $meta_query[] = array('key' => '_division', 'value' => $division);
-        if (!empty($district)) $meta_query[] = array('key' => '_district', 'value' => $district);
-        if (!empty($area))     $meta_query[] = array('key' => '_area', 'value' => $area);
-        if (!empty($provider)) $meta_query[] = array('key' => '_lab_provider', 'value' => $provider);
+        if (!empty($division)) $meta_query[] = array('key' => '_division', 'value' => $division, 'compare' => 'LIKE');
+        if (!empty($district)) $meta_query[] = array('key' => '_district', 'value' => $district, 'compare' => 'LIKE');
+        if (!empty($area))     $meta_query[] = array('key' => '_area', 'value' => $area, 'compare' => 'LIKE');
+        if (!empty($provider)) $meta_query[] = array('key' => '_lab_provider', 'value' => $provider, 'compare' => 'LIKE');
 
         $args = array(
             'post_type'      => 'ecare_lab_test',
