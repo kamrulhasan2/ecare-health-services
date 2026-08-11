@@ -872,6 +872,15 @@ class ECare_Ajax {
         $test_id = intval($_POST['test_id'] ?? 0);
         if (!$test_id) wp_send_json_error(array('message' => 'Invalid test.'));
 
+        $division     = sanitize_text_field($_POST['division'] ?? '');
+        $district     = sanitize_text_field($_POST['district'] ?? '');
+        $area         = sanitize_text_field($_POST['area'] ?? '');
+        $lab_provider = sanitize_text_field($_POST['lab_provider'] ?? '');
+
+        if (!$division || !$district || !$area || !$lab_provider) {
+            wp_send_json_error(array('message' => 'Please select your Division, District, Area, and Lab Provider first.'));
+        }
+
         $price = floatval(get_post_meta($test_id, '_price', true));
         $title = get_the_title($test_id);
 
@@ -882,12 +891,22 @@ class ECare_Ajax {
         // Find or create WooCommerce product for this test
         $product_id = self::find_or_create_product($test_id, $title, $price, 'lab_test');
 
-        $cart_item_key = WC()->cart->add_to_cart($product_id, 1);
+        $cart_item_data = array(
+            'ecare_location_data' => array(
+                'division'     => $division,
+                'district'     => $district,
+                'area'         => $area,
+                'lab_provider' => $lab_provider,
+            )
+        );
+
+        $cart_item_key = WC()->cart->add_to_cart($product_id, 1, 0, array(), $cart_item_data);
         if ($cart_item_key) {
             // Store reference to original test
             WC()->session->set('ecare_lab_test_ref_' . $cart_item_key, $test_id);
             wp_send_json_success(array(
                 'message' => 'Test added to cart!',
+                'checkout_url' => wc_get_checkout_url(),
                 'cart_url' => wc_get_cart_url(),
                 'cart_count' => WC()->cart->get_cart_contents_count(),
             ));

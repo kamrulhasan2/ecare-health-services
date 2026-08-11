@@ -591,11 +591,11 @@
         var area = $('#ecare-lab-area').val() || '';
         var provider = $('#ecare-lab-provider').val() || '';
 
-        if (!division) {
+        if (!division || !district || !area || !provider) {
             $('#ecare-lab-grid').html(
                 '<div class="ecare-empty-lab-view" style="grid-column:1/-1;">' +
                 '  <span style="font-size:48px;display:block;margin-bottom:12px;">🏥</span>' +
-                '  <p>Select a location and provider to view available tests.</p>' +
+                '  <p>Select your Division, District, Area, and Lab Provider to view available tests.</p>' +
                 '</div>'
             );
             $('.ecare-test-count').text('Showing 0 tests');
@@ -626,19 +626,33 @@
         var id = $(this).data('id');
         var $btn = $(this);
         
+        var division = $('#ecare-lab-division').val() || '';
+        var district = $('#ecare-lab-district').val() || '';
+        var area = $('#ecare-lab-area').val() || '';
+        var provider = $('#ecare-lab-provider').val() || '';
+
+        if (!division || !district || !area || !provider) {
+            alert('Please select your Division, District, Area, and Lab Provider first.');
+            return;
+        }
+
         $btn.html('⏳').prop('disabled', true);
 
         $.post(ecare_ajax.ajax_url, {
             action: 'ecare_add_lab_test_to_cart',
             nonce: ecare_ajax.nonce,
-            test_id: id
+            test_id: id,
+            division: division,
+            district: district,
+            area: area,
+            lab_provider: provider
         }, function(response) {
             if (response.success) {
                 $btn.html('✓').css('background-color', '#0E9F6E');
                 
                 // Show floating success notice
                 var $card = $btn.closest('.ecare-lab-test-card');
-                var noticeHtml = '<div class="ecare-form-response success" style="margin-top:12px;font-size:12px;padding:6px 10px;">Added! <a href="' + response.data.cart_url + '" style="font-weight:700;color:#166534;text-decoration:underline;">Checkout</a></div>';
+                var noticeHtml = '<div class="ecare-form-response success" style="margin-top:12px;font-size:12px;padding:6px 10px;">Added! <a href="' + response.data.checkout_url + '" style="font-weight:700;color:#166534;text-decoration:underline;">Checkout Now</a></div>';
                 
                 // Remove previous notices in this card
                 $card.find('.ecare-form-response').remove();
