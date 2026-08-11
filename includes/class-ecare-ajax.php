@@ -1117,7 +1117,12 @@ class ECare_Ajax {
             wp_send_json_error(array('message' => 'Invalid parameters.'));
         }
 
-        update_post_meta($provider_id, '_provider_status', $status);
+        $post_type = get_post_type($provider_id);
+        if ($post_type === 'ecare_ambulance') {
+            update_post_meta($provider_id, '_ambulance_status', $status);
+        } else {
+            update_post_meta($provider_id, '_provider_status', $status);
+        }
 
         wp_send_json_success(array('message' => 'Provider status updated.'));
     }

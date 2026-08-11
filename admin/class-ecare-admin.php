@@ -73,6 +73,15 @@ class ECare_Admin {
             'ecare-ambulance-dispatch',
             array(__CLASS__, 'render_ambulance_dispatch')
         );
+
+        add_submenu_page(
+            'ecare-dashboard',
+            __('Ambulance Providers', 'ecare-health-services'),
+            __('Ambulance Providers', 'ecare-health-services'),
+            'manage_options',
+            'ecare-ambulance-providers',
+            array(__CLASS__, 'render_ambulance_registry')
+        );
     }
 
     /**
@@ -855,6 +864,154 @@ class ECare_Admin {
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No dispatch requests found.', 'ecare-health-services'); ?></td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <?php
+    }
+
+    public static function render_ambulance_registry() {
+        self::admin_style_overrides();
+        
+        // Fetch ambulances CPT
+        $ambulances = get_posts(array(
+            'post_type'      => 'ecare_ambulance',
+            'posts_per_page' => -1,
+            'post_status'    => 'publish',
+        ));
+
+        // Count metrics dynamically
+        $active_count = 0;
+        $pending_count = 0;
+        foreach ($ambulances as $amb) {
+            $status = get_post_meta($amb->ID, '_ambulance_status', true) ?: 'pending';
+            if ($status === 'approved') $active_count++;
+            if ($status === 'pending') $pending_count++;
+        }
+
+        ?>
+        <div class="ecare-admin-wrap">
+            <h1 style="font-weight:800;font-size:24px;margin-bottom:20px;color:var(--text-dark);"><?php _e('Ambulance Providers Management', 'ecare-health-services'); ?></h1>
+            
+            <div class="ecare-admin-kpi-grid">
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon teal">🚑</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Active Providers', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $active_count; ?></span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon green">❄️</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Total Registered', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo count($ambulances); ?></span>
+                    </div>
+                </div>
+                <div class="ecare-admin-kpi-card">
+                    <div class="ecare-admin-kpi-icon yellow">⏳</div>
+                    <div class="ecare-admin-kpi-details">
+                        <span class="ecare-admin-kpi-label"><?php _e('Pending Review', 'ecare-health-services'); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo $pending_count; ?></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="ecare-admin-action-header">
+                <div class="ecare-admin-title-area">
+                    <h2><?php _e('Registered Vehicles & Providers', 'ecare-health-services'); ?></h2>
+                    <span class="ecare-admin-badge-count"><?php echo count($ambulances); ?></span>
+                </div>
+                <div class="ecare-admin-controls">
+                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search vehicles...', 'ecare-health-services'); ?>" />
+                    <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_ambulance')); ?>" class="ecare-admin-btn-green">+ <?php _e('Add New Vehicle', 'ecare-health-services'); ?></a>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="ecare-admin-table-container">
+                <table class="ecare-admin-table">
+                    <thead>
+                        <tr>
+                            <th>[ ]</th>
+                            <th><?php _e('Provider Name', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Type & Model', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Contact Details', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Driver Details', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Verification Doc', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Status', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Actions', 'ecare-health-services'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($ambulances): ?>
+                            <?php foreach ($ambulances as $amb): 
+                                $type  = get_post_meta($amb->ID, '_ambulance_type', true) ?: 'Standard';
+                                $model = get_post_meta($amb->ID, '_vehicle_model', true) ?: 'N/A';
+                                $plate = get_post_meta($amb->ID, '_license_plate', true) ?: 'N/A';
+                                $email = get_post_meta($amb->ID, '_email', true) ?: 'N/A';
+                                $phone = get_post_meta($amb->ID, '_phone', true) ?: 'N/A';
+                                
+                                $driver_name = get_post_meta($amb->ID, '_driver_name', true) ?: 'N/A';
+                                $driver_lic  = get_post_meta($amb->ID, '_driver_license', true) ?: 'N/A';
+                                $driver_nid  = get_post_meta($amb->ID, '_driver_nid', true) ?: 'N/A';
+                                $doc_url     = get_post_meta($amb->ID, '_verification_doc', true);
+                                $status      = get_post_meta($amb->ID, '_ambulance_status', true) ?: 'pending';
+                                
+                                $first_letter = strtoupper(substr($amb->post_title, 0, 1));
+                            ?>
+                                <tr>
+                                    <td><input type="checkbox" /></td>
+                                    <td>
+                                        <div class="ecare-admin-provider-info">
+                                            <div class="ecare-admin-avatar-placeholder" style="background:var(--brand-teal-light);color:var(--brand-teal);"><?php echo $first_letter; ?></div>
+                                            <div>
+                                                <a href="<?php echo esc_url(get_edit_post_link($amb->ID)); ?>" class="provider-name-link"><?php echo esc_html($amb->post_title); ?></a>
+                                                <span style="display:block;font-size:11px;color:var(--text-muted);"><?php _e('Ambulance Provider', 'ecare-health-services'); ?></span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong><?php echo esc_html($type); ?></strong>
+                                        <span style="display:block;font-size:11px;color:var(--text-muted);"><?php echo esc_html($model); ?> (<?php echo esc_html($plate); ?>)</span>
+                                    </td>
+                                    <td>
+                                        <span>📞 <?php echo esc_html($phone); ?></span>
+                                        <span style="display:block;font-size:11px;color:var(--text-muted);">✉️ <?php echo esc_html($email); ?></span>
+                                    </td>
+                                    <td>
+                                        <strong><?php echo esc_html($driver_name); ?></strong>
+                                        <span style="display:block;font-size:11px;color:var(--text-muted);">Lic: <?php echo esc_html($driver_lic); ?> / NID: <?php echo esc_html($driver_nid); ?></span>
+                                    </td>
+                                    <td>
+                                        <?php if ($doc_url): ?>
+                                            <a href="<?php echo esc_url($doc_url); ?>" target="_blank" class="ecare-admin-btn-outline" style="padding:4px 8px;font-size:11px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+                                                📄 View Doc
+                                            </a>
+                                        <?php else: ?>
+                                            <span style="color:var(--text-muted);font-style:italic;font-size:12px;">No Doc</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="ecare-status-pill <?php echo esc_attr($status); ?>"><?php echo esc_html(ucfirst($status)); ?></span>
+                                    </td>
+                                    <td>
+                                        <div style="display:flex;gap:4px;">
+                                            <a href="<?php echo esc_url(get_edit_post_link($amb->ID)); ?>" class="ecare-admin-btn-outline" style="padding:4px 8px;font-size:11px;" title="<?php esc_attr_e('Edit Vehicle', 'ecare-health-services'); ?>">✏️</a>
+                                            <button type="button" class="ecare-admin-btn-outline ecare-delete-provider" data-id="<?php echo intval($amb->ID); ?>" style="padding:4px 8px;font-size:11px;border-color:#EF4444;color:#EF4444;" title="<?php esc_attr_e('Delete Vehicle', 'ecare-health-services'); ?>">🗑️</button>
+                                            <?php if ($status === 'pending'): ?>
+                                                <button class="ecare-admin-btn-green ecare-approve-provider" data-id="<?php echo intval($amb->ID); ?>" style="padding:4px 8px;font-size:11px;">✓</button>
+                                                <button class="ecare-admin-btn-outline ecare-reject-provider" data-id="<?php echo intval($amb->ID); ?>" style="padding:4px 8px;font-size:11px;border-color:#EF4444;color:#EF4444;">✕</button>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No ambulances registered yet.', 'ecare-health-services'); ?></td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>

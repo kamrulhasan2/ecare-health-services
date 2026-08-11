@@ -141,6 +141,7 @@ class ECare_CPT {
             'email'          => get_post_meta($post->ID, '_email', true),
             'gender'         => get_post_meta($post->ID, '_gender', true),
             'address'        => get_post_meta($post->ID, '_address_line', true),
+            'verification_doc' => get_post_meta($post->ID, '_verification_doc', true),
         );
         $photo_url = esc_url($fields['photo_url']);
         ?>
@@ -198,6 +199,20 @@ class ECare_CPT {
             <tr><th><label>NID/Passport</label></th><td><input type="text" name="_nid_passport" value="<?php echo esc_attr($fields['nid_passport']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Bank Name</label></th><td><input type="text" name="_bank_name" value="<?php echo esc_attr($fields['bank_name']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Bank Account</label></th><td><input type="text" name="_bank_account" value="<?php echo esc_attr($fields['bank_account']); ?>" class="regular-text" /></td></tr>
+            <tr>
+                <th><label><?php _e('Verification Document', 'ecare-health-services'); ?></label></th>
+                <td>
+                    <?php if ($fields['verification_doc']): ?>
+                        <a href="<?php echo esc_url($fields['verification_doc']); ?>" target="_blank" class="button button-secondary" style="margin-right:8px;">
+                            📄 <?php _e('View Document', 'ecare-health-services'); ?>
+                        </a>
+                        <input type="text" name="_verification_doc" value="<?php echo esc_attr($fields['verification_doc']); ?>" class="regular-text" />
+                    <?php else: ?>
+                        <span style="color:#ef4444;font-style:italic;margin-right:8px;"><?php _e('No document uploaded', 'ecare-health-services'); ?></span>
+                        <input type="text" name="_verification_doc" value="" class="regular-text" placeholder="https://..." />
+                    <?php endif; ?>
+                </td>
+            </tr>
             <tr><th><label>Status</label></th><td><select name="_provider_status"><option value="pending" <?php selected($fields['status'], 'pending'); ?>>Pending</option><option value="approved" <?php selected($fields['status'], 'approved'); ?>>Approved</option><option value="rejected" <?php selected($fields['status'], 'rejected'); ?>>Rejected</option></select></td></tr>
         </table>
         <?php
@@ -268,9 +283,14 @@ class ECare_CPT {
             'ambulance_type'  => get_post_meta($post->ID, '_ambulance_type', true),
             'base_price'      => get_post_meta($post->ID, '_base_price', true),
             'status'          => get_post_meta($post->ID, '_ambulance_status', true) ?: 'pending',
+            'phone'           => get_post_meta($post->ID, '_phone', true),
+            'email'           => get_post_meta($post->ID, '_email', true),
+            'verification_doc'=> get_post_meta($post->ID, '_verification_doc', true),
         );
         ?>
         <table class="form-table">
+            <tr><th><label>Phone</label></th><td><input type="text" name="_phone" value="<?php echo esc_attr($fields['phone']); ?>" class="regular-text" placeholder="+880..." /></td></tr>
+            <tr><th><label>Email</label></th><td><input type="email" name="_email" value="<?php echo esc_attr($fields['email']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>License Plate</label></th><td><input type="text" name="_license_plate" value="<?php echo esc_attr($fields['license_plate']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Vehicle Model</label></th><td><input type="text" name="_vehicle_model" value="<?php echo esc_attr($fields['vehicle_model']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Driver Name</label></th><td><input type="text" name="_driver_name" value="<?php echo esc_attr($fields['driver_name']); ?>" class="regular-text" /></td></tr>
@@ -279,6 +299,20 @@ class ECare_CPT {
             <tr><th><label>Ambulance Type</label></th><td><select name="_ambulance_type"><option value="Standard" <?php selected($fields['ambulance_type'], 'Standard'); ?>>Standard (Non-AC)</option><option value="ICU" <?php selected($fields['ambulance_type'], 'ICU'); ?>>ICU (AC)</option><option value="Freezer" <?php selected($fields['ambulance_type'], 'Freezer'); ?>>Freezer Type</option></select></td></tr>
             <tr><th><label>Base Price (৳)</label></th><td><input type="number" step="0.01" name="_base_price" value="<?php echo esc_attr($fields['base_price']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Status</label></th><td><select name="_ambulance_status"><option value="pending" <?php selected($fields['status'], 'pending'); ?>>Pending</option><option value="approved" <?php selected($fields['status'], 'approved'); ?>>Approved</option><option value="rejected" <?php selected($fields['status'], 'rejected'); ?>>Rejected</option></select></td></tr>
+            <tr>
+                <th><label>Verification Document</label></th>
+                <td>
+                    <?php if ($fields['verification_doc']): ?>
+                        <a href="<?php echo esc_url($fields['verification_doc']); ?>" target="_blank" class="button button-secondary" style="margin-right:8px;">
+                            📄 View Document
+                        </a>
+                        <input type="text" name="_verification_doc" value="<?php echo esc_attr($fields['verification_doc']); ?>" class="regular-text" />
+                    <?php else: ?>
+                        <span style="color:#ef4444;font-style:italic;margin-right:8px;">No document uploaded</span>
+                        <input type="text" name="_verification_doc" value="" class="regular-text" placeholder="https://..." />
+                    <?php endif; ?>
+                </td>
+            </tr>
         </table>
         <?php
     }
@@ -291,7 +325,7 @@ class ECare_CPT {
 
         if ($post_type === 'ecare_caregiver') {
             if (!isset($_POST['ecare_caregiver_meta_nonce']) || !wp_verify_nonce($_POST['ecare_caregiver_meta_nonce'], 'ecare_caregiver_meta')) return;
-            $keys = array('_provider_type', '_experience', '_category', '_skills', '_education', '_nid_passport', '_bank_name', '_bank_account', '_provider_status', '_phone', '_email', '_gender', '_address_line');
+            $keys = array('_provider_type', '_experience', '_category', '_skills', '_education', '_nid_passport', '_bank_name', '_bank_account', '_provider_status', '_phone', '_email', '_gender', '_address_line', '_verification_doc');
             foreach ($keys as $key) {
                 if (isset($_POST[$key])) {
                     update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));
@@ -335,7 +369,7 @@ class ECare_CPT {
 
         if ($post_type === 'ecare_ambulance') {
             if (!isset($_POST['ecare_ambulance_meta_nonce']) || !wp_verify_nonce($_POST['ecare_ambulance_meta_nonce'], 'ecare_ambulance_meta')) return;
-            $keys = array('_license_plate', '_vehicle_model', '_driver_name', '_driver_license', '_driver_nid', '_ambulance_type', '_base_price', '_ambulance_status');
+            $keys = array('_license_plate', '_vehicle_model', '_driver_name', '_driver_license', '_driver_nid', '_ambulance_type', '_base_price', '_ambulance_status', '_phone', '_email', '_verification_doc');
             foreach ($keys as $key) {
                 if (isset($_POST[$key])) {
                     update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));
