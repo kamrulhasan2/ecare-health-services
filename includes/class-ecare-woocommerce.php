@@ -11,8 +11,11 @@ class ECare_WooCommerce {
         add_action('woocommerce_order_status_processing', array(__CLASS__, 'handle_payment_complete'));
         add_action('woocommerce_order_status_completed', array(__CLASS__, 'handle_order_completed'));
 
-        // Auto ingest lab bookings on order checkout creation
+        // Auto ingest lab bookings on order checkout creation & fallback hooks
         add_action('woocommerce_checkout_order_processed', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 3);
+        add_action('woocommerce_thankyou', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 1);
+        add_action('woocommerce_payment_complete', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 1);
+        add_action('woocommerce_order_status_processing', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 1);
 
         // Display custom location metadata on cart and checkout pages
         add_filter('woocommerce_get_item_data', array(__CLASS__, 'display_cart_item_location_metadata'), 10, 2);
@@ -92,7 +95,7 @@ class ECare_WooCommerce {
         $wpdb->update($table, array('status' => 'completed'), array('order_id' => $order_id, 'booking_type' => 'lab'));
     }
 
-    public static function create_lab_bookings_from_order($order_id, $posted_data, $order) {
+    public static function create_lab_bookings_from_order($order_id, $posted_data = array(), $order = null) {
         if (!$order) {
             $order = wc_get_order($order_id);
         }
