@@ -994,12 +994,12 @@ class ECare_Ajax {
     public static function submit_ambulance_registration() {
         check_ajax_referer('ecare_nonce', 'nonce');
 
-        $provider_name  = sanitize_text_field($_POST['provider_name'] ?? '');
+        $driver_name    = sanitize_text_field($_POST['driver_name'] ?? '');
+        $provider_name  = sanitize_text_field($_POST['provider_name'] ?? $driver_name);
         $email          = sanitize_email($_POST['email'] ?? '');
         $phone          = sanitize_text_field($_POST['phone'] ?? '');
         $license_plate  = sanitize_text_field($_POST['license_plate'] ?? '');
         $vehicle_model  = sanitize_text_field($_POST['vehicle_model'] ?? '');
-        $driver_name    = sanitize_text_field($_POST['driver_name'] ?? '');
         $driver_license = sanitize_text_field($_POST['driver_license'] ?? '');
         $driver_nid     = sanitize_text_field($_POST['driver_nid'] ?? '');
         $ambulance_type = sanitize_text_field($_POST['ambulance_type'] ?? '');
