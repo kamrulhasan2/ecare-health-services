@@ -1206,4 +1206,67 @@
         }
     });
 
+    // ================================================================
+    // 11. REGISTRATION FILE UPLOAD PREVIEW & CANCEL HANDLERS
+    // ================================================================
+    $(document).on('change', 'input[type="file"][name="credentials_doc"]', function(e) {
+        var file = e.target.files[0];
+        var $input = $(this);
+        var $fileBox = $input.closest('.ecare-file-box');
+        
+        var $previewWrap = $fileBox.find('.ecare-doc-preview-wrap');
+        if (!$previewWrap.length) {
+            $previewWrap = $('<div class="ecare-doc-preview-wrap"></div>');
+            $fileBox.append($previewWrap);
+        }
+
+        if (!file) {
+            $previewWrap.hide().empty();
+            return;
+        }
+
+        var icon = '📄';
+        var isImage = file.type.startsWith('image/');
+        var previewHtml = '';
+
+        if (isImage) {
+            var imgUrl = URL.createObjectURL(file);
+            previewHtml = '<div class="ecare-doc-preview-info">' +
+                          '  <img src="' + imgUrl + '" style="width:40px;height:40px;border-radius:6px;object-fit:cover;border:1px solid var(--border-light);" />' +
+                          '  <div class="ecare-doc-preview-details">' +
+                          '    <span class="ecare-doc-preview-name">' + file.name + '</span>' +
+                          '    <span class="ecare-doc-preview-size">' + (file.size / (1024 * 1024)).toFixed(2) + ' MB</span>' +
+                          '  </div>' +
+                          '</div>' +
+                          '<button type="button" class="ecare-doc-preview-cancel-btn" title="Cancel">✕</button>';
+        } else {
+            if (file.name.endsWith('.pdf')) {
+                icon = '📕';
+            }
+            previewHtml = '<div class="ecare-doc-preview-info">' +
+                          '  <span class="ecare-doc-preview-icon">' + icon + '</span>' +
+                          '  <div class="ecare-doc-preview-details">' +
+                          '    <span class="ecare-doc-preview-name">' + file.name + '</span>' +
+                          '    <span class="ecare-doc-preview-size">' + (file.size / (1024 * 1024)).toFixed(2) + ' MB</span>' +
+                          '  </div>' +
+                          '</div>' +
+                          '<button type="button" class="ecare-doc-preview-cancel-btn" title="Cancel">✕</button>';
+        }
+
+        $previewWrap.html(previewHtml).show();
+    });
+
+    $(document).on('click', '.ecare-doc-preview-cancel-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var $btn = $(this);
+        var $fileBox = $btn.closest('.ecare-file-box');
+        var $input = $fileBox.find('input[type="file"]');
+        var $previewWrap = $fileBox.find('.ecare-doc-preview-wrap');
+
+        $input.val('');
+        $previewWrap.hide().empty();
+    });
+
 })(jQuery);
