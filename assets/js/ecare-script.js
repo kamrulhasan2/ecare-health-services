@@ -5,6 +5,45 @@
 (function($) {
     'use strict';
 
+    function validateForm($form) {
+        var isValid = true;
+        var missingFields = [];
+
+        $form.find('[required]').each(function() {
+            var $input = $(this);
+            var val = $input.val();
+            
+            if (!val || ($input.is(':checkbox') && !$input.is(':checked'))) {
+                isValid = false;
+                var $field = $input.closest('.ecare-form-field');
+                var labelText = '';
+                
+                if ($field.length) {
+                    labelText = $field.find('label').text();
+                }
+                
+                if ($input.attr('name') === 'care_photo') {
+                    labelText = 'Profile Photo';
+                }
+                
+                if (!labelText) {
+                    labelText = $input.attr('placeholder') || $input.attr('name');
+                }
+                
+                labelText = labelText.replace('*', '').trim();
+                missingFields.push(labelText);
+            }
+        });
+
+        if (!isValid) {
+            var $resp = $form.find('.ecare-form-response');
+            $resp.html('<div class="error">The following fields are required: ' + missingFields.join(', ') + '.</div>').addClass('error').removeClass('success');
+            $('html, body').animate({ scrollTop: $form.offset().top - 40 }, 300);
+        }
+
+        return isValid;
+    }
+
     // ================================================================
     // 1. CAREGIVER BOOKING MODULE – Tab-style filters
     // ================================================================
@@ -390,6 +429,10 @@
         e.preventDefault();
         var $form = $(this);
 
+        if (!validateForm($form)) {
+            return;
+        }
+
         var formData = new FormData(this);
         formData.append('action', 'ecare_submit_caregiver_registration');
         formData.append('nonce', ecare_ajax.nonce);
@@ -651,6 +694,10 @@
     $(document).on('submit', '#ecare-ambulance-registration-form', function(e) {
         e.preventDefault();
         var $form = $(this);
+
+        if (!validateForm($form)) {
+            return;
+        }
 
         var formData = new FormData(this);
         formData.append('action', 'ecare_submit_ambulance_registration');

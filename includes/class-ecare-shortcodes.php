@@ -114,7 +114,7 @@ class ECare_Shortcodes {
                 <a href="#ecare-caregiver-registration-form" class="ecare-banner-enroll-link"><?php _e('ENROLL NOW →', 'ecare-health-services'); ?></a>
             </div>
 
-            <form id="ecare-caregiver-registration-form" class="ecare-form ecare-form-registration" style="background:#fff;padding:30px;border-radius:12px;border:1px solid var(--border-light);box-shadow:var(--shadow-md);" enctype="multipart/form-data">
+            <form id="ecare-caregiver-registration-form" class="ecare-form ecare-form-registration" style="background:#fff;padding:30px;border-radius:12px;border:1px solid var(--border-light);box-shadow:var(--shadow-md);" enctype="multipart/form-data" novalidate>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                     <h2 class="ecare-section-title" style="margin:0;font-size:20px;"><?php _e('E-CARE Service Registration', 'ecare-health-services'); ?></h2>
                     <button type="button" class="ecare-admin-btn-outline" onclick="window.history.back()"><?php _e('← Back to Options', 'ecare-health-services'); ?></button>
@@ -560,7 +560,7 @@ class ECare_Shortcodes {
         ob_start();
         ?>
         <div class="ecare-container">
-            <form id="ecare-ambulance-registration-form" class="ecare-form ecare-form-registration" style="background:#fff;padding:30px;border-radius:12px;border:1px solid var(--border-light);box-shadow:var(--shadow-md);" enctype="multipart/form-data">
+            <form id="ecare-ambulance-registration-form" class="ecare-form ecare-form-registration" style="background:#fff;padding:30px;border-radius:12px;border:1px solid var(--border-light);box-shadow:var(--shadow-md);" enctype="multipart/form-data" novalidate>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                     <h2 class="ecare-section-title" style="margin:0;font-size:20px;"><?php _e('E-CARE Service Registration', 'ecare-health-services'); ?></h2>
                     <button type="button" class="ecare-admin-btn-outline" onclick="window.history.back()"><?php _e('← Back to Options', 'ecare-health-services'); ?></button>
