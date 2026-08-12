@@ -24,9 +24,27 @@ class ECare_Admin {
             __('E-Care Health', 'ecare-health-services'),
             'manage_options',
             'ecare-dashboard',
-            array(__CLASS__, 'render_dashboard'),
+            array(__CLASS__, 'render_setup_guide'),
             $icon,
             56
+        );
+
+        add_submenu_page(
+            'ecare-dashboard',
+            __('E-care Setup Guide', 'ecare-health-services'),
+            __('E-care Setup Guide', 'ecare-health-services'),
+            'manage_options',
+            'ecare-dashboard',
+            array(__CLASS__, 'render_setup_guide')
+        );
+
+        add_submenu_page(
+            'ecare-dashboard',
+            __('Overview Dashboard', 'ecare-health-services'),
+            __('Overview Dashboard', 'ecare-health-services'),
+            'manage_options',
+            'ecare-overview-dashboard',
+            array(__CLASS__, 'render_dashboard')
         );
 
         add_submenu_page(
@@ -1178,5 +1196,85 @@ class ECare_Admin {
             return '<span style="font-size: 20px; color: #ccc;">👤</span>';
         }
         return $content;
+    }
+
+    public static function render_setup_guide() {
+        self::admin_style_overrides();
+        ?>
+        <div class="ecare-admin-wrap" style="max-width:1100px;">
+            <div style="background:#fff;border-radius:12px;border:1px solid var(--border-light);box-shadow:var(--shadow-md);padding:30px;margin-bottom:30px;">
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;border-bottom:1px solid var(--border-light);padding-bottom:20px;">
+                    <span style="font-size:36px;">⚙️</span>
+                    <div>
+                        <h1 style="font-weight:800;font-size:26px;margin:0;color:var(--text-dark);"><?php _e('E-Care Health Setup Guide', 'ecare-health-services'); ?></h1>
+                        <p style="margin:4px 0 0 0;color:var(--text-muted);font-size:14px;"><?php _e('Quick setup reference and shortcodes documentation for E-Care Health Services plugin.', 'ecare-health-services'); ?></p>
+                    </div>
+                </div>
+
+                <div class="ecare-guide-section" style="margin-bottom:30px;">
+                    <h3 style="font-size:16px;font-weight:700;color:var(--admin-green);margin-bottom:12px;text-transform:uppercase;"><?php _e('1. Core Shortcodes', 'ecare-health-services'); ?></h3>
+                    <p style="color:var(--text-muted);font-size:13.5px;line-height:1.6;margin-bottom:16px;">
+                        <?php _e('Copy and paste these shortcodes into your WordPress pages (or Elementor Shortcode blocks) to display the frontend features:', 'ecare-health-services'); ?>
+                    </p>
+
+                    <div style="display:grid;grid-template-columns:1fr;gap:16px;">
+                        <!-- Shortcode 1 -->
+                        <div style="background:#f8fafc;border:1px solid var(--border-light);border-radius:8px;padding:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+                            <div>
+                                <h4 style="margin:0 0 4px 0;font-size:14.5px;color:var(--text-dark);"><?php _e('Caregiver Booking System', 'ecare-health-services'); ?></h4>
+                                <span style="font-size:12px;color:var(--text-muted);"><?php _e('Displays caregiver tabs, search filters, detail modals, and booking checkout flow.', 'ecare-health-services'); ?></span>
+                            </div>
+                            <code style="background:#e2e8f0;padding:6px 12px;border-radius:6px;font-weight:700;color:#0e9f6e;font-size:13px;font-family:monospace;">[ecare_caregiver_booking]</code>
+                        </div>
+
+                        <!-- Shortcode 2 -->
+                        <div style="background:#f8fafc;border:1px solid var(--border-light);border-radius:8px;padding:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+                            <div>
+                                <h4 style="margin:0 0 4px 0;font-size:14.5px;color:var(--text-dark);"><?php _e('Caregiver Registration Form', 'ecare-health-services'); ?></h4>
+                                <span style="font-size:12px;color:var(--text-muted);"><?php _e('Displays the sign-up form for new caregivers with file upload previews and user meta creation.', 'ecare-health-services'); ?></span>
+                            </div>
+                            <code style="background:#e2e8f0;padding:6px 12px;border-radius:6px;font-weight:700;color:#0e9f6e;font-size:13px;font-family:monospace;">[ecare_caregiver_registration]</code>
+                        </div>
+
+                        <!-- Shortcode 3 -->
+                        <div style="background:#f8fafc;border:1px solid var(--border-light);border-radius:8px;padding:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+                            <div>
+                                <h4 style="margin:0 0 4px 0;font-size:14.5px;color:var(--text-dark);"><?php _e('Lab Test Booking Catalog', 'ecare-health-services'); ?></h4>
+                                <span style="font-size:12px;color:var(--text-muted);"><?php _e('Displays searchable cascading locations selects and lab test catalog with cart additions.', 'ecare-health-services'); ?></span>
+                            </div>
+                            <code style="background:#e2e8f0;padding:6px 12px;border-radius:6px;font-weight:700;color:#0e9f6e;font-size:13px;font-family:monospace;">[ecare_lab_tests]</code>
+                        </div>
+
+                        <!-- Shortcode 4 -->
+                        <div style="background:#f8fafc;border:1px solid var(--border-light);border-radius:8px;padding:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+                            <div>
+                                <h4 style="margin:0 0 4px 0;font-size:14.5px;color:var(--text-dark);"><?php _e('Ambulance Booking Form', 'ecare-health-services'); ?></h4>
+                                <span style="font-size:12px;color:var(--text-muted);"><?php _e('Displays the responsive full-width ambulance dispatch request form and cost estimator.', 'ecare-health-services'); ?></span>
+                            </div>
+                            <code style="background:#e2e8f0;padding:6px 12px;border-radius:6px;font-weight:700;color:#0e9f6e;font-size:13px;font-family:monospace;">[ecare_ambulance_request]</code>
+                        </div>
+
+                        <!-- Shortcode 5 -->
+                        <div style="background:#f8fafc;border:1px solid var(--border-light);border-radius:8px;padding:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+                            <div>
+                                <h4 style="margin:0 0 4px 0;font-size:14.5px;color:var(--text-dark);"><?php _e('Ambulance Provider Registration', 'ecare-health-services'); ?></h4>
+                                <span style="font-size:12px;color:var(--text-muted);"><?php _e('Displays the sign-up form for new vehicle owners/drivers with file upload previews.', 'ecare-health-services'); ?></span>
+                            </div>
+                            <code style="background:#e2e8f0;padding:6px 12px;border-radius:6px;font-weight:700;color:#0e9f6e;font-size:13px;font-family:monospace;">[ecare_ambulance_registration]</code>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ecare-guide-section" style="margin-bottom:10px;">
+                    <h3 style="font-size:16px;font-weight:700;color:var(--admin-green);margin-bottom:12px;text-transform:uppercase;"><?php _e('2. Setup & Requirements Checklist', 'ecare-health-services'); ?></h3>
+                    <ul style="margin:0;padding-left:20px;color:var(--text-muted);font-size:13.5px;line-height:1.8;">
+                        <li><strong><?php _e('WooCommerce Integration:', 'ecare-health-services'); ?></strong> <?php _e('Make sure WooCommerce is active. Lab tests and caregiver bookings dynamically interface with WooCommerce products and checkout carts to handle payments.', 'ecare-health-services'); ?></li>
+                        <li><strong><?php _e('Select2 Library:', 'ecare-health-services'); ?></strong> <?php _e('Select2 handles searchable cascading dropdowns. The plugin automatically enqueues ecare-select2 scripts and styles to prevent third-party collisions.', 'ecare-health-services'); ?></li>
+                        <li><strong><?php _e('Provider Approvals:', 'ecare-health-services'); ?></strong> <?php _e('When caregivers or ambulance partners sign up from the front-end, they are set to "Pending" status. You must verify their documents and approve them under "Care Providers" and "Ambulance Providers" dashboards before they appear in the search results.', 'ecare-health-services'); ?></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 }
