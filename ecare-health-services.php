@@ -39,6 +39,7 @@ final class ECare_Health_Services {
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
 
         add_action('plugins_loaded', array($this, 'init_plugin'));
+        add_action('plugins_loaded', array($this, 'init_elementor'), 20);
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
         // Enable multipart form for caregiver photo upload
@@ -56,6 +57,14 @@ final class ECare_Health_Services {
 
     public function init_plugin() {
         $this->load_dependencies();
+    }
+
+    public function init_elementor() {
+        // Load Elementor custom widgets if Elementor is active
+        if (did_action('elementor/loaded') || defined('ELEMENTOR_VERSION')) {
+            require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-elementor.php';
+            ECare_Elementor::init();
+        }
     }
 
     private function load_dependencies() {
