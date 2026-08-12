@@ -900,20 +900,11 @@
   max-width: 400px;
 }
 .ecare-test-search-input-box input {
-  padding: 10px 14px 10px 38px;
+  padding: 10px 14px;
   border: 1px solid var(--border-light);
   border-radius: 8px;
   width: 100%;
   font-size: 14px;
-}
-.ecare-test-search-input-box::before {
-  content: '🔍';
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 14px;
-  color: var(--text-muted);
 }
 .ecare-catalog-info {
   display: flex;

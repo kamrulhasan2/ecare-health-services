@@ -500,7 +500,7 @@
                 placeholder: function() {
                     return $(this).find('option:first').text();
                 },
-                allowClear: true,
+                allowClear: false,
                 width: '100%'
             });
         }
