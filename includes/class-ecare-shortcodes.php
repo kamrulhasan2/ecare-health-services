@@ -429,61 +429,43 @@ class ECare_Shortcodes {
                         <!-- Hidden Field for selected type -->
                         <input type="hidden" name="ambulance_type" value="Standard" />
 
-                        <!-- Fields with left-aligned icons -->
+                        <!-- Fields without icons -->
                         <div class="ecare-form-row">
                             <div class="ecare-form-field">
                                 <label><?php _e('Pickup Location', 'ecare-health-services'); ?> <span>*</span></label>
-                                <div class="ecare-field-icon-wrap">
-                                    <span class="field-icon">📍</span>
-                                    <input type="text" name="pickup_address" placeholder="<?php esc_attr_e('Your current address', 'ecare-health-services'); ?>" required />
-                                </div>
+                                <input type="text" name="pickup_address" placeholder="<?php esc_attr_e('Your current address', 'ecare-health-services'); ?>" required />
                             </div>
                             <div class="ecare-form-field">
                                 <label><?php _e('Destination', 'ecare-health-services'); ?> <span>*</span></label>
-                                <div class="ecare-field-icon-wrap">
-                                    <span class="field-icon">🎯</span>
-                                    <input type="text" name="destination" placeholder="<?php esc_attr_e('Hospital / target address', 'ecare-health-services'); ?>" required />
-                                </div>
+                                <input type="text" name="destination" placeholder="<?php esc_attr_e('Hospital / target address', 'ecare-health-services'); ?>" required />
                             </div>
                         </div>
 
                         <div class="ecare-form-row">
                             <div class="ecare-form-field">
                                 <label><?php _e('Dispatch Time', 'ecare-health-services'); ?> <span>*</span></label>
-                                <div class="ecare-field-icon-wrap">
-                                    <span class="field-icon">⏰</span>
-                                    <input type="datetime-local" name="schedule_time" required />
-                                </div>
+                                <input type="datetime-local" name="schedule_time" required />
                             </div>
                             <div class="ecare-form-field">
                                 <label><?php _e('Contact Phone', 'ecare-health-services'); ?> <span>*</span></label>
-                                <div class="ecare-field-icon-wrap">
-                                    <span class="field-icon">📞</span>
-                                    <input type="text" name="contact_phone" placeholder="<?php esc_attr_e('Your contact number', 'ecare-health-services'); ?>" required />
-                                </div>
+                                <input type="text" name="contact_phone" placeholder="<?php esc_attr_e('Your contact number', 'ecare-health-services'); ?>" required />
                             </div>
                         </div>
 
                         <div class="ecare-form-row single">
                             <div class="ecare-form-field">
                                 <label><?php _e('Priority Level', 'ecare-health-services'); ?> <span>*</span></label>
-                                <div class="ecare-field-icon-wrap">
-                                    <span class="field-icon">⚠️</span>
-                                    <select name="priority_level" required>
-                                        <option value="Normal"><?php _e('Normal – Scheduled Transport', 'ecare-health-services'); ?></option>
-                                        <option value="Emergency"><?php _e('Emergency – Urgent / Life-Threatening', 'ecare-health-services'); ?></option>
-                                    </select>
-                                </div>
+                                <select name="priority_level" required>
+                                    <option value="Normal"><?php _e('Normal – Scheduled Transport', 'ecare-health-services'); ?></option>
+                                    <option value="Emergency"><?php _e('Emergency – Urgent / Life-Threatening', 'ecare-health-services'); ?></option>
+                                </select>
                             </div>
                         </div>
 
                         <div class="ecare-form-row single">
                             <div class="ecare-form-field">
                                 <label><?php _e('Additional Notes', 'ecare-health-services'); ?></label>
-                                <div class="ecare-field-icon-wrap ecare-field-icon-wrap-textarea">
-                                    <span class="field-icon">📝</span>
-                                    <textarea name="notes" rows="3" placeholder="<?php esc_attr_e('e.g. Patient condition, floor number, special requirements...', 'ecare-health-services'); ?>"></textarea>
-                                </div>
+                                <textarea name="notes" rows="3" placeholder="<?php esc_attr_e('e.g. Patient condition, floor number, special requirements...', 'ecare-health-services'); ?>"></textarea>
                             </div>
                         </div>
 
