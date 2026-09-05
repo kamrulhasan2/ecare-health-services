@@ -217,7 +217,38 @@ class ECare_Ajax {
         $user_id = get_current_user_id();
         $members = self::get_user_family_members($user_id);
         
-        $active_member = $members[0] ?? array();
+        if (empty($members)) {
+            if ($user_id) {
+                $current_user = wp_get_current_user();
+                $user_phone = get_user_meta($user_id, 'billing_phone', true) ?: (get_user_meta($user_id, 'phone_number', true) ?: '');
+                $default_active = array(
+                    'name'      => $current_user ? ($current_user->display_name ?: $current_user->user_login) : '',
+                    'relation'  => 'Self',
+                    'phone'     => $user_phone,
+                    'email'     => $current_user ? $current_user->user_email : '',
+                    'gender'    => '',
+                    'dob'       => '',
+                    'weight'    => '',
+                    'height_ft' => '',
+                    'height_in' => ''
+                );
+            } else {
+                $default_active = array(
+                    'name'      => '',
+                    'relation'  => 'Self',
+                    'phone'     => '',
+                    'email'     => '',
+                    'gender'    => '',
+                    'dob'       => '',
+                    'weight'    => '',
+                    'height_ft' => '',
+                    'height_in' => ''
+                );
+            }
+            $active_member = $default_active;
+        } else {
+            $active_member = $members[0] ?? array();
+        }
         
         $age_str = '';
         if (!empty($active_member['dob'])) {
@@ -254,15 +285,15 @@ class ECare_Ajax {
         $html .= '    <div class="ecare-family-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">';
         $html .= '      <div class="ecare-family-name-wrap" style="display:flex; align-items:center; gap:8px;">';
         $html .= '        <span class="ecare-family-icon" style="font-size:18px;">👤</span>';
-        $html .= '        <span class="ecare-family-name" style="font-weight:700; color:#1E293B; font-size:14px;">' . esc_html($active_member['name']) . '</span>';
-        $html .= '        <span class="ecare-family-badge" style="background:#E0F2FE; color:#0369A1; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600;">' . esc_html($active_member['relation']) . '</span>';
+        $html .= '        <span class="ecare-family-name" style="font-weight:700; color:#1E293B; font-size:14px;">' . esc_html($active_member['name'] ?? '') . '</span>';
+        $html .= '        <span class="ecare-family-badge" style="background:#E0F2FE; color:#0369A1; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600;">' . esc_html($active_member['relation'] ?? 'Self') . '</span>';
         $html .= '      </div>';
         $html .= '    </div>';
         
         $html .= '    <div class="ecare-family-meta" style="display:flex; flex-wrap:wrap; gap:15px; font-size:13px; color:#475569;">';
-        $html .= '      <div class="ecare-family-meta-item">📞 <span class="ecare-family-phone-val">' . esc_html($active_member['phone'] ?: '--') . '</span></div>';
-        $html .= '      <div class="ecare-family-meta-item">✉️ <span class="ecare-family-email-val">' . esc_html($active_member['email'] ?: '--') . '</span></div>';
-        $html .= '      <div class="ecare-family-meta-item">📅 <span class="ecare-family-gender-age-val">' . esc_html($active_member['gender']) . ($age_str ? ' | ' . $age_str : '') . '</span></div>';
+        $html .= '      <div class="ecare-family-meta-item">📞 <span class="ecare-family-phone-val">' . esc_html(($active_member['phone'] ?? '') ?: '--') . '</span></div>';
+        $html .= '      <div class="ecare-family-meta-item">✉️ <span class="ecare-family-email-val">' . esc_html(($active_member['email'] ?? '') ?: '--') . '</span></div>';
+        $html .= '      <div class="ecare-family-meta-item">📅 <span class="ecare-family-gender-age-val">' . esc_html(($active_member['gender'] ?? '') ?: '--') . ($age_str ? ' | ' . $age_str : '') . '</span></div>';
         $html .= '      <div class="ecare-family-meta-item">📏 Height: <span class="ecare-family-height-val">' . esc_html($height_str) . '</span></div>';
         $html .= '      <div class="ecare-family-meta-item">⚖️ Weight: <span class="ecare-family-weight-val">' . esc_html($weight_str) . '</span></div>';
         $html .= '    </div>';
@@ -297,8 +328,8 @@ class ECare_Ajax {
             }
             $m_weight_str = !empty($m['weight']) ? $m['weight'] . ' kg' : '--';
 
-            $html .= '    <div class="ecare-family-option-row" style="display:flex; align-items:center; justify-content:space-between; padding:10px 15px; border-bottom:1px solid #F1F5F9; cursor:pointer;" data-index="' . $idx . '" data-name="' . esc_attr($m['name']) . '" data-relation="' . esc_attr($m['relation']) . '" data-phone="' . esc_attr($m['phone']) . '" data-email="' . esc_attr($m['email']) . '" data-gender="' . esc_attr($m['gender']) . '" data-dob="' . esc_attr($m['dob']) . '" data-age="' . esc_attr($m_age_str) . '" data-weight="' . esc_attr($m_weight_str) . '" data-height-ft="' . esc_attr($m['height_ft'] ?? '') . '" data-height-in="' . esc_attr($m['height_in'] ?? '') . '" data-height="' . esc_attr($m_height_str) . '">';
-            $html .= '      <span style="font-weight:600; font-size:13px; color:#1E293B;">👤 ' . esc_html($m['name']) . ' (' . esc_html($m['relation']) . ')</span>';
+            $html .= '    <div class="ecare-family-option-row" style="display:flex; align-items:center; justify-content:space-between; padding:10px 15px; border-bottom:1px solid #F1F5F9; cursor:pointer;" data-index="' . $idx . '" data-name="' . esc_attr($m['name'] ?? '') . '" data-relation="' . esc_attr($m['relation'] ?? '') . '" data-phone="' . esc_attr($m['phone'] ?? '') . '" data-email="' . esc_attr($m['email'] ?? '') . '" data-gender="' . esc_attr($m['gender'] ?? '') . '" data-dob="' . esc_attr($m['dob'] ?? '') . '" data-age="' . esc_attr($m_age_str) . '" data-weight="' . esc_attr($m_weight_str) . '" data-height-ft="' . esc_attr($m['height_ft'] ?? '') . '" data-height-in="' . esc_attr($m['height_in'] ?? '') . '" data-height="' . esc_attr($m_height_str) . '">';
+            $html .= '      <span style="font-weight:600; font-size:13px; color:#1E293B;">👤 ' . esc_html($m['name'] ?? '') . ' (' . esc_html($m['relation'] ?? '') . ')</span>';
             $html .= '      <div style="display:flex; gap:12px; align-items:center;">';
             $html .= '        <span class="ecare-family-edit-btn" style="font-size:12px; color:#22D3EE; font-weight:600; cursor:pointer;">Edit</span>';
             $html .= '        <span class="ecare-family-select-action" style="font-size:12px; color:#0E9F6E; font-weight:600; cursor:pointer;">Select</span>';
@@ -314,8 +345,8 @@ class ECare_Ajax {
         $html .= '  <input type="hidden" name="caregiver_id" value="' . esc_attr($id) . '" />';
         
         // Hidden inputs for patient details
-        $html .= '  <input type="hidden" name="patient_name" id="ecare-booking-patient-name-val" value="' . esc_attr($active_member['name']) . '" />';
-        $html .= '  <input type="hidden" name="patient_relation" id="ecare-booking-patient-relation-val" value="' . esc_attr($active_member['relation']) . '" />';
+        $html .= '  <input type="hidden" name="patient_name" id="ecare-booking-patient-name-val" value="' . esc_attr($active_member['name'] ?? '') . '" />';
+        $html .= '  <input type="hidden" name="patient_relation" id="ecare-booking-patient-relation-val" value="' . esc_attr($active_member['relation'] ?? 'Self') . '" />';
 
         $html .= '  <div class="ecare-info-grid">';
         
@@ -348,7 +379,7 @@ class ECare_Ajax {
         // Contact Number
         $html .= '    <div class="ecare-form-field">';
         $html .= '      <label>Contact Number <span>*</span></label>';
-        $html .= '      <input type="text" name="contact_phone" id="ecare-booking-patient-phone-val" placeholder="+8801XXXXXXXXX" value="' . esc_attr($active_member['phone']) . '" required />';
+        $html .= '      <input type="text" name="contact_phone" id="ecare-booking-patient-phone-val" placeholder="+8801XXXXXXXXX" value="' . esc_attr($active_member['phone'] ?? '') . '" required />';
         $html .= '    </div>';
         
         // Address Textarea
@@ -1488,32 +1519,7 @@ class ECare_Ajax {
             }
         }
 
-        if (!is_array($members) || empty($members)) {
-            $current_user = wp_get_current_user();
-            $members = array(
-                array(
-                    'name'      => $user_id ? ($current_user->display_name ?: $current_user->user_login) : 'Guest Patient',
-                    'relation'  => 'Self',
-                    'phone'     => '+8801700000000',
-                    'email'     => $user_id ? $current_user->user_email : 'patient@example.com',
-                    'gender'    => 'Male',
-                    'dob'       => '1995-08-30',
-                    'weight'    => '70',
-                    'height_ft' => '5',
-                    'height_in' => '5'
-                )
-            );
-            if ($user_id) {
-                update_user_meta($user_id, 'ecare_family_members', $members);
-            } else {
-                if (!session_id() && !headers_sent()) {
-                    session_start();
-                }
-                $_SESSION['ecare_family_members'] = $members;
-            }
-        }
-
-        return $members;
+        return is_array($members) ? $members : array();
     }
 
     /**
