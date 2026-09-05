@@ -55,9 +55,18 @@ final class ECare_Health_Services {
     }
 
     public function declare_woocommerce_compatibility() {
-        if (class_exists('\\Automattic\\WooCommerce\\Utilities\\FeaturesUtil')) {
-            \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+        if (!class_exists('\\Automattic\\WooCommerce\\Utilities\\FeaturesUtil')) {
+            return;
         }
+
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+
+        // The block checkout is supported: the cart item data filter is applied
+        // by the Store API's cart schema, line item meta survives because the
+        // Store API hands line item creation back to WC_Checkout, and the one
+        // action it does not fire - woocommerce_checkout_order_processed - now
+        // has its Store API counterpart hooked alongside it.
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
     }
 
     public function activate() {

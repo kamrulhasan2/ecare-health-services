@@ -25,6 +25,9 @@ class Fake_Order {
 
 $GLOBALS['orders'] = array();
 function wc_get_order($id) {
+    // Real wc_get_order() hands an order object straight back, which is what the
+    // Store API relies on when it passes $order where an id is expected.
+    if ($id instanceof Fake_Order) { return $id; }
     return isset($GLOBALS['orders'][$id]) ? $GLOBALS['orders'][$id] : false;
 }
 
@@ -177,6 +180,19 @@ $sql = $GLOBALS['wpdb']->log[0];
 check('booking id lands in the query as a bare integer', (bool) preg_match('/\bid = 21\b/', $sql), true);
 check('no raw quote survived from the meta value', strpos($sql, 'OR 1=1'), false);
 check('every status is quoted', (bool) preg_match("/status IN \('pending'\)/", $sql), true);
+
+echo "\n=== G. the block checkout hands over an order, not an id ===\n";
+// woocommerce_store_api_checkout_order_processed passes $order. Feeding that
+// straight into the classic handler used to put the object in the order_id
+// column.
+$GLOBALS['orders'] = array(2001 => new Fake_Order(2001, array()));
+$wpdb->bookings = array();
+$wpdb->log = array();
+ECare_WooCommerce::create_lab_bookings_from_order($GLOBALS['orders'][2001]);
+check('an order object is accepted without error', true, true);
+
+$reflection = new ReflectionMethod('ECare_WooCommerce', 'create_lab_bookings_from_order');
+check('the handler takes one required argument', $reflection->getNumberOfRequiredParameters(), 1);
 
 printf("\n---------------------------------------\n%d passed, %d failed\n", $pass, $fail);
 exit($fail === 0 ? 0 : 1);

@@ -11,8 +11,17 @@ class ECare_WooCommerce {
         add_action('woocommerce_order_status_processing', array(__CLASS__, 'handle_payment_complete'));
         add_action('woocommerce_order_status_completed', array(__CLASS__, 'handle_order_completed'));
 
-        // Auto ingest lab bookings on order checkout creation & fallback hooks
+        // Auto ingest lab bookings on order checkout creation & fallback hooks.
+        //
+        // The classic checkout fires woocommerce_checkout_order_processed; the
+        // block checkout does not, it fires its own Store API action and passes
+        // the order object rather than an id. Verified against WooCommerce 11:
+        // of the three hooks this class relies on, that is the only one the
+        // Store API skips. woocommerce_get_item_data is applied by the cart
+        // schema, and line item meta still works because the Store API hands
+        // line item creation back to WC_Checkout::create_order_line_items().
         add_action('woocommerce_checkout_order_processed', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 3);
+        add_action('woocommerce_store_api_checkout_order_processed', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 1);
         add_action('woocommerce_thankyou', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 1);
         add_action('woocommerce_payment_complete', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 1);
         add_action('woocommerce_order_status_processing', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 1);
@@ -137,6 +146,11 @@ class ECare_WooCommerce {
             $order = wc_get_order($order_id);
         }
         if (!$order) return;
+
+        // The Store API passes the order object where the classic checkout
+        // passes an id, so take the id from the order and let either shape in.
+        // Without this the object would end up in the order_id column.
+        $order_id = $order->get_id();
 
         global $wpdb;
         $table = $wpdb->prefix . 'ecare_bookings';
