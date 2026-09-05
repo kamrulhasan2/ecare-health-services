@@ -102,6 +102,151 @@ class ECare_Admin {
         );
     }
 
+    /** Rows per admin list page. */
+    private static function per_page() {
+        return max(1, (int) apply_filters('ecare_admin_per_page', 20));
+    }
+
+    private static function current_page() {
+        return max(1, (int) ($_GET['paged'] ?? 0));
+    }
+
+    private static function search_term() {
+        return isset($_GET['ecare_s']) ? sanitize_text_field(wp_unslash($_GET['ecare_s'])) : '';
+    }
+
+    /**
+     * The search box, which until now was an input with nothing behind it.
+     */
+    private static function render_search_form($placeholder) {
+        $page   = isset($_GET['page']) ? sanitize_text_field(wp_unslash($_GET['page'])) : '';
+        $search = self::search_term();
+        ?>
+        <form method="get" style="display:flex;gap:6px;align-items:center;margin:0;">
+            <input type="hidden" name="page" value="<?php echo esc_attr($page); ?>" />
+            <input type="search" name="ecare_s" class="ecare-search-input" value="<?php echo esc_attr($search); ?>" placeholder="<?php echo esc_attr($placeholder); ?>" />
+            <button type="submit" class="ecare-admin-btn-outline">&#128269; <?php esc_html_e('Search', 'ecare-health-services'); ?></button>
+            <?php if ($search !== ''): ?>
+                <a class="ecare-admin-btn-outline" href="<?php echo esc_url(admin_url('admin.php?page=' . $page)); ?>"><?php esc_html_e('Clear', 'ecare-health-services'); ?></a>
+            <?php endif; ?>
+        </form>
+        <?php
+    }
+
+    private static function render_pagination($total, $per_page, $current) {
+        $pages = (int) ceil($total / max(1, $per_page));
+        if ($pages < 2) {
+            return;
+        }
+
+        $links = paginate_links(array(
+            'base'      => add_query_arg('paged', '%#%'),
+            'format'    => '',
+            'current'   => $current,
+            'total'     => $pages,
+            'prev_text' => '&laquo;',
+            'next_text' => '&raquo;',
+            'type'      => 'plain',
+        ));
+
+        if (!$links) {
+            return;
+        }
+        ?>
+        <div class="tablenav" style="margin:14px 0;">
+            <div class="tablenav-pages" style="float:none;">
+                <span class="displaying-num"><?php
+                    echo esc_html(sprintf(
+                        /* translators: %s: number of rows */
+                        _n('%s item', '%s items', $total, 'ecare-health-services'),
+                        number_format_i18n($total)
+                    ));
+                ?></span>
+                <span class="pagination-links" style="margin-left:10px;"><?php echo wp_kses_post($links); ?></span>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * One page of bookings of a given type, and the total the search matched.
+     *
+     * These lists used to select every row with no LIMIT at all, and the search
+     * box above them was wired to nothing. Twenty-one bookings hid both; a few
+     * thousand would render an enormous table, exhaust the page's memory, and
+     * leave no way to find a particular booking.
+     *
+     * @return array array($rows, $total)
+     */
+    private static function query_bookings($booking_type, $search, $per_page, $paged) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ecare_bookings';
+
+        $where  = 'booking_type = %s';
+        $params = array($booking_type);
+
+        if ($search !== '') {
+            $like     = '%' . $wpdb->esc_like($search) . '%';
+            $where   .= ' AND (patient_name LIKE %s OR contact_phone LIKE %s OR id = %d)';
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = (int) $search;
+        }
+
+        $total = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE {$where}", $params));
+
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table} WHERE {$where} ORDER BY created_at DESC LIMIT %d OFFSET %d",
+            array_merge($params, array($per_page, ($paged - 1) * $per_page))
+        ));
+
+        return array($rows, $total);
+    }
+
+    /**
+     * How many published posts of a type sit at each status.
+     *
+     * The KPI tiles used to count by walking the full result set, which stops
+     * being possible once the table below is paginated. One grouped query keeps
+     * the numbers exact, and mirrors the old default of treating a missing value
+     * as 'pending'.
+     */
+    private static function status_counts($post_type, $meta_key) {
+        global $wpdb;
+
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT COALESCE(NULLIF(pm.meta_value, ''), 'pending') AS status, COUNT(*) AS n
+               FROM {$wpdb->posts} p
+          LEFT JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key = %s
+              WHERE p.post_type = %s AND p.post_status = 'publish'
+           GROUP BY status",
+            $meta_key,
+            $post_type
+        ));
+
+        $counts = array();
+        foreach ($rows as $row) {
+            $counts[$row->status] = (int) $row->n;
+        }
+
+        return $counts;
+    }
+
+    /** One page of a post type, with the admin search applied. */
+    private static function query_posts($post_type, $search, $per_page, $paged) {
+        $query = new WP_Query(array(
+            'post_type'      => $post_type,
+            'post_status'    => 'publish',
+            'posts_per_page' => $per_page,
+            'paged'          => $paged,
+            's'              => $search,
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+        ));
+
+        return array($query->posts, (int) $query->found_posts);
+    }
+
     /**
      * Edit-screen URL for a WooCommerce order.
      *
@@ -190,7 +335,7 @@ class ECare_Admin {
                     <span class="ecare-admin-badge-count"><?php echo count($recent_bookings); ?></span>
                 </div>
                 <div class="ecare-admin-controls">
-                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search bookings...', 'ecare-health-services'); ?>" />
+                    <?php self::render_search_form(__('Search bookings...', 'ecare-health-services')); ?>
                     <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=ecare_export_bookings'), 'ecare_export_bookings')); ?>" class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></a>
                 </div>
             </div>
@@ -243,7 +388,10 @@ class ECare_Admin {
         $completed = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'caregiver', 'completed'));
         $cancelled = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'caregiver', 'cancelled'));
 
-        $bookings = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} WHERE booking_type = %s ORDER BY created_at DESC", 'caregiver'));
+        $ecare_per_page = self::per_page();
+        $ecare_paged    = self::current_page();
+        $ecare_search   = self::search_term();
+        list($bookings, $ecare_total) = self::query_bookings('caregiver', $ecare_search, $ecare_per_page, $ecare_paged);
         
         ?>
         <div class="ecare-admin-wrap">
@@ -284,11 +432,10 @@ class ECare_Admin {
             <div class="ecare-admin-action-header">
                 <div class="ecare-admin-title-area">
                     <h2><?php _e('Bookings Management', 'ecare-health-services'); ?></h2>
-                    <span class="ecare-admin-badge-count"><?php echo count($bookings); ?></span>
+                    <span class="ecare-admin-badge-count"><?php echo intval($ecare_total); ?></span>
                 </div>
                 <div class="ecare-admin-controls">
-                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search bookings...', 'ecare-health-services'); ?>" />
-                    <button class="ecare-admin-btn-outline">🔍 <?php _e('Filters', 'ecare-health-services'); ?></button>
+                    <?php self::render_search_form(__('Search bookings...', 'ecare-health-services')); ?>
                     <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=ecare_export_bookings'), 'ecare_export_bookings')); ?>" class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></a>
                     <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_caregiver')); ?>" class="ecare-admin-btn-green">+ <?php _e('Add Booking', 'ecare-health-services'); ?></a>
                 </div>
@@ -362,6 +509,7 @@ class ECare_Admin {
                     </tbody>
                 </table>
             </div>
+            <?php self::render_pagination($ecare_total, $ecare_per_page, $ecare_paged); ?>
         </div>
         <?php
     }
@@ -371,21 +519,15 @@ class ECare_Admin {
     public static function render_care_providers() {
         self::admin_style_overrides();
         
-        // Fetch providers CPT
-        $providers = get_posts(array(
-            'post_type'      => 'ecare_caregiver',
-            'posts_per_page' => -1,
-            'post_status'    => 'publish',
-        ));
+        $ecare_per_page = self::per_page();
+        $ecare_paged    = self::current_page();
+        $ecare_search   = self::search_term();
+        list($providers, $ecare_total) = self::query_posts('ecare_caregiver', $ecare_search, $ecare_per_page, $ecare_paged);
 
-        // Count metrics dynamically
-        $active_count = 0;
-        $pending_count = 0;
-        foreach ($providers as $p) {
-            $status = get_post_meta($p->ID, '_provider_status', true) ?: 'pending';
-            if ($status === 'approved') $active_count++;
-            if ($status === 'pending') $pending_count++;
-        }
+        // Counted across every provider, not just the page on screen.
+        $ecare_counts  = self::status_counts('ecare_caregiver', '_provider_status');
+        $active_count  = $ecare_counts['approved'] ?? 0;
+        $pending_count = $ecare_counts['pending'] ?? 0;
 
         ?>
         <div class="ecare-admin-wrap">
@@ -427,10 +569,10 @@ class ECare_Admin {
             <div class="ecare-admin-action-header">
                 <div class="ecare-admin-title-area">
                     <h2><?php _e('Care Provider Registry', 'ecare-health-services'); ?></h2>
-                    <span class="ecare-admin-badge-count"><?php echo count($providers); ?></span>
+                    <span class="ecare-admin-badge-count"><?php echo intval($ecare_total); ?></span>
                 </div>
                 <div class="ecare-admin-controls">
-                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search providers...', 'ecare-health-services'); ?>" />
+                    <?php self::render_search_form(__('Search providers...', 'ecare-health-services')); ?>
                     <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
                     <button type="button" class="button ecare-admin-btn-outline" id="ecare-add-caregiver-type-btn">+ <?php _e('Caregiver Type Info', 'ecare-health-services'); ?></button>
                     <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_caregiver')); ?>" class="ecare-admin-btn-green">+ <?php _e('Register New', 'ecare-health-services'); ?></a>
@@ -513,6 +655,7 @@ class ECare_Admin {
                     </tbody>
                 </table>
             </div>
+            <?php self::render_pagination($ecare_total, $ecare_per_page, $ecare_paged); ?>
 
             <!-- Add Caregiver Type Modal -->
             <div id="ecare-add-type-modal" class="ecare-admin-modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99999; justify-content:center; align-items:center;">
@@ -579,11 +722,13 @@ class ECare_Admin {
     public static function render_lab_catalog() {
         self::admin_style_overrides();
         
-        $tests = get_posts(array(
-            'post_type'      => 'ecare_lab_test',
-            'posts_per_page' => -1,
-            'post_status'    => 'publish',
-        ));
+        $ecare_per_page = self::per_page();
+        $ecare_paged    = self::current_page();
+        $ecare_search   = self::search_term();
+        list($tests, $ecare_total) = self::query_posts('ecare_lab_test', $ecare_search, $ecare_per_page, $ecare_paged);
+
+        // The tile counts the catalogue; the badge below counts what matched.
+        $ecare_test_total = (int) (wp_count_posts('ecare_lab_test')->publish ?? 0);
         
         ?>
         <div class="ecare-admin-wrap">
@@ -594,7 +739,7 @@ class ECare_Admin {
                     <div class="ecare-admin-kpi-icon teal">🔬</div>
                     <div class="ecare-admin-kpi-details">
                         <span class="ecare-admin-kpi-label"><?php _e('TOTAL TESTS', 'ecare-health-services'); ?></span>
-                        <span class="ecare-admin-kpi-value"><?php echo count($tests); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo intval($ecare_test_total); ?></span>
                     </div>
                 </div>
                 <div class="ecare-admin-kpi-card">
@@ -624,11 +769,10 @@ class ECare_Admin {
             <div class="ecare-admin-action-header">
                 <div class="ecare-admin-title-area">
                     <h2><?php _e('Diagnostic Lab Catalog', 'ecare-health-services'); ?></h2>
-                    <span class="ecare-admin-badge-count"><?php echo count($tests); ?></span>
+                    <span class="ecare-admin-badge-count"><?php echo intval($ecare_total); ?></span>
                 </div>
                 <div class="ecare-admin-controls">
-                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search tests...', 'ecare-health-services'); ?>" />
-                    <button class="ecare-admin-btn-outline">🔍 <?php _e('Filters', 'ecare-health-services'); ?></button>
+                    <?php self::render_search_form(__('Search tests...', 'ecare-health-services')); ?>
                     <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
                     <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_lab_test')); ?>" class="ecare-admin-btn-green">+ <?php _e('Add New Test', 'ecare-health-services'); ?></a>
                 </div>
@@ -684,6 +828,7 @@ class ECare_Admin {
                     </tbody>
                 </table>
             </div>
+            <?php self::render_pagination($ecare_total, $ecare_per_page, $ecare_paged); ?>
         </div>
         <?php
     }
@@ -701,7 +846,10 @@ class ECare_Admin {
         $pending = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'lab', 'pending'));
         $completed = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'lab', 'completed'));
 
-        $orders = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} WHERE booking_type = %s ORDER BY created_at DESC", 'lab'));
+        $ecare_per_page = self::per_page();
+        $ecare_paged    = self::current_page();
+        $ecare_search   = self::search_term();
+        list($orders, $ecare_total) = self::query_bookings('lab', $ecare_search, $ecare_per_page, $ecare_paged);
         
         ?>
         <div class="ecare-admin-wrap">
@@ -742,10 +890,10 @@ class ECare_Admin {
             <div class="ecare-admin-action-header">
                 <div class="ecare-admin-title-area">
                     <h2><?php _e('Diagnostic Orders', 'ecare-health-services'); ?></h2>
-                    <span class="ecare-admin-badge-count"><?php echo count($orders); ?></span>
+                    <span class="ecare-admin-badge-count"><?php echo intval($ecare_total); ?></span>
                 </div>
                 <div class="ecare-admin-controls">
-                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search orders...', 'ecare-health-services'); ?>" />
+                    <?php self::render_search_form(__('Search orders...', 'ecare-health-services')); ?>
                     <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
                     <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_lab_test')); ?>" class="ecare-admin-btn-green">+ <?php _e('Place New Order', 'ecare-health-services'); ?></a>
                 </div>
@@ -802,6 +950,7 @@ class ECare_Admin {
                     </tbody>
                 </table>
             </div>
+            <?php self::render_pagination($ecare_total, $ecare_per_page, $ecare_paged); ?>
         </div>
         <?php
     }
@@ -819,7 +968,10 @@ class ECare_Admin {
         $completed = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'ambulance', 'completed'));
         $emergency = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND priority_level = %s", 'ambulance', 'Emergency'));
 
-        $bookings = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} WHERE booking_type = %s ORDER BY created_at DESC", 'ambulance'));
+        $ecare_per_page = self::per_page();
+        $ecare_paged    = self::current_page();
+        $ecare_search   = self::search_term();
+        list($bookings, $ecare_total) = self::query_bookings('ambulance', $ecare_search, $ecare_per_page, $ecare_paged);
         
         ?>
         <div class="ecare-admin-wrap">
@@ -860,10 +1012,10 @@ class ECare_Admin {
             <div class="ecare-admin-action-header">
                 <div class="ecare-admin-title-area">
                     <h2><?php _e('Active Dispatch Requests', 'ecare-health-services'); ?></h2>
-                    <span class="ecare-admin-badge-count"><?php echo count($bookings); ?></span>
+                    <span class="ecare-admin-badge-count"><?php echo intval($ecare_total); ?></span>
                 </div>
                 <div class="ecare-admin-controls">
-                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search dispatch...', 'ecare-health-services'); ?>" />
+                    <?php self::render_search_form(__('Search dispatch...', 'ecare-health-services')); ?>
                     <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
                     <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_ambulance')); ?>" class="ecare-admin-btn-green">+ <?php _e('Create Dispatch', 'ecare-health-services'); ?></a>
                 </div>
@@ -930,6 +1082,7 @@ class ECare_Admin {
                     </tbody>
                 </table>
             </div>
+            <?php self::render_pagination($ecare_total, $ecare_per_page, $ecare_paged); ?>
         </div>
         <?php
     }
@@ -937,21 +1090,16 @@ class ECare_Admin {
     public static function render_ambulance_registry() {
         self::admin_style_overrides();
         
-        // Fetch ambulances CPT
-        $ambulances = get_posts(array(
-            'post_type'      => 'ecare_ambulance',
-            'posts_per_page' => -1,
-            'post_status'    => 'publish',
-        ));
+        $ecare_per_page = self::per_page();
+        $ecare_paged    = self::current_page();
+        $ecare_search   = self::search_term();
+        list($ambulances, $ecare_total) = self::query_posts('ecare_ambulance', $ecare_search, $ecare_per_page, $ecare_paged);
 
-        // Count metrics dynamically
-        $active_count = 0;
-        $pending_count = 0;
-        foreach ($ambulances as $amb) {
-            $status = get_post_meta($amb->ID, '_ambulance_status', true) ?: 'pending';
-            if ($status === 'approved') $active_count++;
-            if ($status === 'pending') $pending_count++;
-        }
+        // Counted across the whole fleet, not just the page on screen.
+        $ecare_counts  = self::status_counts('ecare_ambulance', '_ambulance_status');
+        $active_count  = $ecare_counts['approved'] ?? 0;
+        $pending_count = $ecare_counts['pending'] ?? 0;
+        $ecare_fleet   = array_sum($ecare_counts);
 
         ?>
         <div class="ecare-admin-wrap">
@@ -969,7 +1117,7 @@ class ECare_Admin {
                     <div class="ecare-admin-kpi-icon green">❄️</div>
                     <div class="ecare-admin-kpi-details">
                         <span class="ecare-admin-kpi-label"><?php _e('Total Registered', 'ecare-health-services'); ?></span>
-                        <span class="ecare-admin-kpi-value"><?php echo count($ambulances); ?></span>
+                        <span class="ecare-admin-kpi-value"><?php echo intval($ecare_fleet); ?></span>
                     </div>
                 </div>
                 <div class="ecare-admin-kpi-card">
@@ -985,10 +1133,10 @@ class ECare_Admin {
             <div class="ecare-admin-action-header">
                 <div class="ecare-admin-title-area">
                     <h2><?php _e('Registered Vehicles & Providers', 'ecare-health-services'); ?></h2>
-                    <span class="ecare-admin-badge-count"><?php echo count($ambulances); ?></span>
+                    <span class="ecare-admin-badge-count"><?php echo intval($ecare_total); ?></span>
                 </div>
                 <div class="ecare-admin-controls">
-                    <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search vehicles...', 'ecare-health-services'); ?>" />
+                    <?php self::render_search_form(__('Search vehicles...', 'ecare-health-services')); ?>
                     <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_ambulance')); ?>" class="ecare-admin-btn-green">+ <?php _e('Add New Vehicle', 'ecare-health-services'); ?></a>
                 </div>
             </div>
@@ -1079,6 +1227,7 @@ class ECare_Admin {
                     </tbody>
                 </table>
             </div>
+            <?php self::render_pagination($ecare_total, $ecare_per_page, $ecare_paged); ?>
         </div>
         <?php
     }

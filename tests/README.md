@@ -12,6 +12,7 @@ From the plugin root:
     php tests/harness-ajax-registration.php
     php tests/harness-caregiver-pricing.php
     php tests/harness-booking-order.php
+    php tests/harness-admin-lists.php
 
 There is also an optional layout test, which needs Node and Playwright:
 
@@ -54,6 +55,13 @@ One caveat worth knowing: a sequential test cannot reproduce the race itself
 proves is that the precondition is gone — the two bookings no longer touch the
 same product. The total-equals-its-lines checks are likewise a guard against
 future divergence, not a demonstration of a present one.
+
+**harness-admin-lists.php** (27 assertions) — finding #14.
+The admin list queries. Every list is bounded by a LIMIT, the offset follows the
+page, the search box reaches patient name, phone and booking id, the KPI tiles
+count the whole set rather than the page on screen, and a quote or a LIKE
+wildcard typed into the search stays inside its string literal. Sixteen of these
+fail against the pre-fix code.
 
 **harness-ajax-registration.php** — finding #12.
 Asserts admin-only AJAX actions are never registered as wp_ajax_nopriv_, and
