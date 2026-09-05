@@ -45,6 +45,80 @@
     }
 
     // ================================================================
+    // 0b. UPLOAD GUARD - mirrors the server's limits, checked before the
+    //     upload starts so nobody waits out an 8 MB transfer that will be
+    //     refused on arrival. The server still validates independently;
+    //     this is convenience, not security.
+    // ================================================================
+    var ECARE_UPLOAD_KIND = {
+        booking_file:    'doc',
+        credentials_doc: 'doc',
+        care_photo:      'img'
+    };
+
+    function ecareUploadLimits(kind) {
+        var u = (window.ecare_ajax && ecare_ajax.upload) || {};
+        if (kind === 'img') {
+            return { max: u.img_max_bytes, maxLabel: u.img_max_label, types: u.img_types || [], typesLabel: u.img_types_label };
+        }
+        return { max: u.doc_max_bytes, maxLabel: u.doc_max_label, types: u.doc_types || [], typesLabel: u.doc_types_label };
+    }
+
+    function ecareFileProblem(file, kind) {
+        var lim = ecareUploadLimits(kind);
+
+        if (!file.size) {
+            return 'That file is empty.';
+        }
+        // Some browsers report an empty type; let the server decide those.
+        if (lim.types.length && file.type && lim.types.indexOf(file.type) === -1) {
+            return 'That file type is not accepted. Please upload one of: ' + (lim.typesLabel || '') + '.';
+        }
+        if (lim.max && file.size > lim.max) {
+            return 'That file is too large (' + (file.size / (1024 * 1024)).toFixed(1) + ' MB). The limit is ' + lim.maxLabel + '.';
+        }
+        return null;
+    }
+
+    function ecareUploadBox($input) {
+        var $box = $input.closest('.ecare-file-box');
+        if (!$box.length) { $box = $input.closest('.ecare-form-field'); }
+        if (!$box.length) { $box = $input.parent(); }
+        return $box;
+    }
+
+    // Bound before the preview handler, so a rejected file never gets drawn.
+    $(document).on('change', 'input[type="file"]', function(e) {
+        var kind = ECARE_UPLOAD_KIND[$(this).attr('name')];
+        if (!kind) { return; }
+
+        var file = this.files && this.files[0];
+        if (!file) { return; }
+
+        var $box = ecareUploadBox($(this));
+        var problem = ecareFileProblem(file, kind);
+
+        if (!problem) {
+            $box.find('.ecare-upload-error').remove();
+            return;
+        }
+
+        // Clear the input so the form cannot be submitted with a file the
+        // server is going to refuse anyway.
+        this.value = '';
+        e.stopImmediatePropagation();
+
+        var $err = $box.find('.ecare-upload-error');
+        if (!$err.length) {
+            $err = $('<div class="ecare-upload-error" style="color:#b91c1c;font-size:12px;font-weight:600;margin-top:8px;"></div>');
+            $box.append($err);
+        }
+        $err.text(problem);
+        $box.find('.ecare-doc-preview-wrap').hide().empty();
+    });
+
+
+    // ================================================================
     // 1. CAREGIVER BOOKING MODULE – Tab-style filters
     // ================================================================
 

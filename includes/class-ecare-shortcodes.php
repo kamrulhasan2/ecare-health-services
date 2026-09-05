@@ -136,7 +136,7 @@ class ECare_Shortcodes {
                             </svg>
                             <span><?php _e('Choose File', 'ecare-health-services'); ?></span>
                         </span>
-                        <input type="file" name="care_photo" accept="image/*" required />
+                        <input type="file" name="care_photo" accept="<?php echo esc_attr(implode(',', array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_IMAGE)))); ?>" required />
                     </label>
                 </div>
 
@@ -297,8 +297,13 @@ class ECare_Shortcodes {
                             </svg>
                         </span>
                         <p><?php _e('Click to Upload Credentials / Certificates', 'ecare-health-services'); ?></p>
-                        <span class="file-hint"><?php _e('Upload certificates, NID copies (Max 2MB per file)', 'ecare-health-services'); ?></span>
-                        <input type="file" id="reg_credentials" name="credentials_doc" style="display:none;" required />
+                        <span class="file-hint"><?php echo esc_html(sprintf(
+                            /* translators: 1: extension list, 2: size, e.g. "8 MB" */
+                            __('%1$s, up to %2$s per file', 'ecare-health-services'),
+                            ECare_Secure_Files::allowed_extensions_label(ECare_Secure_Files::KIND_DOCUMENT),
+                            size_format(ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_DOCUMENT))
+                        )); ?></span>
+                        <input type="file" id="reg_credentials" name="credentials_doc" accept="<?php echo esc_attr(implode(',', array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_DOCUMENT)))); ?>" style="display:none;" required />
                     </div>
                 </div>
 
@@ -674,8 +679,13 @@ class ECare_Shortcodes {
                     <div class="ecare-doc-upload" onclick="document.getElementById('reg_amb_credentials').click()">
                         <span class="ecare-doc-upload-icon">❄️</span>
                         <p><?php _e('Upload Verification Documents', 'ecare-health-services'); ?></p>
-                        <span class="file-hint"><?php _e('Upload Driving License, NID copy, vehicle registration (Max 2MB each)', 'ecare-health-services'); ?></span>
-                        <input type="file" id="reg_amb_credentials" name="credentials_doc" style="display:none;" required />
+                        <span class="file-hint"><?php echo esc_html(sprintf(
+                            /* translators: 1: extension list, 2: size, e.g. "8 MB" */
+                            __('%1$s, up to %2$s per file', 'ecare-health-services'),
+                            ECare_Secure_Files::allowed_extensions_label(ECare_Secure_Files::KIND_DOCUMENT),
+                            size_format(ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_DOCUMENT))
+                        )); ?></span>
+                        <input type="file" id="reg_amb_credentials" name="credentials_doc" accept="<?php echo esc_attr(implode(',', array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_DOCUMENT)))); ?>" style="display:none;" required />
                     </div>
                 </div>
 

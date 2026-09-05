@@ -373,8 +373,13 @@ class ECare_Ajax {
         $html .= '    <div class="ecare-doc-upload" onclick="document.getElementById(\'ecare-booking-file\').click()">';
         $html .= '      <span class="ecare-doc-upload-icon">📎</span>';
         $html .= '      <p>Click to upload prescription or diagnostic document</p>';
-        $html .= '      <span class="file-hint">PDF or Image file (Max 2MB)</span>';
-        $html .= '      <input type="file" id="ecare-booking-file" name="booking_file" style="display:none;" />';
+        $html .= '      <span class="file-hint">' . esc_html(sprintf(
+            /* translators: 1: extension list, 2: size, e.g. "8 MB" */
+            __('%1$s file, up to %2$s', 'ecare-health-services'),
+            ECare_Secure_Files::allowed_extensions_label(ECare_Secure_Files::KIND_DOCUMENT),
+            size_format(ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_DOCUMENT))
+        )) . '</span>';
+        $html .= '      <input type="file" id="ecare-booking-file" name="booking_file" accept="' . esc_attr(implode(',', array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_DOCUMENT)))) . '" style="display:none;" />';
         $html .= '    </div>';
         $html .= '  </div>';
         
@@ -630,6 +635,27 @@ class ECare_Ajax {
             wp_send_json_error(array('message' => 'This email address is already registered.'));
         }
 
+        // Validate every uploaded file BEFORE the user and the provider post are
+        // created. A rejected file must not leave a half-finished registration
+        // behind, and the visitor must be told why rather than being congratulated
+        // on a submission that quietly dropped their document.
+        foreach (array(
+            'care_photo'      => ECare_Secure_Files::KIND_IMAGE,
+            'credentials_doc' => ECare_Secure_Files::KIND_DOCUMENT,
+        ) as $upload_field => $upload_kind) {
+            if (empty($_FILES[$upload_field]) || empty($_FILES[$upload_field]['name'])) {
+                continue;
+            }
+            $file_check = ECare_Secure_Files::validate_upload($upload_field, $upload_kind);
+            if (is_wp_error($file_check)) {
+                wp_send_json_error(array('message' => $file_check->get_error_message()));
+            }
+            $rate_check = ECare_Secure_Files::check_rate_limit();
+            if (is_wp_error($rate_check)) {
+                wp_send_json_error(array('message' => $rate_check->get_error_message()));
+            }
+        }
+
         // Create standard WordPress subscriber user
         $user_id = wp_insert_user(array(
             'user_login'   => $email,
@@ -658,14 +684,19 @@ class ECare_Ajax {
 
         update_post_meta($post_id, '_user_id', $user_id);
 
-        // Handle profile photo using media_handle_upload
+        // Handle profile photo using media_handle_upload. This one stays in the
+        // Media Library on purpose: it is shown publicly on the caregiver cards.
+        $doc_warning = '';
         $photo_id = 0;
         if (!empty($_FILES['care_photo']) && !empty($_FILES['care_photo']['name'])) {
             require_once ABSPATH . 'wp-admin/includes/image.php';
             require_once ABSPATH . 'wp-admin/includes/file.php';
             require_once ABSPATH . 'wp-admin/includes/media.php';
 
-            $photo_id = media_handle_upload('care_photo', $post_id);
+            $photo_id = media_handle_upload('care_photo', $post_id, array(), array(
+                'test_form' => false,
+                'mimes'     => ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_IMAGE),
+            ));
             if (is_wp_error($photo_id)) {
                 $photo_id = 0;
             }
@@ -698,7 +729,11 @@ class ECare_Ajax {
         // Identity / verification document. Private storage, never the Media Library.
         if (!empty($_FILES['credentials_doc']) && !empty($_FILES['credentials_doc']['name'])) {
             $stored = ECare_Secure_Files::upload('credentials_doc');
-            if (!is_wp_error($stored)) {
+            if (is_wp_error($stored)) {
+                // The account and provider post already exist, so this cannot
+                // abort. Say so instead of reporting a clean success.
+                $doc_warning = $stored->get_error_message();
+            } else {
                 update_post_meta($post_id, '_verification_doc', $stored);
             }
         }
@@ -709,7 +744,12 @@ class ECare_Ajax {
             wp_set_post_terms($post_id, array($term->term_id), 'ecare_caregiver_type');
         }
 
-        wp_send_json_success(array('message' => 'Caregiver Registration submitted successfully! We will review your application and approve it.'));
+        $message = 'Caregiver Registration submitted successfully! We will review your application and approve it.';
+        if (!empty($doc_warning)) {
+            $message .= ' However, your verification document was NOT saved (' . $doc_warning . '). Please contact us to submit it again.';
+        }
+
+        wp_send_json_success(array('message' => $message));
     }
 
     /**
@@ -1014,6 +1054,24 @@ class ECare_Ajax {
             wp_send_json_error(array('message' => 'This email address is already registered.'));
         }
 
+        // Validate every uploaded file BEFORE the user and the provider post are
+        // created. A rejected file must not leave a half-finished registration
+        // behind, and the visitor must be told why rather than being congratulated
+        // on a submission that quietly dropped their document.
+        foreach (array('credentials_doc' => ECare_Secure_Files::KIND_DOCUMENT) as $upload_field => $upload_kind) {
+            if (empty($_FILES[$upload_field]) || empty($_FILES[$upload_field]['name'])) {
+                continue;
+            }
+            $file_check = ECare_Secure_Files::validate_upload($upload_field, $upload_kind);
+            if (is_wp_error($file_check)) {
+                wp_send_json_error(array('message' => $file_check->get_error_message()));
+            }
+            $rate_check = ECare_Secure_Files::check_rate_limit();
+            if (is_wp_error($rate_check)) {
+                wp_send_json_error(array('message' => $rate_check->get_error_message()));
+            }
+        }
+
         // Create standard WordPress subscriber user
         $user_id = wp_insert_user(array(
             'user_login'   => $email,
@@ -1054,14 +1112,24 @@ class ECare_Ajax {
         update_post_meta($post_id, '_phone', $phone);
 
         // Identity / verification document. Private storage, never the Media Library.
+        $doc_warning = '';
         if (!empty($_FILES['credentials_doc']) && !empty($_FILES['credentials_doc']['name'])) {
             $stored = ECare_Secure_Files::upload('credentials_doc');
-            if (!is_wp_error($stored)) {
+            if (is_wp_error($stored)) {
+                // The account and provider post already exist, so this cannot
+                // abort. Say so instead of reporting a clean success.
+                $doc_warning = $stored->get_error_message();
+            } else {
                 update_post_meta($post_id, '_verification_doc', $stored);
             }
         }
 
-        wp_send_json_success(array('message' => 'Ambulance provider registration submitted! We will review and approve.'));
+        $message = 'Ambulance provider registration submitted! We will review and approve.';
+        if (!empty($doc_warning)) {
+            $message .= ' However, your verification document was NOT saved (' . $doc_warning . '). Please contact us to submit it again.';
+        }
+
+        wp_send_json_success(array('message' => $message));
     }
 
     // ---- Admin Actions ----

@@ -24,12 +24,216 @@ class ECare_Secure_Files {
     const CTX_PROVIDER = 'provider';
     const CTX_BOOKING  = 'booking';
 
+    /** Upload kinds, which decide the size cap and the accepted types. */
+    const KIND_DOCUMENT = 'document';
+    const KIND_IMAGE    = 'image';
+
+    /** Ceilings before the server's own php.ini limit is applied. */
+    const MAX_DOCUMENT_BYTES = 8388608; // 8 MB
+    const MAX_IMAGE_BYTES    = 5242880; // 5 MB
+
+    /** Uploads allowed from one IP per hour. */
+    const RATE_LIMIT = 20;
+
     /** Set while our upload_dir filter is active. */
     private static $redirect_upload = false;
+
+    /** Memoised throttle result, so one request counts once however often it asks. */
+    private static $rate_result = null;
 
     public static function init() {
         add_action('admin_post_' . self::ACTION, array(__CLASS__, 'serve'));
         // No nopriv counterpart on purpose: these files always require a login.
+    }
+
+    // ---- Validation ----
+
+    /**
+     * Largest upload we accept, never larger than what this server can receive.
+     *
+     * Clamping to wp_max_upload_size() keeps the number we advertise in the UI
+     * honest: promising 8 MB on a host capped at 2 MB just produces a confusing
+     * failure halfway through the upload.
+     */
+    public static function max_bytes($kind = self::KIND_DOCUMENT) {
+        $ceiling = ($kind === self::KIND_IMAGE) ? self::MAX_IMAGE_BYTES : self::MAX_DOCUMENT_BYTES;
+
+        /**
+         * Filter the size cap for E-Care uploads.
+         *
+         * @param int    $ceiling Bytes.
+         * @param string $kind    KIND_DOCUMENT or KIND_IMAGE.
+         */
+        $ceiling = (int) apply_filters('ecare_upload_max_bytes', $ceiling, $kind);
+
+        $server = (int) wp_max_upload_size();
+        if ($server > 0 && $server < $ceiling) {
+            $ceiling = $server;
+        }
+
+        return max(0, $ceiling);
+    }
+
+    /**
+     * Accepted types, as extension => mime.
+     *
+     * Deliberately narrow. Anything not listed here is refused even when
+     * WordPress would otherwise allow it, because these forms only ever need a
+     * photo of a document.
+     */
+    public static function allowed_mimes($kind = self::KIND_DOCUMENT) {
+        $image = array(
+            'jpg|jpeg|jpe' => 'image/jpeg',
+            'png'          => 'image/png',
+            'webp'         => 'image/webp',
+        );
+
+        $mimes = ($kind === self::KIND_IMAGE)
+            ? $image
+            : array_merge($image, array('pdf' => 'application/pdf'));
+
+        /**
+         * Filter the accepted upload types.
+         *
+         * @param array  $mimes extension pattern => mime type.
+         * @param string $kind  KIND_DOCUMENT or KIND_IMAGE.
+         */
+        return apply_filters('ecare_allowed_upload_mimes', $mimes, $kind);
+    }
+
+    /**
+     * A human list of accepted extensions, for UI hints.
+     */
+    public static function allowed_extensions_label($kind = self::KIND_DOCUMENT) {
+        $out = array();
+        foreach (array_keys(self::allowed_mimes($kind)) as $pattern) {
+            $parts = explode('|', $pattern);
+            $out[] = strtoupper($parts[0]);
+        }
+        return implode(', ', $out);
+    }
+
+    /**
+     * Validate one $_FILES entry before anything is written or created.
+     *
+     * Call this BEFORE creating users, posts or booking rows, so a rejected file
+     * does not leave half-finished records behind.
+     *
+     * @return true|WP_Error
+     */
+    public static function validate_upload($field, $kind = self::KIND_DOCUMENT) {
+        if (empty($_FILES[$field]) || !is_array($_FILES[$field])) {
+            return new WP_Error('ecare_no_file', __('No file was uploaded.', 'ecare-health-services'));
+        }
+
+        $file = $_FILES[$field];
+        $max  = self::max_bytes($kind);
+
+        // PHP-level errors first: these have nothing to do with our own rules.
+        $error = isset($file['error']) ? (int) $file['error'] : UPLOAD_ERR_NO_FILE;
+        if ($error !== UPLOAD_ERR_OK) {
+            switch ($error) {
+                case UPLOAD_ERR_INI_SIZE:
+                case UPLOAD_ERR_FORM_SIZE:
+                    return new WP_Error('ecare_too_large', sprintf(
+                        /* translators: %s: human readable size, e.g. "8 MB" */
+                        __('That file is too large. The limit is %s.', 'ecare-health-services'),
+                        size_format($max)
+                    ));
+                case UPLOAD_ERR_PARTIAL:
+                    return new WP_Error('ecare_partial', __('The upload was interrupted. Please try again.', 'ecare-health-services'));
+                case UPLOAD_ERR_NO_FILE:
+                    return new WP_Error('ecare_no_file', __('No file was uploaded.', 'ecare-health-services'));
+                default:
+                    return new WP_Error('ecare_upload_error', __('The file could not be uploaded. Please try again.', 'ecare-health-services'));
+            }
+        }
+
+        if (empty($file['tmp_name']) || !static::is_real_upload($file['tmp_name'])) {
+            return new WP_Error('ecare_bad_upload', __('The file could not be uploaded. Please try again.', 'ecare-health-services'));
+        }
+
+        $size = isset($file['size']) ? (int) $file['size'] : 0;
+        if ($size <= 0) {
+            return new WP_Error('ecare_empty_file', __('That file is empty.', 'ecare-health-services'));
+        }
+        if ($size > $max) {
+            return new WP_Error('ecare_too_large', sprintf(
+                __('That file is too large. The limit is %s.', 'ecare-health-services'),
+                size_format($max)
+            ));
+        }
+
+        $allowed = self::allowed_mimes($kind);
+
+        // Checks the real contents, not just the extension, so a script renamed
+        // to .jpg does not get through.
+        $checked = wp_check_filetype_and_ext($file['tmp_name'], $file['name'], $allowed);
+        $type    = !empty($checked['type']) ? $checked['type'] : false;
+
+        if (!$type || !in_array($type, array_values($allowed), true)) {
+            return new WP_Error('ecare_bad_type', sprintf(
+                /* translators: %s: list of extensions, e.g. "JPG, PNG, WEBP, PDF" */
+                __('That file type is not accepted. Please upload one of: %s.', 'ecare-health-services'),
+                self::allowed_extensions_label($kind)
+            ));
+        }
+
+        // An image must actually decode as one.
+        if (strpos($type, 'image/') === 0 && !@getimagesize($file['tmp_name'])) {
+            return new WP_Error('ecare_bad_image', __('That image could not be read. Please upload a different file.', 'ecare-health-services'));
+        }
+
+        return true;
+    }
+
+    /**
+     * Guards against a forged $_FILES entry pointing at a file already on disk.
+     *
+     * Split out as its own overridable method purely so the test harness can
+     * exercise validate_upload(): is_uploaded_file() is always false outside a
+     * real HTTP POST, which would otherwise make every path untestable.
+     */
+    protected static function is_real_upload($path) {
+        return is_uploaded_file($path);
+    }
+
+    /**
+     * Crude per-IP throttle, so a size cap alone cannot be turned into disk
+     * exhaustion by repeating the upload.
+     *
+     * Keyed on IP because these endpoints are open to logged-out visitors. Shared
+     * connections (carrier NAT, a clinic behind one address) share the budget, so
+     * the default is deliberately loose and filterable.
+     *
+     * @return true|WP_Error
+     */
+    public static function check_rate_limit() {
+        // One HTTP request may carry two files and ask twice; charge it once.
+        if (self::$rate_result !== null) {
+            return self::$rate_result;
+        }
+
+        $limit = (int) apply_filters('ecare_upload_rate_limit', self::RATE_LIMIT);
+        if ($limit <= 0) {
+            return self::$rate_result = true;
+        }
+
+        $ip = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+        if ($ip === '') {
+            return self::$rate_result = true;
+        }
+
+        $key   = 'ecare_ul_' . md5($ip);
+        $count = (int) get_transient($key);
+
+        if ($count >= $limit) {
+            return self::$rate_result = new WP_Error('ecare_rate_limited', __('Too many uploads from this connection. Please wait an hour and try again.', 'ecare-health-services'));
+        }
+
+        set_transient($key, $count + 1, HOUR_IN_SECONDS);
+
+        return self::$rate_result = true;
     }
 
     // ---- Storage ----
@@ -84,11 +288,18 @@ class ECare_Secure_Files {
      * Move an uploaded file into private storage.
      *
      * @param string $field Key in $_FILES.
+     * @param string $kind  KIND_DOCUMENT or KIND_IMAGE.
      * @return string|WP_Error Reference to persist (relative to the uploads basedir), or error.
      */
-    public static function upload($field) {
-        if (empty($_FILES[$field]) || empty($_FILES[$field]['name'])) {
-            return new WP_Error('ecare_no_file', __('No file was uploaded.', 'ecare-health-services'));
+    public static function upload($field, $kind = self::KIND_DOCUMENT) {
+        $valid = self::validate_upload($field, $kind);
+        if (is_wp_error($valid)) {
+            return $valid;
+        }
+
+        $allowed = self::check_rate_limit();
+        if (is_wp_error($allowed)) {
+            return $allowed;
         }
 
         if (!function_exists('wp_handle_upload')) {
@@ -104,9 +315,12 @@ class ECare_Secure_Files {
         add_filter('wp_handle_upload_prefilter', array(__CLASS__, 'filter_upload_name'));
 
         // test_form is false because these come from AJAX, not a rendered form.
-        // wp_handle_upload still runs wp_check_filetype_and_ext(), which rejects
-        // executable extensions such as .php.
-        $result = wp_handle_upload($_FILES[$field], array('test_form' => false));
+        // The mimes override makes wp_handle_upload enforce the same narrow list
+        // validate_upload() just checked, so both layers agree.
+        $result = wp_handle_upload($_FILES[$field], array(
+            'test_form' => false,
+            'mimes'     => self::allowed_mimes($kind),
+        ));
 
         remove_filter('wp_handle_upload_prefilter', array(__CLASS__, 'filter_upload_name'));
         remove_filter('upload_dir', array(__CLASS__, 'filter_upload_dir'));

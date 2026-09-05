@@ -126,6 +126,16 @@ final class ECare_Health_Services {
             'ajax_url'      => admin_url('admin-ajax.php'),
             'nonce'         => wp_create_nonce('ecare_nonce'),
             'type_packages' => $type_packages,
+            'upload'        => array(
+                'doc_max_bytes'   => ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_DOCUMENT),
+                'doc_max_label'   => size_format(ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_DOCUMENT)),
+                'doc_types'       => array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_DOCUMENT)),
+                'doc_types_label' => ECare_Secure_Files::allowed_extensions_label(ECare_Secure_Files::KIND_DOCUMENT),
+                'img_max_bytes'   => ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_IMAGE),
+                'img_max_label'   => size_format(ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_IMAGE)),
+                'img_types'       => array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_IMAGE)),
+                'img_types_label' => ECare_Secure_Files::allowed_extensions_label(ECare_Secure_Files::KIND_IMAGE),
+            ),
         ));
     }
 
@@ -173,6 +183,16 @@ final class ECare_Health_Services {
             'ajax_url'      => admin_url('admin-ajax.php'),
             'nonce'         => wp_create_nonce('ecare_nonce'),
             'type_packages' => $type_packages,
+            'upload'        => array(
+                'doc_max_bytes'   => ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_DOCUMENT),
+                'doc_max_label'   => size_format(ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_DOCUMENT)),
+                'doc_types'       => array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_DOCUMENT)),
+                'doc_types_label' => ECare_Secure_Files::allowed_extensions_label(ECare_Secure_Files::KIND_DOCUMENT),
+                'img_max_bytes'   => ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_IMAGE),
+                'img_max_label'   => size_format(ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_IMAGE)),
+                'img_types'       => array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_IMAGE)),
+                'img_types_label' => ECare_Secure_Files::allowed_extensions_label(ECare_Secure_Files::KIND_IMAGE),
+            ),
         ));
     }
 
