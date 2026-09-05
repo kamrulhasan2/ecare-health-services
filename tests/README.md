@@ -11,6 +11,7 @@ From the plugin root:
     php tests/harness-woocommerce.php
     php tests/harness-ajax-registration.php
     php tests/harness-caregiver-pricing.php
+    php tests/harness-booking-order.php
 
 There is also an optional layout test, which needs Node and Playwright:
 
@@ -40,6 +41,19 @@ overrides falling back rather than booking free, physiotherapist packages, and
 zero-priced packages being dropped. If the modal and the handler ever stop
 sharing this function, a customer gets quoted one number and charged another —
 which has already happened once, at 1700 shown against 100 taken.
+
+**harness-booking-order.php** (17 assertions) — finding #21.
+How a booking turns into a WooCommerce order. The product carrying the price is
+keyed on caregiver-plus-package rather than on the display name, so a
+caregiver's four packages no longer share one product whose price is rewritten
+on every booking. Checked against the pre-fix code these assertions produce four
+failures, so they are not decorative.
+
+One caveat worth knowing: a sequential test cannot reproduce the race itself
+(two requests interleaving between set_price() and add_product()). What it
+proves is that the precondition is gone — the two bookings no longer touch the
+same product. The total-equals-its-lines checks are likewise a guard against
+future divergence, not a demonstration of a present one.
 
 **harness-ajax-registration.php** — finding #12.
 Asserts admin-only AJAX actions are never registered as wp_ajax_nopriv_, and

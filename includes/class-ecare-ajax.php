@@ -632,7 +632,14 @@ class ECare_Ajax {
                 'address' => $address
             );
             
-            $order = self::create_woocommerce_order($user_id, $price, 'Caregiver Booking - ' . get_the_title($caregiver_id), $booking_id, $patient_data);
+            $order = self::create_woocommerce_order(
+                $user_id,
+                $price,
+                'Caregiver Booking - ' . get_the_title($caregiver_id) . ' (' . $package_type . ')',
+                $booking_id,
+                $patient_data,
+                'cg' . (int) $caregiver_id . '-' . sanitize_title($package_type)
+            );
             if ($order) {
                 $wpdb->update($table, array('order_id' => $order->get_id()), array('id' => $booking_id));
                 wp_send_json_success(array(
@@ -1131,7 +1138,14 @@ class ECare_Ajax {
                 $patient_data['name'] = $user_info->display_name;
             }
             
-            $order = self::create_woocommerce_order($user_id, $price, 'Ambulance Booking - ' . $ambulance_type, $booking_id, $patient_data);
+            $order = self::create_woocommerce_order(
+                $user_id,
+                $price,
+                'Ambulance Booking - ' . $ambulance_type,
+                $booking_id,
+                $patient_data,
+                'amb-' . sanitize_title($ambulance_type)
+            );
             if ($order) {
                 $wpdb->update($table, array('order_id' => $order->get_id()), array('id' => $booking_id));
                 wp_send_json_success(array(
@@ -1476,12 +1490,23 @@ class ECare_Ajax {
         return $attach_id;
     }
 
-    private static function create_woocommerce_order($user_id, $amount, $item_name, $booking_id, $patient_data = array()) {
+    /**
+     * @param string $sku_key Identifies the exact thing being sold, so two price
+     *                        points never share one product. See
+     *                        get_or_create_booking_product().
+     */
+    private static function create_woocommerce_order($user_id, $amount, $item_name, $booking_id, $patient_data = array(), $sku_key = '') {
         if (!class_exists('WooCommerce')) return null;
 
         $order = wc_create_order(array('customer_id' => $user_id));
-        $order->add_product(self::get_or_create_booking_product($item_name, $amount), 1);
-        $order->set_total($amount);
+        $order->add_product(self::get_or_create_booking_product($sku_key, $item_name, $amount), 1);
+
+        // Sum the line items rather than stamping the total on top of them.
+        // set_total() left the two free to disagree: the line came from whatever
+        // the shared product cost at that instant, the total from $amount. Taxes
+        // are not recalculated, so the customer still pays the package price.
+        $order->calculate_totals(false);
+
         $order->update_meta_data('_ecare_booking_id', $booking_id);
         
         // Setup billing info
@@ -1500,8 +1525,27 @@ class ECare_Ajax {
         return $order;
     }
 
-    private static function get_or_create_booking_product($name, $price) {
-        $sku = 'ecare-booking-' . sanitize_title($name);
+    /**
+     * The hidden WooCommerce product that carries a booking's price.
+     *
+     * The SKU used to be derived from the display name alone, which for a
+     * caregiver meant one product shared by all four packages, with its price
+     * rewritten on every booking. Two people booking the same caregiver on
+     * different packages at the same moment could therefore have one order's
+     * line item priced from the other's package. The key now identifies the
+     * caregiver and the package together, so concurrent bookings of different
+     * packages touch different products.
+     *
+     * The price is still kept in step, because an administrator can change what
+     * a package costs and the same key has to follow it - but now only bookings
+     * that genuinely share a price share a product.
+     *
+     * @param string $sku_key Stable identity, e.g. "cg931-daily-12-hours".
+     */
+    private static function get_or_create_booking_product($sku_key, $name, $price) {
+        $sku_key = $sku_key !== '' ? sanitize_title($sku_key) : sanitize_title($name);
+        $sku     = 'ecare-booking-' . $sku_key;
+
         $product_id = wc_get_product_id_by_sku($sku);
 
         if ($product_id) {
