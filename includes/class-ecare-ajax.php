@@ -192,7 +192,7 @@ class ECare_Ajax {
         } else {
             $html .= '<div class="ecare-profile-img" style="background:#E2E8F0;display:flex;align-items:center;justify-content:center;font-size:48px;">👤</div>';
         }
-        $html .= '<h3>' . get_the_title($id) . '</h3>';
+        $html .= '<h3>' . esc_html(get_the_title($id)) . '</h3>';
         $html .= '<span class="ecare-provider-badge">' . esc_html($meta['provider_type']) . '</span>';
         
         $html .= '<div class="ecare-sidebar-block">';
@@ -270,9 +270,6 @@ class ECare_Ajax {
         }
         
         $weight_str = !empty($active_member['weight']) ? $active_member['weight'] . ' kg' : '--';
-
-        // Right Column Form
-        $html .= '<div class="ecare-detail-main">';
         
         // Family Members Box
         $html .= '<div class="ecare-family-card">';
@@ -933,7 +930,7 @@ class ECare_Ajax {
 
                 $html .= '<div class="ecare-lab-test-card">';
                 $html .= '  <div>';
-                $html .= '    <h3 class="ecare-lab-test-title">' . get_the_title() . '</h3>';
+                $html .= '    <h3 class="ecare-lab-test-title">' . esc_html(get_the_title()) . '</h3>';
                 $html .= '    <div class="ecare-lab-test-meta">';
                 $html .= '      <span class="ecare-pill ecare-pill-gray">Code: ' . esc_html(get_post_meta($id, '_test_code', true)) . '</span>';
                 if ($cat) $html .= '      <span class="ecare-pill ecare-pill-yellow">' . esc_html($cat) . '</span>';
