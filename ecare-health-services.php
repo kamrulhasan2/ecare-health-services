@@ -3,7 +3,7 @@
  * Plugin Name:       E-Care Health Services
  * Plugin URI:        https://github.com/kamrulhasan2/ecare-health-services
  * Description:       Comprehensive healthcare service booking and management – connects patients with caregivers, lab tests, and ambulance dispatch with WooCommerce payments. Shortcodes: [ecare_caregiver_booking] – filter & book caregivers; [ecare_caregiver_registration] – provider signup; [ecare_lab_tests] – diagnostic catalog; [ecare_ambulance_request] – ambulance dispatch; [ecare_ambulance_registration] – ambulance provider signup.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Author:            Md. Kamrul Hasan
  * License:           GPL v2 or later
  * Text Domain:       ecare-health-services
@@ -15,7 +15,7 @@
 
 defined('ABSPATH') || exit;
 
-define('ECARE_VERSION', '1.0.0');
+define('ECARE_VERSION', '1.1.0');
 define('ECARE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('ECARE_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -47,6 +47,7 @@ final class ECare_Health_Services {
     }
 
     public function activate() {
+        require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-secure-files.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-activator.php';
         ECare_Activator::activate();
     }
@@ -68,12 +69,14 @@ final class ECare_Health_Services {
     }
 
     private function load_dependencies() {
+        require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-secure-files.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-cpt.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-ajax.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-woocommerce.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-shortcodes.php';
         require_once ECARE_PLUGIN_DIR . 'admin/class-ecare-admin.php';
 
+        ECare_Secure_Files::init();
         ECare_CPT::init();
         ECare_Ajax::init();
         ECare_WooCommerce::init();

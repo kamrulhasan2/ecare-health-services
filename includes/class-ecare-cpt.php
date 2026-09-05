@@ -202,14 +202,25 @@ class ECare_CPT {
             <tr>
                 <th><label><?php _e('Verification Document', 'ecare-health-services'); ?></label></th>
                 <td>
-                    <?php if ($fields['verification_doc']): ?>
-                        <a href="<?php echo esc_url($fields['verification_doc']); ?>" target="_blank" class="button button-secondary" style="margin-right:8px;">
-                            📄 <?php _e('View Document', 'ecare-health-services'); ?>
-                        </a>
-                        <input type="text" name="_verification_doc" value="<?php echo esc_attr($fields['verification_doc']); ?>" class="regular-text" />
+                    <?php
+                    $doc_ref  = $fields['verification_doc'];
+                    $doc_link = ECare_Secure_Files::get_view_url($doc_ref, ECare_Secure_Files::CTX_PROVIDER, $post->ID);
+                    ?>
+                    <?php if ($doc_ref): ?>
+                        <?php if ($doc_link): ?>
+                            <a href="<?php echo esc_url($doc_link); ?>" target="_blank" class="button button-secondary" style="margin-right:8px;">
+                                &#128196; <?php _e('View Document', 'ecare-health-services'); ?>
+                            </a>
+                        <?php else: ?>
+                            <span style="color:#b45309;font-style:italic;margin-right:8px;"><?php _e('Stored file is missing or unreadable', 'ecare-health-services'); ?></span>
+                        <?php endif; ?>
+                        <input type="text" name="_verification_doc" value="<?php echo esc_attr($doc_ref); ?>" class="regular-text" readonly />
+                        <?php if (ECare_Secure_Files::is_legacy($doc_ref)): ?>
+                            <p class="description" style="color:#b45309;">&#9888; <?php _e('Legacy public file - still readable by anyone who has the URL. Migrate it to private storage.', 'ecare-health-services'); ?></p>
+                        <?php endif; ?>
                     <?php else: ?>
                         <span style="color:#ef4444;font-style:italic;margin-right:8px;"><?php _e('No document uploaded', 'ecare-health-services'); ?></span>
-                        <input type="text" name="_verification_doc" value="" class="regular-text" placeholder="https://..." />
+                        <input type="hidden" name="_verification_doc" value="" />
                     <?php endif; ?>
                 </td>
             </tr>
@@ -302,14 +313,25 @@ class ECare_CPT {
             <tr>
                 <th><label>Verification Document</label></th>
                 <td>
-                    <?php if ($fields['verification_doc']): ?>
-                        <a href="<?php echo esc_url($fields['verification_doc']); ?>" target="_blank" class="button button-secondary" style="margin-right:8px;">
-                            📄 View Document
-                        </a>
-                        <input type="text" name="_verification_doc" value="<?php echo esc_attr($fields['verification_doc']); ?>" class="regular-text" />
+                    <?php
+                    $doc_ref  = $fields['verification_doc'];
+                    $doc_link = ECare_Secure_Files::get_view_url($doc_ref, ECare_Secure_Files::CTX_PROVIDER, $post->ID);
+                    ?>
+                    <?php if ($doc_ref): ?>
+                        <?php if ($doc_link): ?>
+                            <a href="<?php echo esc_url($doc_link); ?>" target="_blank" class="button button-secondary" style="margin-right:8px;">
+                                &#128196; View Document
+                            </a>
+                        <?php else: ?>
+                            <span style="color:#b45309;font-style:italic;margin-right:8px;">Stored file is missing or unreadable</span>
+                        <?php endif; ?>
+                        <input type="text" name="_verification_doc" value="<?php echo esc_attr($doc_ref); ?>" class="regular-text" readonly />
+                        <?php if (ECare_Secure_Files::is_legacy($doc_ref)): ?>
+                            <p class="description" style="color:#b45309;">&#9888; Legacy public file - still readable by anyone who has the URL. Migrate it to private storage.</p>
+                        <?php endif; ?>
                     <?php else: ?>
                         <span style="color:#ef4444;font-style:italic;margin-right:8px;">No document uploaded</span>
-                        <input type="text" name="_verification_doc" value="" class="regular-text" placeholder="https://..." />
+                        <input type="hidden" name="_verification_doc" value="" />
                     <?php endif; ?>
                 </td>
             </tr>

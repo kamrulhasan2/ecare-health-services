@@ -288,6 +288,7 @@ class ECare_Admin {
                             <th><?php _e('Amount', 'ecare-health-services'); ?></th>
                             <th><?php _e('Status', 'ecare-health-services'); ?></th>
                             <th><?php _e('Payment', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Document', 'ecare-health-services'); ?></th>
                             <th><?php _e('Actions', 'ecare-health-services'); ?></th>
                         </tr>
                     </thead>
@@ -296,6 +297,7 @@ class ECare_Admin {
                             <?php foreach ($bookings as $b):
                                 $provider_name = $b->provider_id ? get_the_title($b->provider_id) : 'Any Provider';
                                 $pkg_label = str_replace('_', ' ', $b->package_type);
+                                $doc_url   = ECare_Secure_Files::get_view_url($b->file_urls, ECare_Secure_Files::CTX_BOOKING, $b->id);
                             ?>
                                 <tr>
                                     <td>#<?php echo intval($b->id); ?></td>
@@ -313,6 +315,16 @@ class ECare_Admin {
                                         <?php endif; ?>
                                     </td>
                                     <td>
+                                        <?php if ($doc_url): ?>
+                                            <a href="<?php echo esc_url($doc_url); ?>" target="_blank" rel="noopener" style="font-weight:600;color:#2563EB;text-decoration:none;">&#128196; <?php _e('View', 'ecare-health-services'); ?></a>
+                                            <?php if (ECare_Secure_Files::is_legacy($b->file_urls)): ?>
+                                                <span title="<?php esc_attr_e('Legacy public file - readable by anyone who has the URL', 'ecare-health-services'); ?>" style="color:#b45309;">&#9888;</span>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span style="color:var(--text-muted);font-style:italic;">&mdash;</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
                                         <select class="ecare-status-select" data-booking-id="<?php echo intval($b->id); ?>" style="padding:5px;font-size:12px;border-radius:4px;border:1px solid var(--border-light);">
                                             <option value="pending" <?php selected($b->status, 'pending'); ?>>Pending</option>
                                             <option value="approved" <?php selected($b->status, 'approved'); ?>>Approved</option>
@@ -323,7 +335,7 @@ class ECare_Admin {
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No bookings found.', 'ecare-health-services'); ?></td></tr>
+                            <tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No bookings found.', 'ecare-health-services'); ?></td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -976,7 +988,8 @@ class ECare_Admin {
                                 $driver_name = get_post_meta($amb->ID, '_driver_name', true) ?: 'N/A';
                                 $driver_lic  = get_post_meta($amb->ID, '_driver_license', true) ?: 'N/A';
                                 $driver_nid  = get_post_meta($amb->ID, '_driver_nid', true) ?: 'N/A';
-                                $doc_url     = get_post_meta($amb->ID, '_verification_doc', true);
+                                $doc_ref     = get_post_meta($amb->ID, '_verification_doc', true);
+                                $doc_url     = ECare_Secure_Files::get_view_url($doc_ref, ECare_Secure_Files::CTX_PROVIDER, $amb->ID);
                                 $status      = get_post_meta($amb->ID, '_ambulance_status', true) ?: 'pending';
                                 
                                 $first_letter = strtoupper(substr($amb->post_title, 0, 1));

@@ -530,19 +530,17 @@ class ECare_Ajax {
             }
         }
 
-        // File upload using standard WordPress media_handle_upload
+        // Prescription / medical document. Stored privately, NOT in the Media
+        // Library: attachments are listable through the public REST media
+        // endpoint, which would expose every patient's documents.
         $file_urls = '';
         if (!empty($_FILES['booking_file']) && !empty($_FILES['booking_file']['name'])) {
-            require_once ABSPATH . 'wp-admin/includes/image.php';
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-            require_once ABSPATH . 'wp-admin/includes/media.php';
-
-            $doc_id = media_handle_upload('booking_file', 0);
-            if (!is_wp_error($doc_id)) {
-                $file_urls = wp_get_attachment_url($doc_id);
-            } else {
-                wp_send_json_error(array('message' => 'File upload failed: ' . $doc_id->get_error_message()));
+            $stored = ECare_Secure_Files::upload('booking_file');
+            if (is_wp_error($stored)) {
+                wp_send_json_error(array('message' => 'File upload failed: ' . $stored->get_error_message()));
             }
+            // A private reference relative to the uploads directory, never a URL.
+            $file_urls = $stored;
         }
 
         global $wpdb;
@@ -697,15 +695,11 @@ class ECare_Ajax {
         update_post_meta($post_id, '_email', $email);
         update_post_meta($post_id, '_phone', $phone);
 
-        // Upload verification document using standard media library
+        // Identity / verification document. Private storage, never the Media Library.
         if (!empty($_FILES['credentials_doc']) && !empty($_FILES['credentials_doc']['name'])) {
-            require_once ABSPATH . 'wp-admin/includes/image.php';
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-            require_once ABSPATH . 'wp-admin/includes/media.php';
-
-            $doc_id = media_handle_upload('credentials_doc', $post_id);
-            if (!is_wp_error($doc_id)) {
-                update_post_meta($post_id, '_verification_doc', wp_get_attachment_url($doc_id));
+            $stored = ECare_Secure_Files::upload('credentials_doc');
+            if (!is_wp_error($stored)) {
+                update_post_meta($post_id, '_verification_doc', $stored);
             }
         }
 
@@ -1059,15 +1053,11 @@ class ECare_Ajax {
         update_post_meta($post_id, '_email', $email);
         update_post_meta($post_id, '_phone', $phone);
 
-        // File upload using standard media_handle_upload
+        // Identity / verification document. Private storage, never the Media Library.
         if (!empty($_FILES['credentials_doc']) && !empty($_FILES['credentials_doc']['name'])) {
-            require_once ABSPATH . 'wp-admin/includes/image.php';
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-            require_once ABSPATH . 'wp-admin/includes/media.php';
-
-            $doc_id = media_handle_upload('credentials_doc', $post_id);
-            if (!is_wp_error($doc_id)) {
-                update_post_meta($post_id, '_verification_doc', wp_get_attachment_url($doc_id));
+            $stored = ECare_Secure_Files::upload('credentials_doc');
+            if (!is_wp_error($stored)) {
+                update_post_meta($post_id, '_verification_doc', $stored);
             }
         }
 

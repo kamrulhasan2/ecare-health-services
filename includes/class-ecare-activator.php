@@ -6,6 +6,11 @@ class ECare_Activator {
     public static function activate() {
         self::create_tables();
         self::set_default_options();
+
+        // Private storage for prescriptions and identity documents.
+        if (class_exists('ECare_Secure_Files')) {
+            ECare_Secure_Files::ensure_dir();
+        }
     }
 
     private static function create_tables() {
