@@ -1343,4 +1343,26 @@
         $previewWrap.hide().empty();
     });
 
+    function refreshEcareNonce(callback) {
+        if (typeof ecare_ajax === 'undefined' || !ecare_ajax.ajax_url) return;
+        $.post(ecare_ajax.ajax_url, { action: 'ecare_refresh_nonce' }, function(res) {
+            if (res && res.success && res.data && res.data.nonce) {
+                ecare_ajax.nonce = res.data.nonce;
+                if (typeof callback === 'function') callback(res.data.nonce);
+            }
+        });
+    }
+
+    $(document).ajaxSuccess(function(event, xhr, settings, data) {
+        if (data === -1 || data === '-1') {
+            refreshEcareNonce();
+        }
+    });
+
+    $(document).ajaxError(function(event, xhr, settings, error) {
+        if (xhr.status === 403) {
+            refreshEcareNonce();
+        }
+    });
+
 })(jQuery);

@@ -19,6 +19,7 @@ class ECare_Ajax {
             'get_caregiver_types',
             'delete_caregiver_type',
             'create_family_member',
+            'refresh_nonce',
         );
 
         foreach ($actions as $action) {
@@ -1615,6 +1616,16 @@ class ECare_Ajax {
             'message' => 'Family member details updated successfully!',
             'member'  => $new_member,
             'index'   => $target_index
+        ));
+    }
+
+    /**
+     * Refresh ecare_nonce dynamically (useful for LiteSpeed / cached pages)
+     */
+    public static function refresh_nonce() {
+        do_action('litespeed_nonce', 'ecare_nonce');
+        wp_send_json_success(array(
+            'nonce' => wp_create_nonce('ecare_nonce')
         ));
     }
 }
