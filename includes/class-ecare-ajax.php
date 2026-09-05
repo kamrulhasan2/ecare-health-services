@@ -4,30 +4,43 @@ defined('ABSPATH') || exit;
 class ECare_Ajax {
 
     public static function init() {
-        $actions = array(
+        // Reachable without logging in. The public catalogue, guest checkout and
+        // the provider sign-up forms all have to work for visitors.
+        $public_actions = array(
             'filter_caregivers',
             'get_caregiver_details',
-            'submit_caregiver_booking',
-            'submit_caregiver_registration',
             'get_locations',
             'filter_lab_tests',
             'add_lab_test_to_cart',
+            'submit_caregiver_booking',
+            'submit_caregiver_registration',
             'submit_ambulance_request',
             'submit_ambulance_registration',
-            'add_caregiver_type',
-            'delete_caregiver',
-            'get_caregiver_types',
-            'delete_caregiver_type',
             'create_family_member',
             'refresh_nonce',
         );
 
-        foreach ($actions as $action) {
+        // Never exposed to guests. Each of these also checks manage_options
+        // inside the handler, but that check should be the second line of
+        // defence, not the only one: a single forgotten current_user_can() in a
+        // future handler would otherwise hand the world an admin endpoint.
+        // delete_caregiver, for one, calls wp_delete_post() with force.
+        $admin_actions = array(
+            'add_caregiver_type',
+            'get_caregiver_types',
+            'delete_caregiver_type',
+            'delete_caregiver',
+        );
+
+        foreach ($public_actions as $action) {
             add_action("wp_ajax_ecare_{$action}", array(__CLASS__, $action));
             add_action("wp_ajax_nopriv_ecare_{$action}", array(__CLASS__, $action));
         }
 
-        // Admin AJAX
+        foreach ($admin_actions as $action) {
+            add_action("wp_ajax_ecare_{$action}", array(__CLASS__, $action));
+        }
+
         add_action('wp_ajax_ecare_update_booking_status', array(__CLASS__, 'update_booking_status'));
         add_action('wp_ajax_ecare_update_provider_status', array(__CLASS__, 'update_provider_status'));
     }
@@ -992,6 +1005,21 @@ class ECare_Ajax {
         $test_id = intval($_POST['test_id'] ?? 0);
         if (!$test_id) wp_send_json_error(array('message' => 'Invalid test.'));
 
+        // Without these checks any post id at all could be pushed through here.
+        // A page or a product would be turned into a brand new zero-priced
+        // WooCommerce product by find_or_create_product() below, and a test the
+        // admin had switched off could still be bought by posting its id
+        // directly - 'inactive' only ever hid it from the listing.
+        $test = get_post($test_id);
+        if (!$test || $test->post_type !== 'ecare_lab_test' || $test->post_status !== 'publish') {
+            wp_send_json_error(array('message' => __('That test is not available.', 'ecare-health-services')));
+        }
+
+        $test_status = get_post_meta($test_id, '_test_status', true);
+        if ($test_status && $test_status !== 'active') {
+            wp_send_json_error(array('message' => __('That test is not currently available.', 'ecare-health-services')));
+        }
+
         $division     = sanitize_text_field($_POST['division'] ?? '');
         $district     = sanitize_text_field($_POST['district'] ?? '');
         $area         = sanitize_text_field($_POST['area'] ?? '');
@@ -1003,6 +1031,10 @@ class ECare_Ajax {
 
         $price = floatval(get_post_meta($test_id, '_price', true));
         $title = get_the_title($test_id);
+
+        if ($price <= 0) {
+            wp_send_json_error(array('message' => __('That test has no price set. Please contact us to book it.', 'ecare-health-services')));
+        }
 
         if (!class_exists('WooCommerce')) {
             wp_send_json_error(array('message' => 'WooCommerce is required for checkout.'));

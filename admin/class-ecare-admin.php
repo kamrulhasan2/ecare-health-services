@@ -191,7 +191,7 @@ class ECare_Admin {
                 </div>
                 <div class="ecare-admin-controls">
                     <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search bookings...', 'ecare-health-services'); ?>" />
-                    <a href="<?php echo esc_url(admin_url('admin-post.php?action=ecare_export_bookings')); ?>" class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></a>
+                    <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=ecare_export_bookings'), 'ecare_export_bookings')); ?>" class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></a>
                 </div>
             </div>
 
@@ -289,7 +289,7 @@ class ECare_Admin {
                 <div class="ecare-admin-controls">
                     <input type="text" class="ecare-search-input" placeholder="<?php esc_attr_e('Search bookings...', 'ecare-health-services'); ?>" />
                     <button class="ecare-admin-btn-outline">🔍 <?php _e('Filters', 'ecare-health-services'); ?></button>
-                    <a href="<?php echo esc_url(admin_url('admin-post.php?action=ecare_export_bookings')); ?>" class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></a>
+                    <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=ecare_export_bookings'), 'ecare_export_bookings')); ?>" class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></a>
                     <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_caregiver')); ?>" class="ecare-admin-btn-green">+ <?php _e('Add Booking', 'ecare-health-services'); ?></a>
                 </div>
             </div>
@@ -1076,10 +1076,28 @@ class ECare_Admin {
         <?php
     }
 
+    /**
+     * Neutralise a value that a spreadsheet would treat as a formula.
+     *
+     * patient_name and contact_phone arrive from an unauthenticated booking
+     * form, so a visitor can choose exactly what an administrator's Excel opens
+     * later. Prefixing with an apostrophe keeps the text readable while making
+     * the cell inert.
+     */
+    private static function csv_cell($value) {
+        $value = (string) $value;
+        if ($value !== '' && strpbrk($value[0], "=+-@\t\r") !== false) {
+            return "'" . $value;
+        }
+        return $value;
+    }
+
     public static function export_bookings_csv() {
         if (!current_user_can('manage_options')) {
             wp_die('Unauthorized');
         }
+
+        check_admin_referer('ecare_export_bookings');
 
         global $wpdb;
         $table = $wpdb->prefix . 'ecare_bookings';
@@ -1093,13 +1111,13 @@ class ECare_Admin {
 
         foreach ($bookings as $b) {
             fputcsv($output, array(
-                $b->id,
-                $b->booking_type,
-                $b->patient_name,
-                $b->contact_phone,
+                (int) $b->id,
+                self::csv_cell($b->booking_type),
+                self::csv_cell($b->patient_name),
+                self::csv_cell($b->contact_phone),
                 $b->total_amount,
-                $b->status,
-                $b->created_at,
+                self::csv_cell($b->status),
+                self::csv_cell($b->created_at),
             ));
         }
 
