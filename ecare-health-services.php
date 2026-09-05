@@ -44,6 +44,18 @@ final class ECare_Health_Services {
         add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
         // Enable multipart form for caregiver photo upload
         add_action('post_edit_form_tag', array($this, 'caregiver_form_enctype'));
+
+        // Every order read in this plugin goes through the WooCommerce CRUD
+        // layer, so High-Performance Order Storage is safe. Without this
+        // declaration WooCommerce lists the plugin as incompatible and warns the
+        // site owner off a feature that in fact works.
+        add_action('before_woocommerce_init', array($this, 'declare_woocommerce_compatibility'));
+    }
+
+    public function declare_woocommerce_compatibility() {
+        if (class_exists('\\Automattic\\WooCommerce\\Utilities\\FeaturesUtil')) {
+            \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+        }
     }
 
     public function activate() {

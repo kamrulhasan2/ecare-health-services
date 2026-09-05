@@ -70,29 +70,66 @@ class ECare_WooCommerce {
     }
 
     public static function handle_payment_complete($order_id) {
-        $booking_id = get_post_meta($order_id, '_ecare_booking_id', true);
-        global $wpdb;
-        $table = $wpdb->prefix . 'ecare_bookings';
-
-        if ($booking_id) {
-            $wpdb->update($table, array('status' => 'approved'), array('id' => $booking_id));
-        }
-
-        // Also update any lab bookings associated with this order
-        $wpdb->update($table, array('status' => 'approved'), array('order_id' => $order_id, 'booking_type' => 'lab'));
+        // Money received: a booking that is still waiting becomes approved.
+        self::advance_booking_status($order_id, 'approved', array('pending'));
     }
 
     public static function handle_order_completed($order_id) {
-        $booking_id = get_post_meta($order_id, '_ecare_booking_id', true);
-        global $wpdb;
-        $table = $wpdb->prefix . 'ecare_bookings';
+        // Order fulfilled: anything still in flight is done.
+        self::advance_booking_status($order_id, 'completed', array('pending', 'approved', 'assigned', 'dispatched'));
+    }
 
-        if ($booking_id) {
-            $wpdb->update($table, array('status' => 'completed'), array('id' => $booking_id));
+    /**
+     * Move the bookings behind an order to a new status, but only from a status
+     * this transition is allowed to replace.
+     *
+     * Two things make the whitelist matter more than it looks.
+     *
+     * First, until the meta lookup below was corrected these handlers silently
+     * did nothing on a High-Performance Order Storage site, so this path has
+     * never actually run against real data. Switching it on unguarded is a
+     * change in behaviour, not a no-op.
+     *
+     * Second, WooCommerce re-fires the order status hooks whenever an order is
+     * saved again. Without the whitelist an ambulance an operator had already
+     * marked 'assigned' would quietly fall back to 'approved' the next time
+     * somebody opened that order and pressed Update. 'cancelled' appears in no
+     * list at all, so a cancelled booking is never revived.
+     *
+     * @param int      $order_id
+     * @param string   $new_status Status to write.
+     * @param string[] $from       Statuses this transition may replace.
+     */
+    private static function advance_booking_status($order_id, $new_status, array $from) {
+        $order = wc_get_order($order_id);
+        if (!$order || empty($from)) {
+            return;
         }
 
-        // Also update any lab bookings associated with this order
-        $wpdb->update($table, array('status' => 'completed'), array('order_id' => $order_id, 'booking_type' => 'lab'));
+        global $wpdb;
+        $table = $wpdb->prefix . 'ecare_bookings';
+        $slots = implode(', ', array_fill(0, count($from), '%s'));
+        $id    = $order->get_id();
+
+        // Caregiver and ambulance bookings carry their id on the order's own
+        // meta. Read it through the order object rather than get_post_meta():
+        // under HPOS the value lives in wp_wc_orders_meta, which post meta
+        // cannot see. That mismatch is what left paid bookings stuck at
+        // 'pending'.
+        $booking_id = (int) $order->get_meta('_ecare_booking_id');
+
+        if ($booking_id) {
+            $wpdb->query($wpdb->prepare(
+                "UPDATE {$table} SET status = %s WHERE id = %d AND status IN ({$slots})",
+                array_merge(array($new_status, $booking_id), $from)
+            ));
+        }
+
+        // Lab bookings are matched by the order they were created from.
+        $wpdb->query($wpdb->prepare(
+            "UPDATE {$table} SET status = %s WHERE order_id = %d AND booking_type = 'lab' AND status IN ({$slots})",
+            array_merge(array($new_status, $id), $from)
+        ));
     }
 
     public static function create_lab_bookings_from_order($order_id, $posted_data = array(), $order = null) {
