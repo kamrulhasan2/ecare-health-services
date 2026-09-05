@@ -43,7 +43,12 @@ class ECare_Secure_Files {
 
     public static function init() {
         add_action('admin_post_' . self::ACTION, array(__CLASS__, 'serve'));
-        // No nopriv counterpart on purpose: these files always require a login.
+        // The nopriv hook is registered too, but only so serve() can send a
+        // logged-out visitor to the login screen and back. Without it,
+        // admin-post.php answers an anonymous request with a bare 400, which
+        // tells a provider following a link to their own document nothing at
+        // all. Authorisation is decided by can_view(), not by which hook ran.
+        add_action('admin_post_nopriv_' . self::ACTION, array(__CLASS__, 'serve'));
     }
 
     // ---- Validation ----
