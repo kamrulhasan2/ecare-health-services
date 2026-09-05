@@ -550,22 +550,45 @@ class ECare_Ajax {
             wp_send_json_error(array('message' => 'Please fill in all required fields, including duration package.'));
         }
 
-        $price = 0;
+        $valid_packages = array();
         $provider_type = get_post_meta($caregiver_id, '_provider_type', true);
+
         if ($provider_type) {
             $term = get_term_by('name', $provider_type, 'ecare_caregiver_type');
             if ($term) {
                 $pkgs = get_term_meta($term->term_id, 'ecare_packages', true);
                 if (is_array($pkgs)) {
                     foreach ($pkgs as $pkg) {
-                        if ($pkg['label'] === $package_type) {
-                            $price = floatval($pkg['price']);
-                            break;
+                        if (!empty($pkg['label']) && isset($pkg['price'])) {
+                            $valid_packages[$pkg['label']] = floatval($pkg['price']);
                         }
                     }
                 }
             }
         }
+
+        if ($provider_type === 'Physiotherapist') {
+            $daily_12_price   = floatval(get_post_meta($caregiver_id, '_daily_12_price', true) ?: get_option('ecare_default_physio_regular_price', 1500));
+            $daily_24_price   = floatval(get_post_meta($caregiver_id, '_daily_24_price', true) ?: get_option('ecare_default_physio_premium_price', 2000));
+            $valid_packages['Daily Regular (1 Hour)'] = $daily_12_price;
+            $valid_packages['Daily Premium (1 Hour)'] = $daily_24_price;
+        } else {
+            $daily_12_price   = floatval(get_post_meta($caregiver_id, '_daily_12_price', true) ?: get_option('ecare_default_daily_12_price', 1700));
+            $daily_24_price   = floatval(get_post_meta($caregiver_id, '_daily_24_price', true) ?: get_option('ecare_default_daily_24_price', 2200));
+            $monthly_12_price = floatval(get_post_meta($caregiver_id, '_monthly_12_price', true) ?: get_option('ecare_default_monthly_12_price', 30000));
+            $monthly_24_price = floatval(get_post_meta($caregiver_id, '_monthly_24_price', true) ?: get_option('ecare_default_monthly_24_price', 50000));
+            
+            $valid_packages['Daily (12 Hours)']   = $daily_12_price;
+            $valid_packages['Daily (24 Hours)']   = $daily_24_price;
+            $valid_packages['Monthly (12 Hours)'] = $monthly_12_price;
+            $valid_packages['Monthly (24 Hours)'] = $monthly_24_price;
+        }
+
+        if (!isset($valid_packages[$package_type]) || $valid_packages[$package_type] <= 0) {
+            wp_send_json_error(array('message' => __('Invalid or unrecognized duration package selected. Please select a valid package.', 'ecare-health-services')));
+        }
+
+        $price = $valid_packages[$package_type];
 
         // Prescription / medical document. Stored privately, NOT in the Media
         // Library: attachments are listable through the public REST media
