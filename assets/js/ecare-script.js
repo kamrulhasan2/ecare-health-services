@@ -235,14 +235,15 @@
                 $('#ecare-caregiver-detail-content').html(response.data.html);
                 
                 // Retrieve preselected package from the outside filter
+                // The modal prices each package for this caregiver, so it owns the
+                // choice. The filter's selection is carried across only when this
+                // caregiver actually offers it. The old fallback posted the literal
+                // string 'daily_12', which matches no package label and used to
+                // book at a price of zero.
                 var preselectedPkg = $('#ecare-filter-package .ecare-package-tab.active').data('package');
-                
-                // If "All Packages" is selected, fallback to the first available package for this Caregiver Type
-                if (!preselectedPkg) {
-                    preselectedPkg = 'daily_12'; 
-                }
-                
-                $('#ecare-booking-package-val').val(preselectedPkg);
+                var $modalTabs = $('#ecare-caregiver-detail-content .ecare-modal-package-tab');
+                var $match = preselectedPkg ? $modalTabs.filter('[data-package="' + preselectedPkg + '"]') : $();
+                ($match.length ? $match : $modalTabs.first()).trigger('click');
 
                 if (typeof activeIndex !== 'undefined' && activeIndex !== null) {
                     var $row = $('.ecare-family-option-row[data-index="' + activeIndex + '"]');
@@ -261,6 +262,14 @@
         e.preventDefault();
         var id = $(this).data('id');
         loadCaregiverDetails(id);
+    });
+
+    // Package chosen inside the caregiver modal
+    $(document).on('click', '.ecare-modal-package-tab', function() {
+        var $tabs = $(this).closest('.ecare-modal-package-tabs').find('.ecare-modal-package-tab');
+        $tabs.removeClass('active').css({ borderColor: '#E2E8F0', background: '#fff' });
+        $(this).addClass('active').css({ borderColor: '#22D3EE', background: '#ECFEFF' });
+        $('#ecare-booking-package-val').val($(this).data('package'));
     });
 
     // Close modal

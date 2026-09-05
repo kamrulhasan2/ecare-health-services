@@ -236,31 +236,8 @@ class ECare_Shortcodes {
                     </div>
                 </div>
 
-                <!-- Section: Available Service Packages -->
-                <div class="ecare-package-prices-section" style="display:none;">
-                    <h3 style="font-size:14px;font-weight:700;color:var(--admin-green);text-transform:uppercase;border-bottom:2px solid var(--brand-teal-light);padding-bottom:6px;margin:30px 0 20px;"><?php _e('Available Service Packages', 'ecare-health-services'); ?></h3>
-                    <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;"><?php _e('Set your price rates for service durations (Leave blank if not offered):', 'ecare-health-services'); ?></p>
-                    <div class="ecare-form-row">
-                        <div class="ecare-form-field">
-                            <label><?php _e('Daily 12H Rate (৳)', 'ecare-health-services'); ?></label>
-                            <input type="number" step="0.01" name="daily_12_price" placeholder="1700" />
-                        </div>
-                        <div class="ecare-form-field">
-                            <label><?php _e('Daily 24H Rate (৳)', 'ecare-health-services'); ?></label>
-                            <input type="number" step="0.01" name="daily_24_price" placeholder="2200" />
-                        </div>
-                    </div>
-                    <div class="ecare-form-row">
-                        <div class="ecare-form-field">
-                            <label><?php _e('Monthly 12H Rate (৳)', 'ecare-health-services'); ?></label>
-                            <input type="number" step="0.01" name="monthly_12_price" placeholder="30000" />
-                        </div>
-                        <div class="ecare-form-field">
-                            <label><?php _e('Monthly 24H Rate (৳)', 'ecare-health-services'); ?></label>
-                            <input type="number" step="0.01" name="monthly_24_price" placeholder="50000" />
-                        </div>
-                    </div>
-                </div>
+                <!-- Service package rates are set by an administrator, not by the
+                     applicant, so there is no rate section on this form. -->
 
                 <!-- Section: Bank Information -->
                 <h3 style="font-size:14px;font-weight:700;color:var(--admin-green);text-transform:uppercase;border-bottom:2px solid var(--brand-teal-light);padding-bottom:6px;margin:30px 0 20px;"><?php _e('Bank Information', 'ecare-health-services'); ?></h3>

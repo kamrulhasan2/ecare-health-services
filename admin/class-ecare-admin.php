@@ -888,7 +888,7 @@ class ECare_Admin {
                         <?php if ($bookings): ?>
                             <?php foreach ($bookings as $b):
                                 $route = $b->pickup_address . ' → ' . $b->destination;
-                                $assigned_unit = $b->ambulance_type . ' Type';
+                                $provider_name = $b->provider_id ? get_the_title($b->provider_id) : '';
                                 $issued_by = $b->user_id ? get_the_author_meta('display_name', $b->user_id) : 'Guest Patient';
                             ?>
                                 <tr>
@@ -898,7 +898,14 @@ class ECare_Admin {
                                         <strong><?php echo esc_html($issued_by); ?></strong>
                                         <span style="display:block;font-size:11px;color:var(--text-muted);">📞 <?php echo esc_html($b->contact_phone); ?></span>
                                     </td>
-                                    <td><span class="ecare-status-pill assigned"><?php echo esc_html($assigned_unit); ?></span></td>
+                                    <td>
+                                        <?php if ($provider_name): ?>
+                                            <span class="ecare-status-pill assigned"><?php echo esc_html($provider_name); ?></span>
+                                        <?php else: ?>
+                                            <span class="ecare-status-pill pending"><?php esc_html_e('Unassigned', 'ecare-health-services'); ?></span>
+                                        <?php endif; ?>
+                                        <span style="display:block;font-size:11px;color:var(--text-muted);margin-top:4px;"><?php echo esc_html($b->ambulance_type); ?></span>
+                                    </td>
                                     <td><small><?php echo esc_html($route); ?></small></td>
                                     <td>
                                         <span class="ecare-status-pill <?php echo esc_attr($b->status); ?> <?php echo ($b->priority_level === 'Emergency' && $b->status === 'pending') ? 'emergency' : ''; ?>">

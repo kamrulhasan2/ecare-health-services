@@ -405,7 +405,34 @@ class ECare_Ajax {
         $html .= '      <textarea name="disease" placeholder="Describe symptoms or diseases if any..."></textarea>';
         $html .= '    </div>';
         
-        $html .= '  <input type="hidden" name="package_type" id="ecare-booking-package-val" value="" />';
+        // Priced for THIS caregiver, and rendered here rather than read off the
+        // filter bar. The filter showed the caregiver-type rate and could hand
+        // over a label this caregiver does not offer at all.
+        $packages    = self::caregiver_packages($id);
+        $first_label = $packages ? (string) array_key_first($packages) : '';
+
+        $html .= '    <div class="ecare-form-field full-width">';
+        $html .= '      <label>Duration Package <span>*</span></label>';
+        $html .= '      <div class="ecare-modal-package-tabs" style="display:flex;flex-wrap:wrap;gap:8px;">';
+        $is_first = true;
+        foreach ($packages as $pkg_label => $pkg_amount) {
+            $html .= '        <button type="button" class="ecare-modal-package-tab' . ($is_first ? ' active' : '') . '"'
+                . ' data-package="' . esc_attr($pkg_label) . '"'
+                . ' style="flex:1 1 150px;padding:10px 12px;border-radius:8px;cursor:pointer;text-align:left;'
+                . 'border:1.5px solid ' . ($is_first ? '#22D3EE' : '#E2E8F0') . ';background:' . ($is_first ? '#ECFEFF' : '#fff') . ';">'
+                . '<span style="display:block;font-size:12px;font-weight:600;color:#1E293B;">' . esc_html($pkg_label) . '</span>'
+                . '<span style="display:block;font-size:14px;font-weight:700;color:#0E9F6E;margin-top:2px;">&#2547; '
+                . esc_html(number_format((float) $pkg_amount, 2)) . '</span>'
+                . '</button>';
+            $is_first = false;
+        }
+        if (empty($packages)) {
+            $html .= '        <p style="color:#b91c1c;font-size:13px;margin:0;">No packages are priced for this caregiver yet. Please contact us to book.</p>';
+        }
+        $html .= '      </div>';
+        $html .= '    </div>';
+
+        $html .= '  <input type="hidden" name="package_type" id="ecare-booking-package-val" value="' . esc_attr($first_label) . '" />';
         
         $html .= '  </div>'; // End info-grid
         
@@ -560,48 +587,9 @@ class ECare_Ajax {
             wp_send_json_error(array('message' => 'Please fill in all required fields, including duration package.'));
         }
 
-        $valid_packages = array();
-        $provider_type = get_post_meta($caregiver_id, '_provider_type', true);
-
-        if ($provider_type) {
-            $term = get_term_by('name', $provider_type, 'ecare_caregiver_type');
-            if ($term) {
-                $pkgs = get_term_meta($term->term_id, 'ecare_packages', true);
-                if (is_array($pkgs)) {
-                    foreach ($pkgs as $pkg) {
-                        if (!empty($pkg['label']) && isset($pkg['price'])) {
-                            $valid_packages[$pkg['label']] = floatval($pkg['price']);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Fall back to the option defaults ONLY when the caregiver type carries no
-        // packages of its own. These are the same defaults the enqueue code seeds
-        // into ecare_ajax.type_packages, so the server and the visitor agree.
-        //
-        // The per-caregiver _daily_12_price meta is deliberately NOT consulted.
-        // The booking UI prices every package from the taxonomy term, so charging
-        // from the caregiver meta instead would quote one number and take another
-        // - against the live data that is 1700 shown and 100 charged. Making those
-        // meta fields authoritative is audit finding #10, and it needs the package
-        // tabs and the caregiver filter changed along with it.
-        if (empty($valid_packages)) {
-            if ($provider_type === 'Physiotherapist') {
-                $valid_packages = array(
-                    'Daily Regular (1 Hour)' => floatval(get_option('ecare_default_physio_regular_price', 1500)),
-                    'Daily Premium (1 Hour)' => floatval(get_option('ecare_default_physio_premium_price', 2000)),
-                );
-            } else {
-                $valid_packages = array(
-                    'Daily (12 Hours)'   => floatval(get_option('ecare_default_daily_12_price', 1700)),
-                    'Daily (24 Hours)'   => floatval(get_option('ecare_default_daily_24_price', 2200)),
-                    'Monthly (12 Hours)' => floatval(get_option('ecare_default_monthly_12_price', 30000)),
-                    'Monthly (24 Hours)' => floatval(get_option('ecare_default_monthly_24_price', 50000)),
-                );
-            }
-        }
+        // One source of truth, shared with the booking modal, so the visitor is
+        // charged exactly the figure they were shown.
+        $valid_packages = self::caregiver_packages($caregiver_id);
 
         if (!isset($valid_packages[$package_type]) || $valid_packages[$package_type] <= 0) {
             wp_send_json_error(array('message' => __('Invalid or unrecognized duration package selected. Please select a valid package.', 'ecare-health-services')));
@@ -689,11 +677,6 @@ class ECare_Ajax {
         $bank_acc_name = sanitize_text_field($_POST['bank_account_name'] ?? '');
         $bank_account  = sanitize_text_field($_POST['bank_account'] ?? '');
         
-        $daily_12      = floatval($_POST['daily_12_price'] ?? 0);
-        $daily_24      = floatval($_POST['daily_24_price'] ?? 0);
-        $monthly_12    = floatval($_POST['monthly_12_price'] ?? 0);
-        $monthly_24    = floatval($_POST['monthly_24_price'] ?? 0);
-
         $password      = $_POST['password'] ?? '';
         $confirm_pass  = $_POST['confirm_password'] ?? '';
 
@@ -815,11 +798,6 @@ class ECare_Ajax {
         update_post_meta($post_id, '_bank_name', $bank_name);
         update_post_meta($post_id, '_bank_account_name', $bank_acc_name);
         update_post_meta($post_id, '_bank_account', $bank_account);
-        
-        update_post_meta($post_id, '_daily_12_price', $daily_12);
-        update_post_meta($post_id, '_daily_24_price', $daily_24);
-        update_post_meta($post_id, '_monthly_12_price', $monthly_12);
-        update_post_meta($post_id, '_monthly_24_price', $monthly_24);
         
         update_post_meta($post_id, '_provider_status', 'pending');
         update_post_meta($post_id, '_email', $email);
@@ -1125,9 +1103,16 @@ class ECare_Ajax {
         global $wpdb;
         $table = $wpdb->prefix . 'ecare_bookings';
 
+        // Attach a vehicle up front so the dispatch board shows who is going,
+        // rather than every request landing as an anonymous row. The price stays
+        // on the fixed per-type rate the request form quoted; _base_price on the
+        // vehicle is reference information, not what the customer is charged.
+        $provider_id = self::find_available_ambulance($ambulance_type);
+
         $data = array(
             'booking_type'   => 'ambulance',
             'user_id'        => $user_id ?: 0,
+            'provider_id'    => $provider_id ?: null,
             'ambulance_type' => $ambulance_type,
             'pickup_address' => $pickup_address,
             'destination'    => $destination,
@@ -1372,6 +1357,124 @@ class ECare_Ajax {
         }
 
         wp_send_json_success(array('message' => 'Provider status updated.'));
+    }
+
+    /**
+     * Pick an approved ambulance of the requested type, spreading work across
+     * the fleet instead of always handing it to the same vehicle.
+     *
+     * Returns 0 when nothing matches, which leaves the request unassigned for an
+     * operator to place by hand. That is deliberate: refusing an ambulance
+     * because no vehicle of that type happens to be registered would be the
+     * wrong trade to make in an emergency.
+     */
+    private static function find_available_ambulance($ambulance_type) {
+        $candidates = get_posts(array(
+            'post_type'      => 'ecare_ambulance',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'ID',
+            'order'          => 'ASC',
+            'fields'         => 'ids',
+            'meta_query'     => array(
+                array('key' => '_ambulance_status', 'value' => 'approved'),
+                array('key' => '_ambulance_type',   'value' => $ambulance_type),
+            ),
+        ));
+
+        if (empty($candidates)) {
+            return 0;
+        }
+
+        global $wpdb;
+        $table     = $wpdb->prefix . 'ecare_bookings';
+        $best      = 0;
+        $best_load = null;
+
+        foreach ($candidates as $id) {
+            $load = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table}
+                  WHERE provider_id = %d
+                    AND booking_type = 'ambulance'
+                    AND status IN ('pending', 'approved', 'assigned', 'dispatched')",
+                $id
+            ));
+
+            if ($best_load === null || $load < $best_load) {
+                $best_load = $load;
+                $best      = (int) $id;
+            }
+        }
+
+        return $best;
+    }
+
+    /**
+     * Effective package prices for one caregiver, as label => amount.
+     *
+     * The taxonomy term decides which packages exist and what they normally
+     * cost. An administrator may override any of the four standard rates on the
+     * caregiver itself; providers cannot, those fields are admin-only. The
+     * booking modal and submit_caregiver_booking() both read this one function,
+     * so the price shown and the price charged cannot drift apart.
+     */
+    public static function caregiver_packages($caregiver_id) {
+        $provider_type = get_post_meta($caregiver_id, '_provider_type', true);
+        $packages      = array();
+
+        if ($provider_type) {
+            $term = get_term_by('name', $provider_type, 'ecare_caregiver_type');
+            if ($term) {
+                $pkgs = get_term_meta($term->term_id, 'ecare_packages', true);
+                if (is_array($pkgs)) {
+                    foreach ($pkgs as $pkg) {
+                        if (!empty($pkg['label']) && isset($pkg['price'])) {
+                            $packages[$pkg['label']] = floatval($pkg['price']);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (empty($packages)) {
+            $packages = ($provider_type === 'Physiotherapist')
+                ? array(
+                    'Daily Regular (1 Hour)' => floatval(get_option('ecare_default_physio_regular_price', 1500)),
+                    'Daily Premium (1 Hour)' => floatval(get_option('ecare_default_physio_premium_price', 2000)),
+                )
+                : array(
+                    'Daily (12 Hours)'   => floatval(get_option('ecare_default_daily_12_price', 1700)),
+                    'Daily (24 Hours)'   => floatval(get_option('ecare_default_daily_24_price', 2200)),
+                    'Monthly (12 Hours)' => floatval(get_option('ecare_default_monthly_12_price', 30000)),
+                    'Monthly (24 Hours)' => floatval(get_option('ecare_default_monthly_24_price', 50000)),
+                );
+        }
+
+        $overrides = ($provider_type === 'Physiotherapist')
+            ? array(
+                'Daily Regular (1 Hour)' => '_daily_12_price',
+                'Daily Premium (1 Hour)' => '_daily_24_price',
+            )
+            : array(
+                'Daily (12 Hours)'   => '_daily_12_price',
+                'Daily (24 Hours)'   => '_daily_24_price',
+                'Monthly (12 Hours)' => '_monthly_12_price',
+                'Monthly (24 Hours)' => '_monthly_24_price',
+            );
+
+        // Applied only where a rate has actually been entered; a blank field
+        // means "use the standard rate", not "free".
+        foreach ($overrides as $label => $meta_key) {
+            if (!isset($packages[$label])) {
+                continue;
+            }
+            $override = floatval(get_post_meta($caregiver_id, $meta_key, true));
+            if ($override > 0) {
+                $packages[$label] = $override;
+            }
+        }
+
+        return array_filter($packages, function ($amount) { return $amount > 0; });
     }
 
     // ---- Helpers ----

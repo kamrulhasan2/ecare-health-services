@@ -10,6 +10,7 @@ From the plugin root:
     php tests/harness-secure-files.php
     php tests/harness-woocommerce.php
     php tests/harness-ajax-registration.php
+    php tests/harness-caregiver-pricing.php
 
 Each exits 0 on success, 1 on any failure, so they chain:
 
@@ -26,6 +27,14 @@ content sniffing (a PHP file renamed .png), and the per-IP throttle.
 The HPOS meta read, and the status whitelist that stops a re-fired order hook
 from dragging an 'assigned' ambulance back to 'approved' or reviving a
 cancelled booking.
+
+**harness-caregiver-pricing.php** (15 assertions) — finding #10.
+The one function both the booking modal and the booking handler price from.
+Covers the caregiver-type rate, the admin override, blank/zero/negative
+overrides falling back rather than booking free, physiotherapist packages, and
+zero-priced packages being dropped. If the modal and the handler ever stop
+sharing this function, a customer gets quoted one number and charged another —
+which has already happened once, at 1700 shown against 100 taken.
 
 **harness-ajax-registration.php** — finding #12.
 Asserts admin-only AJAX actions are never registered as wp_ajax_nopriv_, and

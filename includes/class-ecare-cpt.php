@@ -200,6 +200,22 @@ class ECare_CPT {
             <tr><th><label>Bank Name</label></th><td><input type="text" name="_bank_name" value="<?php echo esc_attr($fields['bank_name']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Bank Account</label></th><td><input type="text" name="_bank_account" value="<?php echo esc_attr($fields['bank_account']); ?>" class="regular-text" /></td></tr>
             <tr>
+                <th><label><?php _e('Package Rate Overrides', 'ecare-health-services'); ?></label></th>
+                <td>
+                    <p class="description" style="margin:0 0 10px;">
+                        <?php _e('Leave a field blank to charge the standard rate for this caregiver type. A value here applies to this caregiver only, and is both what the customer is shown in the booking modal and what they are charged.', 'ecare-health-services'); ?>
+                    </p>
+                    <label style="display:inline-block;margin:0 16px 8px 0;"><?php _e('Daily 12H', 'ecare-health-services'); ?><br />
+                        <input type="number" step="0.01" min="0" name="_daily_12_price" value="<?php echo esc_attr($fields['daily_12_price']); ?>" style="width:120px;" /></label>
+                    <label style="display:inline-block;margin:0 16px 8px 0;"><?php _e('Daily 24H', 'ecare-health-services'); ?><br />
+                        <input type="number" step="0.01" min="0" name="_daily_24_price" value="<?php echo esc_attr($fields['daily_24_price']); ?>" style="width:120px;" /></label>
+                    <label style="display:inline-block;margin:0 16px 8px 0;"><?php _e('Monthly 12H', 'ecare-health-services'); ?><br />
+                        <input type="number" step="0.01" min="0" name="_monthly_12_price" value="<?php echo esc_attr($fields['monthly_12_price']); ?>" style="width:120px;" /></label>
+                    <label style="display:inline-block;margin:0 0 8px 0;"><?php _e('Monthly 24H', 'ecare-health-services'); ?><br />
+                        <input type="number" step="0.01" min="0" name="_monthly_24_price" value="<?php echo esc_attr($fields['monthly_24_price']); ?>" style="width:120px;" /></label>
+                </td>
+            </tr>
+            <tr>
                 <th><label><?php _e('Verification Document', 'ecare-health-services'); ?></label></th>
                 <td>
                     <?php
@@ -308,7 +324,13 @@ class ECare_CPT {
             <tr><th><label>Driving License No</label></th><td><input type="text" name="_driver_license" value="<?php echo esc_attr($fields['driver_license']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Driver NID</label></th><td><input type="text" name="_driver_nid" value="<?php echo esc_attr($fields['driver_nid']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Ambulance Type</label></th><td><select name="_ambulance_type"><option value="Standard" <?php selected($fields['ambulance_type'], 'Standard'); ?>>Standard (Non-AC)</option><option value="ICU" <?php selected($fields['ambulance_type'], 'ICU'); ?>>ICU (AC)</option><option value="Freezer" <?php selected($fields['ambulance_type'], 'Freezer'); ?>>Freezer Type</option></select></td></tr>
-            <tr><th><label>Base Price (৳)</label></th><td><input type="number" step="0.01" name="_base_price" value="<?php echo esc_attr($fields['base_price']); ?>" class="regular-text" /></td></tr>
+            <tr>
+                <th><label>Base Price (৳)</label></th>
+                <td>
+                    <input type="number" step="0.01" name="_base_price" value="<?php echo esc_attr($fields['base_price']); ?>" class="regular-text" />
+                    <p class="description"><?php _e('Reference only. Dispatch charges the fixed rate for the ambulance type, so changing this does not change what a customer pays.', 'ecare-health-services'); ?></p>
+                </td>
+            </tr>
             <tr><th><label>Status</label></th><td><select name="_ambulance_status"><option value="pending" <?php selected($fields['status'], 'pending'); ?>>Pending</option><option value="approved" <?php selected($fields['status'], 'approved'); ?>>Approved</option><option value="rejected" <?php selected($fields['status'], 'rejected'); ?>>Rejected</option></select></td></tr>
             <tr>
                 <th><label>Verification Document</label></th>
@@ -347,7 +369,7 @@ class ECare_CPT {
 
         if ($post_type === 'ecare_caregiver') {
             if (!isset($_POST['ecare_caregiver_meta_nonce']) || !wp_verify_nonce($_POST['ecare_caregiver_meta_nonce'], 'ecare_caregiver_meta')) return;
-            $keys = array('_provider_type', '_experience', '_category', '_skills', '_education', '_nid_passport', '_bank_name', '_bank_account', '_provider_status', '_phone', '_email', '_gender', '_address_line', '_verification_doc');
+            $keys = array('_provider_type', '_experience', '_category', '_skills', '_education', '_nid_passport', '_bank_name', '_bank_account', '_provider_status', '_phone', '_email', '_gender', '_address_line', '_verification_doc', '_daily_12_price', '_daily_24_price', '_monthly_12_price', '_monthly_24_price');
             foreach ($keys as $key) {
                 if (isset($_POST[$key])) {
                     update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));
