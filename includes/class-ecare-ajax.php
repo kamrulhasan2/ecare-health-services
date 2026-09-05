@@ -658,12 +658,20 @@ class ECare_Ajax {
             wp_send_json_error(array('message' => 'Please fill in all required fields.'));
         }
 
-        if (empty($password) || $password !== $confirm_pass) {
-            wp_send_json_error(array('message' => 'Passwords do not match or are empty.'));
-        }
+        if (is_user_logged_in()) {
+            $user_id = get_current_user_id();
+        } else {
+            if (!get_option('users_can_register')) {
+                wp_send_json_error(array('message' => __('User registration is currently disabled on this site.', 'ecare-health-services')));
+            }
 
-        if (email_exists($email)) {
-            wp_send_json_error(array('message' => 'This email address is already registered.'));
+            if (empty($password) || $password !== $confirm_pass) {
+                wp_send_json_error(array('message' => __('Passwords do not match or are empty.', 'ecare-health-services')));
+            }
+
+            if (email_exists($email)) {
+                wp_send_json_error(array('message' => __('This email address is already registered.', 'ecare-health-services')));
+            }
         }
 
         // Validate every uploaded file BEFORE the user and the provider post are
@@ -687,18 +695,20 @@ class ECare_Ajax {
             }
         }
 
-        // Create standard WordPress subscriber user
-        $user_id = wp_insert_user(array(
-            'user_login'   => $email,
-            'user_email'   => $email,
-            'user_pass'    => $password,
-            'display_name' => $full_name,
-            'first_name'   => $full_name,
-            'role'         => 'subscriber'
-        ));
+        if (!is_user_logged_in()) {
+            // Create standard WordPress subscriber user
+            $user_id = wp_insert_user(array(
+                'user_login'   => $email,
+                'user_email'   => $email,
+                'user_pass'    => $password,
+                'display_name' => $full_name,
+                'first_name'   => $full_name,
+                'role'         => 'subscriber'
+            ));
 
-        if (is_wp_error($user_id)) {
-            wp_send_json_error(array('message' => 'Registration failed: ' . $user_id->get_error_message()));
+            if (is_wp_error($user_id)) {
+                wp_send_json_error(array('message' => 'Registration failed: ' . $user_id->get_error_message()));
+            }
         }
 
         $post_id = wp_insert_post(array(
@@ -1077,12 +1087,20 @@ class ECare_Ajax {
             wp_send_json_error(array('message' => 'Please fill in all required fields.'));
         }
 
-        if (empty($password) || $password !== $confirm_pass) {
-            wp_send_json_error(array('message' => 'Passwords do not match or are empty.'));
-        }
+        if (is_user_logged_in()) {
+            $user_id = get_current_user_id();
+        } else {
+            if (!get_option('users_can_register')) {
+                wp_send_json_error(array('message' => __('User registration is currently disabled on this site.', 'ecare-health-services')));
+            }
 
-        if (email_exists($email)) {
-            wp_send_json_error(array('message' => 'This email address is already registered.'));
+            if (empty($password) || $password !== $confirm_pass) {
+                wp_send_json_error(array('message' => __('Passwords do not match or are empty.', 'ecare-health-services')));
+            }
+
+            if (email_exists($email)) {
+                wp_send_json_error(array('message' => __('This email address is already registered.', 'ecare-health-services')));
+            }
         }
 
         // Validate every uploaded file BEFORE the user and the provider post are
@@ -1103,18 +1121,20 @@ class ECare_Ajax {
             }
         }
 
-        // Create standard WordPress subscriber user
-        $user_id = wp_insert_user(array(
-            'user_login'   => $email,
-            'user_email'   => $email,
-            'user_pass'    => $password,
-            'display_name' => $provider_name,
-            'first_name'   => $provider_name,
-            'role'         => 'subscriber'
-        ));
+        if (!is_user_logged_in()) {
+            // Create standard WordPress subscriber user
+            $user_id = wp_insert_user(array(
+                'user_login'   => $email,
+                'user_email'   => $email,
+                'user_pass'    => $password,
+                'display_name' => $provider_name,
+                'first_name'   => $provider_name,
+                'role'         => 'subscriber'
+            ));
 
-        if (is_wp_error($user_id)) {
-            wp_send_json_error(array('message' => 'Registration failed: ' . $user_id->get_error_message()));
+            if (is_wp_error($user_id)) {
+                wp_send_json_error(array('message' => 'Registration failed: ' . $user_id->get_error_message()));
+            }
         }
 
         $post_id = wp_insert_post(array(

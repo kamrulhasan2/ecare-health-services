@@ -100,6 +100,9 @@ class ECare_Shortcodes {
      * Caregiver provider sign up form [ecare_caregiver_registration]
      */
     public static function render_caregiver_registration() {
+        if (!is_user_logged_in() && !get_option('users_can_register')) {
+            return '<div class="ecare-container"><div class="ecare-alert ecare-alert-warning" style="background:#FFFBEB;border:1px solid #FCD34D;color:#92400E;padding:15px;border-radius:8px;margin:20px 0;">' . esc_html__('User registration is currently disabled on this site.', 'ecare-health-services') . '</div></div>';
+        }
         ob_start();
         ?>
         <div class="ecare-container">
@@ -544,6 +547,9 @@ class ECare_Shortcodes {
      * Ambulance Provider sign up form [ecare_ambulance_registration]
      */
     public static function render_ambulance_registration() {
+        if (!is_user_logged_in() && !get_option('users_can_register')) {
+            return '<div class="ecare-container"><div class="ecare-alert ecare-alert-warning" style="background:#FFFBEB;border:1px solid #FCD34D;color:#92400E;padding:15px;border-radius:8px;margin:20px 0;">' . esc_html__('User registration is currently disabled on this site.', 'ecare-health-services') . '</div></div>';
+        }
         ob_start();
         ?>
         <div class="ecare-container">
