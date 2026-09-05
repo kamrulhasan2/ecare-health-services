@@ -141,8 +141,9 @@ class ECare_WooCommerce {
         global $wpdb;
         $table = $wpdb->prefix . 'ecare_bookings';
 
-        // Check if we already created lab bookings for this order to prevent duplicate insertions
-        $already_created = get_post_meta($order_id, '_ecare_lab_bookings_created', true);
+        // Check if we already created lab bookings for this order to prevent duplicate insertions.
+        // Under HPOS order meta lives in wp_wc_orders_meta, which get_post_meta() cannot read.
+        $already_created = $order->get_meta('_ecare_lab_bookings_created');
         if ($already_created) return;
 
         $has_lab_tests = false;
@@ -183,7 +184,8 @@ class ECare_WooCommerce {
         }
 
         if ($has_lab_tests) {
-            update_post_meta($order_id, '_ecare_lab_bookings_created', '1');
+            $order->update_meta_data('_ecare_lab_bookings_created', '1');
+            $order->save_meta_data();
         }
     }
 }
