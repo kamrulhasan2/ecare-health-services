@@ -113,6 +113,27 @@ Place these shortcodes on WordPress pages to render frontend modules:
 
 ---
 
+## 🗑️ Uninstalling
+
+Deleting the plugin from the Plugins screen removes **only the plugin's files**.
+Bookings, providers, lab tests, caregiver types and uploaded documents are all
+left in place, so you can replace one copy of the plugin with another, or clear
+a duplicate folder, without losing anything.
+
+If you really do want the data gone, opt in first and then delete the plugin:
+
+```bash
+wp option update ecare_delete_data_on_uninstall yes
+```
+
+That one run removes the `ecare_bookings` table, all Care Provider / Lab Test /
+Ambulance posts (trashed ones included), the caregiver types and their package
+prices, the plugin's options, and the private document store under
+`wp-content/uploads/ecare-private/`. It is not reversible — take a backup first.
+WooCommerce orders and Media Library attachments are never touched.
+
+The option clears itself afterwards, so a later install starts safe again.
+
 ## 📋 License
 
 This plugin is licensed under the GPL v2 or later.

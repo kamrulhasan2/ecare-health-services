@@ -13,6 +13,7 @@ From the plugin root:
     php tests/harness-caregiver-pricing.php
     php tests/harness-booking-order.php
     php tests/harness-admin-lists.php
+    php tests/harness-uninstall.php
 
 There is also an optional layout test, which needs Node and Playwright:
 
@@ -67,6 +68,26 @@ fail against the pre-fix code.
 Asserts admin-only AJAX actions are never registered as wp_ajax_nopriv_, and
 that the public set is exactly the intended list. Add a new action to
 ECare_Ajax::init() and this fails until you classify it.
+
+**harness-uninstall.php** (38 assertions) — the uninstall guard.
+`uninstall.php` used to drop `wp_ecare_bookings` and permanently delete every
+provider, lab test and ambulance the moment somebody clicked Delete on the
+Plugins screen — and deleting a plugin is ordinary housekeeping: replacing one
+copy with another, clearing a duplicate folder. Now nothing goes unless
+`ecare_delete_data_on_uninstall` is set to the exact string `yes`. Run 1 of the
+harness asserts that a default site loses nothing at all — not a row, not a
+query, not a file. Run 2 sets the option and asserts the cleanup is complete
+and correctly scoped: both tables, all three post types including trashed and
+auto-draft rows, the caregiver-type terms and their package prices, the seven
+options and the rate-limit transients, and the private document store — while
+pages, products, orders and Media Library attachments are left alone. Against
+the pre-fix file 22 of these fail.
+
+Two details worth keeping: the post sweep is batched with a pass counter, so a
+post another plugin refuses to release cannot spin the loop for ever; and the
+recursive file delete checks every step against the uploads basedir and unlinks
+symlinks rather than following them, so a link planted inside the private
+directory cannot aim the routine at the rest of the disk.
 
 **tests/layout/check.js** — finding #20.
 Loads the real stylesheet and measures the Create Family Member modal at 390px,
