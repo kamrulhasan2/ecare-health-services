@@ -1030,9 +1030,41 @@ class ECare_Ajax {
             wp_send_json_error(array('message' => 'Please fill in all required fields.'));
         }
 
-        // Calculate price based on type
+        // Calculate price based on type and validate ambulance_type
         $price_map = array('Standard' => 1500, 'ICU' => 3000, 'Freezer' => 5000);
-        $price = $price_map[$ambulance_type] ?? 1500;
+        if (!array_key_exists($ambulance_type, $price_map)) {
+            wp_send_json_error(array('message' => 'Invalid ambulance type.'));
+        }
+        $price = $price_map[$ambulance_type];
+
+        // Validate priority_level
+        $allowed_priorities = array('Normal', 'Emergency');
+        if (!in_array($priority_level, $allowed_priorities, true)) {
+            wp_send_json_error(array('message' => 'Invalid priority level.'));
+        }
+
+        // Validate and sanitize schedule_time
+        $formatted_schedule_time = null;
+        if (!empty($schedule_time)) {
+            $dt = DateTime::createFromFormat('Y-m-d\TH:i', $schedule_time);
+            if (!$dt) {
+                $dt = DateTime::createFromFormat('Y-m-d\TH:i:s', $schedule_time);
+            }
+            if (!$dt) {
+                $dt = DateTime::createFromFormat('Y-m-d H:i:s', $schedule_time);
+            }
+            if (!$dt) {
+                $dt = DateTime::createFromFormat('Y-m-d H:i', $schedule_time);
+            }
+
+            if ($dt) {
+                $formatted_schedule_time = $dt->format('Y-m-d H:i:s');
+            } else {
+                wp_send_json_error(array('message' => 'Invalid schedule time format.'));
+            }
+        } else {
+            $formatted_schedule_time = current_time('mysql');
+        }
 
         global $wpdb;
         $table = $wpdb->prefix . 'ecare_bookings';
@@ -1043,7 +1075,7 @@ class ECare_Ajax {
             'ambulance_type' => $ambulance_type,
             'pickup_address' => $pickup_address,
             'destination'    => $destination,
-            'schedule_time'  => $schedule_time,
+            'schedule_time'  => $formatted_schedule_time,
             'contact_phone'  => $contact_phone,
             'priority_level' => $priority_level,
             'notes'          => $notes,
@@ -1223,6 +1255,11 @@ class ECare_Ajax {
             wp_send_json_error(array('message' => 'Invalid parameters.'));
         }
 
+        $allowed_statuses = array('pending', 'approved', 'completed', 'cancelled', 'dispatched', 'assigned');
+        if (!in_array($status, $allowed_statuses, true)) {
+            wp_send_json_error(array('message' => 'Invalid booking status.'));
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'ecare_bookings';
         $wpdb->update($table, array('status' => $status), array('id' => $booking_id));
@@ -1248,6 +1285,15 @@ class ECare_Ajax {
         }
 
         $post_type = get_post_type($provider_id);
+        if (!in_array($post_type, array('ecare_caregiver', 'ecare_ambulance'), true)) {
+            wp_send_json_error(array('message' => 'Invalid provider ID or type.'));
+        }
+
+        $allowed_statuses = array('pending', 'approved', 'rejected', 'active', 'inactive');
+        if (!in_array($status, $allowed_statuses, true)) {
+            wp_send_json_error(array('message' => 'Invalid provider status.'));
+        }
+
         if ($post_type === 'ecare_ambulance') {
             update_post_meta($provider_id, '_ambulance_status', $status);
         } else {
@@ -1448,6 +1494,11 @@ class ECare_Ajax {
         $id = intval($_POST['provider_id'] ?? 0);
         if (!$id) {
             wp_send_json_error(array('message' => 'Invalid provider ID.'));
+        }
+
+        $post_type = get_post_type($id);
+        if (!in_array($post_type, array('ecare_caregiver', 'ecare_ambulance'), true)) {
+            wp_send_json_error(array('message' => 'Invalid provider post type.'));
         }
 
         $deleted = wp_delete_post($id, true);
