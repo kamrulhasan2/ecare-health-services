@@ -42,7 +42,6 @@ final class ECare_Health_Services {
         add_action('plugins_loaded', array($this, 'init_elementor'), 20);
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
-        add_filter('litespeed_nonce', array($this, 'register_litespeed_nonce'));
         // Enable multipart form for caregiver photo upload
         add_action('post_edit_form_tag', array($this, 'caregiver_form_enctype'));
 
@@ -57,13 +56,6 @@ final class ECare_Health_Services {
         if (class_exists('\\Automattic\\WooCommerce\\Utilities\\FeaturesUtil')) {
             \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
         }
-    }
-
-    public function register_litespeed_nonce($nonces) {
-        if (is_array($nonces)) {
-            $nonces[] = 'ecare_nonce';
-        }
-        return $nonces;
     }
 
     public function activate() {

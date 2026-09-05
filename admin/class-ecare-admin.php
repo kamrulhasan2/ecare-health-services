@@ -103,6 +103,25 @@ class ECare_Admin {
     }
 
     /**
+     * Edit-screen URL for a WooCommerce order.
+     *
+     * get_edit_post_link() only works while orders are posts. With
+     * High-Performance Order Storage an order lives in wp_wc_orders and is not a
+     * post at all, so that call returns null and the link renders with an empty
+     * href. The CRUD layer knows the right URL under either storage mode.
+     *
+     * @return string Empty when the order no longer exists.
+     */
+    private static function order_edit_url($order_id) {
+        $order_id = (int) $order_id;
+        if (!$order_id || !function_exists('wc_get_order')) {
+            return '';
+        }
+        $order = wc_get_order($order_id);
+        return $order ? $order->get_edit_order_url() : '';
+    }
+
+    /**
      * Helper to render custom styles for WP Admin head to override defaults
      */
     private static function admin_style_overrides() {
@@ -308,8 +327,11 @@ class ECare_Admin {
                                     <td style="font-weight:700;color:var(--brand-teal);">৳ <?php echo esc_html(number_format($b->total_amount, 2)); ?></td>
                                     <td><span class="ecare-status-pill <?php echo esc_attr($b->status); ?>"><?php echo esc_html(ucfirst($b->status)); ?></span></td>
                                     <td>
-                                        <?php if ($b->order_id): ?>
-                                            <a href="<?php echo esc_url(get_edit_post_link($b->order_id)); ?>" target="_blank" style="font-weight:600;color:#2563EB;text-decoration:none;">Order #<?php echo $b->order_id; ?></a>
+                                        <?php $order_edit_url = self::order_edit_url($b->order_id); ?>
+                                        <?php if ($order_edit_url): ?>
+                                            <a href="<?php echo esc_url($order_edit_url); ?>" target="_blank" style="font-weight:600;color:#2563EB;text-decoration:none;">Order #<?php echo intval($b->order_id); ?></a>
+                                        <?php elseif ($b->order_id): ?>
+                                            <span style="color:var(--text-muted);" title="<?php esc_attr_e('Order no longer exists', 'ecare-health-services'); ?>">Order #<?php echo intval($b->order_id); ?></span>
                                         <?php else: ?>
                                             <span style="color:var(--text-muted);font-style:italic;">No Order</span>
                                         <?php endif; ?>
@@ -755,8 +777,11 @@ class ECare_Admin {
                                     <td style="font-weight:700;color:var(--brand-teal);">৳ <?php echo esc_html(number_format($b->total_amount, 2)); ?></td>
                                     <td><span class="ecare-status-pill <?php echo esc_attr($b->status); ?>"><?php echo esc_html(ucfirst($b->status)); ?></span></td>
                                     <td>
-                                        <?php if ($b->order_id): ?>
-                                            <a href="<?php echo esc_url(get_edit_post_link($b->order_id)); ?>" target="_blank" style="font-weight:600;color:#2563EB;text-decoration:none;">Order #<?php echo $b->order_id; ?></a>
+                                        <?php $order_edit_url = self::order_edit_url($b->order_id); ?>
+                                        <?php if ($order_edit_url): ?>
+                                            <a href="<?php echo esc_url($order_edit_url); ?>" target="_blank" style="font-weight:600;color:#2563EB;text-decoration:none;">Order #<?php echo intval($b->order_id); ?></a>
+                                        <?php elseif ($b->order_id): ?>
+                                            <span style="color:var(--text-muted);" title="<?php esc_attr_e('Order no longer exists', 'ecare-health-services'); ?>">Order #<?php echo intval($b->order_id); ?></span>
                                         <?php else: ?>
                                             <span style="color:var(--text-muted);font-style:italic;">No Order</span>
                                         <?php endif; ?>

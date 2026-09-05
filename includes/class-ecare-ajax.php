@@ -564,21 +564,30 @@ class ECare_Ajax {
             }
         }
 
-        if ($provider_type === 'Physiotherapist') {
-            $daily_12_price   = floatval(get_post_meta($caregiver_id, '_daily_12_price', true) ?: get_option('ecare_default_physio_regular_price', 1500));
-            $daily_24_price   = floatval(get_post_meta($caregiver_id, '_daily_24_price', true) ?: get_option('ecare_default_physio_premium_price', 2000));
-            $valid_packages['Daily Regular (1 Hour)'] = $daily_12_price;
-            $valid_packages['Daily Premium (1 Hour)'] = $daily_24_price;
-        } else {
-            $daily_12_price   = floatval(get_post_meta($caregiver_id, '_daily_12_price', true) ?: get_option('ecare_default_daily_12_price', 1700));
-            $daily_24_price   = floatval(get_post_meta($caregiver_id, '_daily_24_price', true) ?: get_option('ecare_default_daily_24_price', 2200));
-            $monthly_12_price = floatval(get_post_meta($caregiver_id, '_monthly_12_price', true) ?: get_option('ecare_default_monthly_12_price', 30000));
-            $monthly_24_price = floatval(get_post_meta($caregiver_id, '_monthly_24_price', true) ?: get_option('ecare_default_monthly_24_price', 50000));
-            
-            $valid_packages['Daily (12 Hours)']   = $daily_12_price;
-            $valid_packages['Daily (24 Hours)']   = $daily_24_price;
-            $valid_packages['Monthly (12 Hours)'] = $monthly_12_price;
-            $valid_packages['Monthly (24 Hours)'] = $monthly_24_price;
+        // Fall back to the option defaults ONLY when the caregiver type carries no
+        // packages of its own. These are the same defaults the enqueue code seeds
+        // into ecare_ajax.type_packages, so the server and the visitor agree.
+        //
+        // The per-caregiver _daily_12_price meta is deliberately NOT consulted.
+        // The booking UI prices every package from the taxonomy term, so charging
+        // from the caregiver meta instead would quote one number and take another
+        // - against the live data that is 1700 shown and 100 charged. Making those
+        // meta fields authoritative is audit finding #10, and it needs the package
+        // tabs and the caregiver filter changed along with it.
+        if (empty($valid_packages)) {
+            if ($provider_type === 'Physiotherapist') {
+                $valid_packages = array(
+                    'Daily Regular (1 Hour)' => floatval(get_option('ecare_default_physio_regular_price', 1500)),
+                    'Daily Premium (1 Hour)' => floatval(get_option('ecare_default_physio_premium_price', 2000)),
+                );
+            } else {
+                $valid_packages = array(
+                    'Daily (12 Hours)'   => floatval(get_option('ecare_default_daily_12_price', 1700)),
+                    'Daily (24 Hours)'   => floatval(get_option('ecare_default_daily_24_price', 2200)),
+                    'Monthly (12 Hours)' => floatval(get_option('ecare_default_monthly_12_price', 30000)),
+                    'Monthly (24 Hours)' => floatval(get_option('ecare_default_monthly_24_price', 50000)),
+                );
+            }
         }
 
         if (!isset($valid_packages[$package_type]) || $valid_packages[$package_type] <= 0) {
@@ -681,6 +690,21 @@ class ECare_Ajax {
 
         if (is_user_logged_in()) {
             $user_id = get_current_user_id();
+
+            // A guest is stopped from registering twice by email_exists(). A
+            // signed-in user skips that branch entirely, so without this check
+            // they could POST this endpoint repeatedly and publish an unlimited
+            // number of provider profiles.
+            $existing = get_posts(array(
+                'post_type'      => 'ecare_caregiver',
+                'post_status'    => 'any',
+                'author'         => $user_id,
+                'posts_per_page' => 1,
+                'fields'         => 'ids',
+            ));
+            if (!empty($existing)) {
+                wp_send_json_error(array('message' => __('You have already submitted a registration with this account. Please contact us if it needs updating.', 'ecare-health-services')));
+            }
         } else {
             if (!get_option('users_can_register')) {
                 wp_send_json_error(array('message' => __('User registration is currently disabled on this site.', 'ecare-health-services')));
@@ -1142,6 +1166,21 @@ class ECare_Ajax {
 
         if (is_user_logged_in()) {
             $user_id = get_current_user_id();
+
+            // A guest is stopped from registering twice by email_exists(). A
+            // signed-in user skips that branch entirely, so without this check
+            // they could POST this endpoint repeatedly and publish an unlimited
+            // number of provider profiles.
+            $existing = get_posts(array(
+                'post_type'      => 'ecare_ambulance',
+                'post_status'    => 'any',
+                'author'         => $user_id,
+                'posts_per_page' => 1,
+                'fields'         => 'ids',
+            ));
+            if (!empty($existing)) {
+                wp_send_json_error(array('message' => __('You have already submitted a registration with this account. Please contact us if it needs updating.', 'ecare-health-services')));
+            }
         } else {
             if (!get_option('users_can_register')) {
                 wp_send_json_error(array('message' => __('User registration is currently disabled on this site.', 'ecare-health-services')));

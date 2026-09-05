@@ -1343,26 +1343,67 @@
         $previewWrap.hide().empty();
     });
 
+    // ================================================================
+    // NONCE RECOVERY
+    // A page served from cache can outlive the nonce baked into it, and
+    // check_ajax_referer then answers 403 with no JSON body - which every
+    // caller here reads as a silent failure. Fetch a fresh nonce and REPLAY
+    // the original request, so the visitor's first click is the one that
+    // works rather than the one that vanishes.
+    // ================================================================
+    var ECARE_RETRIED = '_ecareNonceRetried';
+
     function refreshEcareNonce(callback) {
-        if (typeof ecare_ajax === 'undefined' || !ecare_ajax.ajax_url) return;
-        $.post(ecare_ajax.ajax_url, { action: 'ecare_refresh_nonce' }, function(res) {
+        if (typeof ecare_ajax === 'undefined' || !ecare_ajax.ajax_url) { return; }
+        $.post(ecare_ajax.ajax_url, { action: 'ecare_refresh_nonce' }, function (res) {
             if (res && res.success && res.data && res.data.nonce) {
                 ecare_ajax.nonce = res.data.nonce;
-                if (typeof callback === 'function') callback(res.data.nonce);
+                if (typeof callback === 'function') { callback(res.data.nonce); }
             }
         });
     }
 
-    $(document).ajaxSuccess(function(event, xhr, settings, data) {
-        if (data === -1 || data === '-1') {
-            refreshEcareNonce();
+    function ecareRequestAction(settings) {
+        var d = settings && settings.data;
+        if (!d) { return ''; }
+        if (typeof FormData !== 'undefined' && d instanceof FormData) { return d.get('action') || ''; }
+        if (typeof d === 'string') {
+            var m = d.match(/(?:^|&)action=([^&]*)/);
+            return m ? decodeURIComponent(m[1]) : '';
         }
-    });
+        if (typeof d === 'object') { return d.action || ''; }
+        return '';
+    }
 
-    $(document).ajaxError(function(event, xhr, settings, error) {
-        if (xhr.status === 403) {
-            refreshEcareNonce();
+    function ecareWithNonce(settings, nonce) {
+        var d = settings.data;
+        if (typeof FormData !== 'undefined' && d instanceof FormData) {
+            d.set('nonce', nonce);
+        } else if (typeof d === 'string') {
+            settings.data = /(?:^|&)nonce=/.test(d)
+                ? d.replace(/((?:^|&)nonce=)[^&]*/, '$1' + encodeURIComponent(nonce))
+                : d + '&nonce=' + encodeURIComponent(nonce);
+        } else if (d && typeof d === 'object') {
+            d.nonce = nonce;
         }
+        return settings;
+    }
+
+    $(document).ajaxError(function (event, xhr, settings) {
+        // Scoped deliberately: this page also runs Elementor, WooCommerce and
+        // EG Care, and none of their 403s are ours to retry.
+        if (xhr.status !== 403) { return; }
+        if (typeof ecare_ajax === 'undefined' || !settings) { return; }
+        if (settings.url !== ecare_ajax.ajax_url) { return; }
+        if (settings[ECARE_RETRIED]) { return; }
+        if (ecareRequestAction(settings).indexOf('ecare_') !== 0) { return; }
+
+        // Replayed at most once. A 403 from check_ajax_referer means the handler
+        // never ran, so there is nothing to double-submit.
+        settings[ECARE_RETRIED] = true;
+        refreshEcareNonce(function (nonce) {
+            $.ajax(ecareWithNonce(settings, nonce));
+        });
     });
 
 })(jQuery);
