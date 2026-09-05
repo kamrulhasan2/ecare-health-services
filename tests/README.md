@@ -12,7 +12,12 @@ From the plugin root:
     php tests/harness-ajax-registration.php
     php tests/harness-caregiver-pricing.php
 
-Each exits 0 on success, 1 on any failure, so they chain:
+There is also an optional layout test, which needs Node and Playwright:
+
+    npm i -D playwright && npx playwright install chromium
+    node tests/layout/check.js
+
+Each PHP harness exits 0 on success, 1 on any failure, so they chain:
 
     for f in tests/harness-*.php; do php "$f" || break; done
 
@@ -40,6 +45,13 @@ which has already happened once, at 1700 shown against 100 taken.
 Asserts admin-only AJAX actions are never registered as wp_ajax_nopriv_, and
 that the public set is exactly the intended list. Add a new action to
 ECare_Ajax::init() and this fails until you classify it.
+
+**tests/layout/check.js** — finding #20.
+Loads the real stylesheet and measures the Create Family Member modal at 390px,
+768px and desktop. It caught two things reading the CSS did not: the modal box
+growing to 412px inside a 390px viewport (a flex item will not shrink below its
+min-content unless you say so), and the Date of Birth dropdowns coming out at
+58-72px on tablet and desktop, not only on phones.
 
 ## A note on the one seam in production code
 

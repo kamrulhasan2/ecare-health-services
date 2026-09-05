@@ -453,13 +453,13 @@ class ECare_Ajax {
         // Append Create Family Member Modal Container here!
         $html .= '<!-- Create Family Member Modal -->';
         $html .= '<div id="ecare-create-family-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:100000; justify-content:center; align-items:center;">';
-        $html .= '  <div style="background:#fff; padding:30px; border-radius:12px; width:95%; max-width:600px; box-shadow:0 10px 25px rgba(0,0,0,0.15); position:relative; box-sizing:border-box;">';
+        $html .= '  <div class="ecare-family-modal-box">';
         $html .= '    <h3 style="margin-top:0; font-size:18px; font-weight:700; color:#1E293B; margin-bottom:20px; border-bottom:1px solid #E2E8F0; padding-bottom:10px; text-align:left;">Create Family Member</h3>';
         $html .= '    <button type="button" id="ecare-close-create-family-modal" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#94A3B8; line-height:1;">&times;</button>';
         
         $html .= '    <form id="ecare-create-family-form" style="text-align:left;">';
         $html .= '      <input type="hidden" name="member_index" id="ecare-member-index-val" value="" />';
-        $html .= '      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">';
+        $html .= '      <div class="ecare-family-form-grid">';
         
         $html .= '        <div>';
         $html .= '          <label style="display:block; font-weight:600; font-size:12px; color:#475569; margin-bottom:6px; text-align:left;">Name <span style="color:#EF4444;">*</span></label>';
@@ -486,9 +486,9 @@ class ECare_Ajax {
         $html .= '          </select>';
         $html .= '        </div>';
         
-        $html .= '        <div>';
+        $html .= '        <div class="ecare-family-field-wide">';
         $html .= '          <label style="display:block; font-weight:600; font-size:12px; color:#475569; margin-bottom:6px; text-align:left;">Date of Birth <span style="color:#EF4444;">*</span></label>';
-        $html .= '          <div style="display:flex; gap:5px;">';
+        $html .= '          <div class="ecare-family-dob-row">';
         $html .= '            <select name="member_dob_year" style="flex:1.2; padding:6px; border-radius:6px; border:1px solid #CBD5E1; font-size:12px; box-sizing:border-box;" required>';
         $html .= '              <option value="">Year</option>';
         for($y = intval(date('Y')); $y >= 1900; $y--) {
@@ -530,7 +530,7 @@ class ECare_Ajax {
         
         $html .= '        <div>';
         $html .= '          <label style="display:block; font-weight:600; font-size:12px; color:#475569; margin-bottom:6px; text-align:left;">Height (Feet and Inches)</label>';
-        $html .= '          <div style="display:flex; gap:10px;">';
+        $html .= '          <div class="ecare-family-height-row">';
         $html .= '            <input type="number" name="member_height_ft" placeholder="Feet" style="flex:1; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px; box-sizing:border-box;" />';
         $html .= '            <input type="number" name="member_height_in" placeholder="Inches" style="flex:1; padding:8px; border-radius:6px; border:1px solid #CBD5E1; font-size:13px; box-sizing:border-box;" />';
         $html .= '          </div>';
