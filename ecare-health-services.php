@@ -41,7 +41,9 @@ final class ECare_Health_Services {
         add_action('plugins_loaded', array($this, 'init_plugin'));
         add_action('plugins_loaded', array($this, 'init_elementor'), 20);
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
-        add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
+        // Priority 20: WooCommerce registers selectWoo on this same hook, and
+        // plugin load order would otherwise put us first.
+        add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'), 20);
         // Enable multipart form for caregiver photo upload
         add_action('post_edit_form_tag', array($this, 'caregiver_form_enctype'));
 
@@ -102,7 +104,88 @@ final class ECare_Health_Services {
         ECare_Admin::init();
     }
 
+    /** The shortcodes this plugin provides. Elementor widget names match them. */
+    private static function shortcode_tags() {
+        return array(
+            'ecare_caregiver_booking',
+            'ecare_caregiver_registration',
+            'ecare_lab_tests',
+            'ecare_ambulance_request',
+            'ecare_ambulance_registration',
+        );
+    }
+
+    /**
+     * Which E-Care blocks the page being rendered actually contains.
+     *
+     * The stylesheet, the script, Select2 and a Google Fonts request used to
+     * load on every page of the site, checkout and blog posts included, for the
+     * handful of pages that need them.
+     *
+     * Both post_content and _elementor_data are searched, because Elementor
+     * keeps its layout in postmeta and has_shortcode() cannot see it. The widget
+     * names are the same strings as the shortcode tags, so one search covers
+     * both.
+     *
+     * Detection cannot see a shortcode printed from a theme template, a sidebar
+     * widget, or an Elementor header, footer or popup template, since those live
+     * on a different post. The ecare_blocks_on_page filter is the way out:
+     *
+     *     add_filter('ecare_blocks_on_page', function ($found, $post) {
+     *         return is_page('help') ? array('ecare_lab_tests') : $found;
+     *     }, 10, 2);
+     *
+     * @return string[] Empty when the page has none of our content.
+     */
+    private function ecare_blocks_on_page() {
+        $found = array();
+        $post  = is_singular() ? get_post() : null;
+
+        if ($post instanceof WP_Post) {
+            $haystack = (string) $post->post_content;
+
+            $elementor = get_post_meta($post->ID, '_elementor_data', true);
+            if (is_string($elementor) && $elementor !== '') {
+                $haystack .= ' ' . $elementor;
+            }
+
+            foreach (self::shortcode_tags() as $tag) {
+                if (strpos($haystack, $tag) !== false) {
+                    $found[] = $tag;
+                }
+            }
+        }
+
+        return (array) apply_filters('ecare_blocks_on_page', $found, $post);
+    }
+
+    /**
+     * Only our own admin screens, and the edit screens for our post types.
+     */
+    private function is_ecare_admin_screen() {
+        $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
+        if (strpos($page, 'ecare-') === 0) {
+            return true;
+        }
+
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        if (!$screen) {
+            return false;
+        }
+
+        if (in_array($screen->post_type, array('ecare_caregiver', 'ecare_lab_test', 'ecare_ambulance'), true)) {
+            return true;
+        }
+
+        return $screen->taxonomy === 'ecare_caregiver_type';
+    }
+
     public function admin_enqueue_scripts($hook) {
+        if (!$this->is_ecare_admin_screen()) {
+            return;
+        }
+
+
         wp_enqueue_media();
         wp_enqueue_style('google-font-inter', 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap', array(), null);
         
@@ -145,16 +228,40 @@ final class ECare_Health_Services {
     }
 
     public function frontend_enqueue_scripts() {
+        $ecare_blocks = $this->ecare_blocks_on_page();
+        if (empty($ecare_blocks)) {
+            return;
+        }
+
         wp_enqueue_style('google-font-inter', 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap', array(), null);
         
         $style_ver  = file_exists(ECARE_PLUGIN_DIR . 'assets/css/ecare-style.css') ? filemtime(ECARE_PLUGIN_DIR . 'assets/css/ecare-style.css') : ECARE_VERSION;
         $script_ver = file_exists(ECARE_PLUGIN_DIR . 'assets/js/ecare-script.js') ? filemtime(ECARE_PLUGIN_DIR . 'assets/js/ecare-script.js') : ECARE_VERSION;
 
-        wp_enqueue_style('ecare-select2-css', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0');
-        wp_enqueue_script('ecare-select2-js', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array('jquery'), '4.1.0', true);
+        // Select2 drives the cascading location dropdowns, which only the lab
+        // test catalogue has. WooCommerce is a hard dependency of this plugin and
+        // already ships selectWoo, a select2 fork exposing the same $.fn.select2,
+        // so prefer that over a third-party CDN: one less external request, one
+        // less thing to be offline or to watch a visitor.
+        $script_deps = array('jquery');
 
-        wp_enqueue_style('ecare-frontend-style', ECARE_PLUGIN_URL . 'assets/css/ecare-style.css', array('ecare-select2-css'), $style_ver);
-        wp_enqueue_script('ecare-frontend-script', ECARE_PLUGIN_URL . 'assets/js/ecare-script.js', array('jquery', 'ecare-select2-js'), $script_ver, true);
+        if (in_array('ecare_lab_tests', $ecare_blocks, true)) {
+            if (wp_script_is('selectWoo', 'registered')) {
+                wp_enqueue_script('selectWoo');
+                $script_deps[] = 'selectWoo';
+            } else {
+                wp_enqueue_style('ecare-select2-css', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0');
+                wp_enqueue_script('ecare-select2-js', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array('jquery'), '4.1.0', true);
+                $script_deps[] = 'ecare-select2-js';
+            }
+
+            if (wp_style_is('select2', 'registered')) {
+                wp_enqueue_style('select2');
+            }
+        }
+
+        wp_enqueue_style('ecare-frontend-style', ECARE_PLUGIN_URL . 'assets/css/ecare-style.css', array(), $style_ver);
+        wp_enqueue_script('ecare-frontend-script', ECARE_PLUGIN_URL . 'assets/js/ecare-script.js', $script_deps, $script_ver, true);
         
         // Read only. Seeding the defaults from here meant every page view could
         // issue a database write; that now happens at activation and when a new
