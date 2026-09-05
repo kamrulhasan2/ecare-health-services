@@ -11,6 +11,12 @@ class ECare_Activator {
         if (class_exists('ECare_Secure_Files')) {
             ECare_Secure_Files::ensure_dir();
         }
+
+        // Persist the default package prices once, here, rather than letting a
+        // front-end page view do it.
+        if (class_exists('ECare_CPT')) {
+            ECare_CPT::seed_all_term_packages();
+        }
     }
 
     private static function create_tables() {

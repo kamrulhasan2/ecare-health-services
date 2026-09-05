@@ -9,6 +9,9 @@ class ECare_CPT {
         add_action('init', array(__CLASS__, 'register_lab_test_cpt'));
         add_action('init', array(__CLASS__, 'register_ambulance_provider_cpt'));
 
+        // Seeding happens when a type is created, never while rendering a page.
+        add_action('created_ecare_caregiver_type', array(__CLASS__, 'seed_term_packages'));
+
         add_action('add_meta_boxes', array(__CLASS__, 'add_meta_boxes'));
         add_action('save_post', array(__CLASS__, 'save_meta_boxes'));
     }
@@ -112,6 +115,93 @@ class ECare_CPT {
             'show_in_menu' => false,
             'rewrite'      => array('slug' => 'ambulance-provider'),
         ));
+    }
+
+    /**
+     * What a caregiver type charges when nobody has configured anything.
+     *
+     * @return array List of array('label' => string, 'price' => float).
+     */
+    public static function default_packages($term_name) {
+        if ($term_name === 'Physiotherapist') {
+            return array(
+                array('label' => 'Daily Regular (1 Hour)', 'price' => (float) get_option('ecare_default_physio_regular_price', 1500)),
+                array('label' => 'Daily Premium (1 Hour)', 'price' => (float) get_option('ecare_default_physio_premium_price', 2000)),
+            );
+        }
+
+        return array(
+            array('label' => 'Daily (12 Hours)',   'price' => (float) get_option('ecare_default_daily_12_price', 1700)),
+            array('label' => 'Daily (24 Hours)',   'price' => (float) get_option('ecare_default_daily_24_price', 2200)),
+            array('label' => 'Monthly (12 Hours)', 'price' => (float) get_option('ecare_default_monthly_12_price', 30000)),
+            array('label' => 'Monthly (24 Hours)', 'price' => (float) get_option('ecare_default_monthly_24_price', 50000)),
+        );
+    }
+
+    /**
+     * Packages configured on a caregiver type, falling back to the defaults.
+     *
+     * Read-only, deliberately. This lookup used to write the defaults back every
+     * time it found none, and it sat inside wp_enqueue_scripts - so an ordinary
+     * visitor loading any page on the site performed a database write, and two
+     * arriving together could race on the same row. Persisting the defaults is
+     * the job of activation and of the created_ecare_caregiver_type hook.
+     *
+     * @param WP_Term|string $term A term object, or a caregiver type name.
+     */
+    public static function term_packages($term) {
+        $term_name = '';
+
+        if (!is_object($term)) {
+            // Keep the caller's name: it is what they asked about, and it still
+            // selects the right defaults when no such term exists yet.
+            $term_name = (string) $term;
+            $found     = $term_name !== '' ? get_term_by('name', $term_name, 'ecare_caregiver_type') : false;
+            $term      = $found ? $found : null;
+        }
+
+        $term_id = is_object($term) ? (int) $term->term_id : 0;
+
+        if ($term_name === '' && is_object($term) && isset($term->name)) {
+            $term_name = (string) $term->name;
+        }
+
+        $packages = $term_id ? get_term_meta($term_id, 'ecare_packages', true) : '';
+
+        return (is_array($packages) && !empty($packages))
+            ? $packages
+            : self::default_packages($term_name);
+    }
+
+    /**
+     * Write the defaults onto a type that has none yet.
+     */
+    public static function seed_term_packages($term_id) {
+        $term = get_term((int) $term_id, 'ecare_caregiver_type');
+        if (!$term || is_wp_error($term)) {
+            return;
+        }
+
+        $existing = get_term_meta($term->term_id, 'ecare_packages', true);
+        if (is_array($existing) && !empty($existing)) {
+            return;
+        }
+
+        update_term_meta($term->term_id, 'ecare_packages', self::default_packages($term->name));
+    }
+
+    /**
+     * Seed every caregiver type that is still without packages. Activation only.
+     */
+    public static function seed_all_term_packages() {
+        $terms = get_terms(array('taxonomy' => 'ecare_caregiver_type', 'hide_empty' => false));
+        if (is_wp_error($terms) || empty($terms)) {
+            return;
+        }
+
+        foreach ($terms as $term) {
+            self::seed_term_packages($term->term_id);
+        }
     }
 
     public static function add_meta_boxes() {
@@ -369,10 +459,22 @@ class ECare_CPT {
 
         if ($post_type === 'ecare_caregiver') {
             if (!isset($_POST['ecare_caregiver_meta_nonce']) || !wp_verify_nonce($_POST['ecare_caregiver_meta_nonce'], 'ecare_caregiver_meta')) return;
-            $keys = array('_provider_type', '_experience', '_category', '_skills', '_education', '_nid_passport', '_bank_name', '_bank_account', '_provider_status', '_phone', '_email', '_gender', '_address_line', '_verification_doc', '_daily_12_price', '_daily_24_price', '_monthly_12_price', '_monthly_24_price');
+            $keys = array('_provider_type', '_experience', '_category', '_nid_passport', '_bank_name', '_bank_account', '_provider_status', '_phone', '_email', '_gender', '_address_line', '_verification_doc', '_daily_12_price', '_daily_24_price', '_monthly_12_price', '_monthly_24_price');
             foreach ($keys as $key) {
                 if (isset($_POST[$key])) {
                     update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));
+                }
+            }
+
+            // Skills and Education are textareas. sanitize_text_field() collapses
+            // every newline into a space, so pressing Update on a caregiver used
+            // to flatten both boxes into one long line - even when the admin had
+            // not touched them - and get_caregiver_details() renders them through
+            // nl2br(), which then has nothing left to break on. The loss is
+            // silent and not recoverable.
+            foreach (array('_skills', '_education') as $textarea_key) {
+                if (isset($_POST[$textarea_key])) {
+                    update_post_meta($post_id, $textarea_key, sanitize_textarea_field($_POST[$textarea_key]));
                 }
             }
             if (isset($_POST['_provider_type'])) {

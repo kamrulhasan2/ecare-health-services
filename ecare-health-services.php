@@ -60,7 +60,13 @@ final class ECare_Health_Services {
 
     public function activate() {
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-secure-files.php';
+        require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-cpt.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-activator.php';
+
+        // The taxonomy is normally registered on init, which has not run during
+        // activation, so register it here before seeding depends on it.
+        ECare_CPT::register_caregiver_type_taxonomy();
+
         ECare_Activator::activate();
     }
 
@@ -106,6 +112,9 @@ final class ECare_Health_Services {
         wp_enqueue_style('ecare-admin-style', ECARE_PLUGIN_URL . 'assets/css/ecare-style.css', array(), $style_ver);
         wp_enqueue_script('ecare-admin-script', ECARE_PLUGIN_URL . 'assets/js/ecare-script.js', array('jquery'), $script_ver, true);
         
+        // Read only. Seeding the defaults from here meant every page view could
+        // issue a database write; that now happens at activation and when a new
+        // caregiver type is created.
         $type_packages = array();
         $terms = get_terms(array(
             'taxonomy'   => 'ecare_caregiver_type',
@@ -113,24 +122,7 @@ final class ECare_Health_Services {
         ));
         if (!is_wp_error($terms) && !empty($terms)) {
             foreach ($terms as $term) {
-                $pkgs = get_term_meta($term->term_id, 'ecare_packages', true);
-                if (empty($pkgs) || !is_array($pkgs)) {
-                    if ($term->name === 'Physiotherapist') {
-                        $pkgs = array(
-                            array('label' => 'Daily Regular (1 Hour)', 'price' => get_option('ecare_default_physio_regular_price', 1500)),
-                            array('label' => 'Daily Premium (1 Hour)', 'price' => get_option('ecare_default_physio_premium_price', 2000)),
-                        );
-                    } else {
-                        $pkgs = array(
-                            array('label' => 'Daily (12 Hours)', 'price' => get_option('ecare_default_daily_12_price', 1700)),
-                            array('label' => 'Daily (24 Hours)', 'price' => get_option('ecare_default_daily_24_price', 2200)),
-                            array('label' => 'Monthly (12 Hours)', 'price' => get_option('ecare_default_monthly_12_price', 30000)),
-                            array('label' => 'Monthly (24 Hours)', 'price' => get_option('ecare_default_monthly_24_price', 50000)),
-                        );
-                    }
-                    update_term_meta($term->term_id, 'ecare_packages', $pkgs);
-                }
-                $type_packages[$term->name] = $pkgs;
+                $type_packages[$term->name] = ECare_CPT::term_packages($term);
             }
         }
 
@@ -164,6 +156,9 @@ final class ECare_Health_Services {
         wp_enqueue_style('ecare-frontend-style', ECARE_PLUGIN_URL . 'assets/css/ecare-style.css', array('ecare-select2-css'), $style_ver);
         wp_enqueue_script('ecare-frontend-script', ECARE_PLUGIN_URL . 'assets/js/ecare-script.js', array('jquery', 'ecare-select2-js'), $script_ver, true);
         
+        // Read only. Seeding the defaults from here meant every page view could
+        // issue a database write; that now happens at activation and when a new
+        // caregiver type is created.
         $type_packages = array();
         $terms = get_terms(array(
             'taxonomy'   => 'ecare_caregiver_type',
@@ -171,24 +166,7 @@ final class ECare_Health_Services {
         ));
         if (!is_wp_error($terms) && !empty($terms)) {
             foreach ($terms as $term) {
-                $pkgs = get_term_meta($term->term_id, 'ecare_packages', true);
-                if (empty($pkgs) || !is_array($pkgs)) {
-                    if ($term->name === 'Physiotherapist') {
-                        $pkgs = array(
-                            array('label' => 'Daily Regular (1 Hour)', 'price' => get_option('ecare_default_physio_regular_price', 1500)),
-                            array('label' => 'Daily Premium (1 Hour)', 'price' => get_option('ecare_default_physio_premium_price', 2000)),
-                        );
-                    } else {
-                        $pkgs = array(
-                            array('label' => 'Daily (12 Hours)', 'price' => get_option('ecare_default_daily_12_price', 1700)),
-                            array('label' => 'Daily (24 Hours)', 'price' => get_option('ecare_default_daily_24_price', 2200)),
-                            array('label' => 'Monthly (12 Hours)', 'price' => get_option('ecare_default_monthly_12_price', 30000)),
-                            array('label' => 'Monthly (24 Hours)', 'price' => get_option('ecare_default_monthly_24_price', 50000)),
-                        );
-                    }
-                    update_term_meta($term->term_id, 'ecare_packages', $pkgs);
-                }
-                $type_packages[$term->name] = $pkgs;
+                $type_packages[$term->name] = ECare_CPT::term_packages($term);
             }
         }
 

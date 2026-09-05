@@ -29,10 +29,15 @@ function __($s, $d = null) { return $s; }
 function get_post_meta($id, $k, $single = false) { return $GLOBALS['meta'][$id][$k] ?? ''; }
 function get_option($k, $default = false) { return $GLOBALS['options'][$k] ?? $default; }
 function get_term_by($field, $value, $tax) {
-    return isset($GLOBALS['terms'][$value]) ? (object) array('term_id' => $GLOBALS['terms'][$value]) : false;
+    // A real WP_Term always carries its name; the stub must too.
+    return isset($GLOBALS['terms'][$value])
+        ? (object) array('term_id' => $GLOBALS['terms'][$value], 'name' => $value)
+        : false;
 }
 function get_term_meta($id, $k, $single = false) { return $GLOBALS['term_meta'][$id][$k] ?? ''; }
 
+// Package defaults live in ECare_CPT, so both classes are needed here.
+require_once (__DIR__ . '/../includes/class-ecare-cpt.php');
 require_once ($argv[1] ?? (__DIR__ . '/../includes/class-ecare-ajax.php'));
 
 $pass = 0; $fail = 0;

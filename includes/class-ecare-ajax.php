@@ -170,28 +170,18 @@ class ECare_Ajax {
         }
 
         $provider_type = get_post_meta($id, '_provider_type', true);
-        if ($provider_type === 'Physiotherapist') {
-            $daily_12_fallback = get_option('ecare_default_physio_regular_price', 1500);
-            $daily_24_fallback = get_option('ecare_default_physio_premium_price', 2000);
-            $monthly_12_fallback = 0;
-            $monthly_24_fallback = 0;
-        } else {
-            $daily_12_fallback = get_option('ecare_default_daily_12_price', 1700);
-            $daily_24_fallback = get_option('ecare_default_daily_24_price', 2200);
-            $monthly_12_fallback = get_option('ecare_default_monthly_12_price', 30000);
-            $monthly_24_fallback = get_option('ecare_default_monthly_24_price', 50000);
-        }
 
+        // No prices here. They used to be assembled into $meta and then never
+        // rendered, which left a second, subtly different price calculation
+        // sitting next to the real one - exactly the sort of thing a later
+        // change picks up by mistake. caregiver_packages() below is the only
+        // place a price comes from.
         $meta = array(
-            'provider_type'    => $provider_type,
-            'skills'           => get_post_meta($id, '_skills', true),
-            'education'        => get_post_meta($id, '_education', true),
-            'experience'       => get_post_meta($id, '_experience', true),
-            'daily_12_price'   => get_post_meta($id, '_daily_12_price', true) ?: $daily_12_fallback,
-            'daily_24_price'   => get_post_meta($id, '_daily_24_price', true) ?: $daily_24_fallback,
-            'monthly_12_price' => get_post_meta($id, '_monthly_12_price', true) ?: $monthly_12_fallback,
-            'monthly_24_price' => get_post_meta($id, '_monthly_24_price', true) ?: $monthly_24_fallback,
-            'photo_url'        => get_post_meta($id, '_photo_url', true),
+            'provider_type' => $provider_type,
+            'skills'        => get_post_meta($id, '_skills', true),
+            'education'     => get_post_meta($id, '_education', true),
+            'experience'    => get_post_meta($id, '_experience', true),
+            'photo_url'     => get_post_meta($id, '_photo_url', true),
         );
 
         $html = '<div class="ecare-detail-grid">';
@@ -1422,32 +1412,10 @@ class ECare_Ajax {
         $provider_type = get_post_meta($caregiver_id, '_provider_type', true);
         $packages      = array();
 
-        if ($provider_type) {
-            $term = get_term_by('name', $provider_type, 'ecare_caregiver_type');
-            if ($term) {
-                $pkgs = get_term_meta($term->term_id, 'ecare_packages', true);
-                if (is_array($pkgs)) {
-                    foreach ($pkgs as $pkg) {
-                        if (!empty($pkg['label']) && isset($pkg['price'])) {
-                            $packages[$pkg['label']] = floatval($pkg['price']);
-                        }
-                    }
-                }
+        foreach (ECare_CPT::term_packages($provider_type) as $pkg) {
+            if (!empty($pkg['label']) && isset($pkg['price'])) {
+                $packages[$pkg['label']] = floatval($pkg['price']);
             }
-        }
-
-        if (empty($packages)) {
-            $packages = ($provider_type === 'Physiotherapist')
-                ? array(
-                    'Daily Regular (1 Hour)' => floatval(get_option('ecare_default_physio_regular_price', 1500)),
-                    'Daily Premium (1 Hour)' => floatval(get_option('ecare_default_physio_premium_price', 2000)),
-                )
-                : array(
-                    'Daily (12 Hours)'   => floatval(get_option('ecare_default_daily_12_price', 1700)),
-                    'Daily (24 Hours)'   => floatval(get_option('ecare_default_daily_24_price', 2200)),
-                    'Monthly (12 Hours)' => floatval(get_option('ecare_default_monthly_12_price', 30000)),
-                    'Monthly (24 Hours)' => floatval(get_option('ecare_default_monthly_24_price', 50000)),
-                );
         }
 
         $overrides = ($provider_type === 'Physiotherapist')
@@ -1714,23 +1682,7 @@ class ECare_Ajax {
                     }
                 }
 
-                $packages = get_term_meta($term->term_id, 'ecare_packages', true);
-                if (empty($packages) || !is_array($packages)) {
-                    if ($term->name === 'Physiotherapist') {
-                        $packages = array(
-                            array('label' => 'Daily Regular (1 Hour)', 'price' => get_option('ecare_default_physio_regular_price', 1500)),
-                            array('label' => 'Daily Premium (1 Hour)', 'price' => get_option('ecare_default_physio_premium_price', 2000)),
-                        );
-                    } else {
-                        $packages = array(
-                            array('label' => 'Daily (12 Hours)', 'price' => get_option('ecare_default_daily_12_price', 1700)),
-                            array('label' => 'Daily (24 Hours)', 'price' => get_option('ecare_default_daily_24_price', 2200)),
-                            array('label' => 'Monthly (12 Hours)', 'price' => get_option('ecare_default_monthly_12_price', 30000)),
-                            array('label' => 'Monthly (24 Hours)', 'price' => get_option('ecare_default_monthly_24_price', 50000)),
-                        );
-                    }
-                    update_term_meta($term->term_id, 'ecare_packages', $packages);
-                }
+                $packages = ECare_CPT::term_packages($term);
 
                 $types[] = array(
                     'term_id'   => $term->term_id,
