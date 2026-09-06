@@ -267,7 +267,7 @@ echo "\n=== H. the order-pay button says what happens next ===\n";
 ECare_WooCommerce::init();
 $cb = $GLOBALS['filters']['woocommerce_pay_order_button_text'][0] ?? null;
 check('the order-pay button text filter is registered', is_callable($cb), true);
-check('it reads Pay After Service', $cb ? call_user_func($cb, 'Pay for order') : null, 'Pay After Service');
+check('it reads Confirm Booking', $cb ? call_user_func($cb, 'Pay for order') : null, 'Confirm Booking');
 check('the standard checkout button is left alone',
       isset($GLOBALS['filters']['woocommerce_order_button_text']), false);
 

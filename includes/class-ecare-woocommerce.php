@@ -54,16 +54,17 @@ class ECare_WooCommerce {
     /**
      * Label for the submit button on the order-pay page.
      *
-     * WooCommerce ships "Pay for order", which reads like a card payment is
-     * coming. Nothing is paid here: the customer confirms and settles in cash
-     * when the caregiver arrives. Filter name verified against WooCommerce 11
-     * (includes/shortcodes/class-wc-shortcode-checkout.php:208).
+     * WooCommerce ships "Pay for order". One button now serves two very
+     * different outcomes - SSLCommerz takes the customer off to pay, Cash on
+     * Delivery does not take a payment at all - so it is named after the thing
+     * both have in common: the booking is confirmed. Filter name verified
+     * against WooCommerce 11 (class-wc-shortcode-checkout.php:208).
      *
      * The standard checkout button is a different filter,
      * woocommerce_order_button_text, and is deliberately left alone.
      */
     public static function pay_order_button_text($text) {
-        return __('Pay After Service', 'ecare-health-services');
+        return __('Confirm Booking', 'ecare-health-services');
     }
 
     /**
