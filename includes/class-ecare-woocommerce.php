@@ -31,6 +31,10 @@ class ECare_WooCommerce {
         // and the result issued long before anyone would turn up to collect.
         add_filter('woocommerce_available_payment_gateways', array(__CLASS__, 'restrict_lab_test_gateways'));
 
+        // There is no shop to return to on an empty cart.
+        add_filter('woocommerce_return_to_shop_text', array(__CLASS__, 'return_to_shop_text'));
+        add_filter('woocommerce_return_to_shop_redirect', array(__CLASS__, 'return_to_shop_redirect'));
+
         // Display custom location metadata on cart and checkout pages
         add_filter('woocommerce_get_item_data', array(__CLASS__, 'display_cart_item_location_metadata'), 10, 2);
 
@@ -173,6 +177,23 @@ class ECare_WooCommerce {
     /** Lab tests are the products whose SKU starts ecare-lab_test-. */
     private static function is_lab_test_product($product) {
         return $product && strpos((string) $product->get_sku(), 'ecare-lab_test-') === 0;
+    }
+
+    /**
+     * Label on the empty-cart button.
+     *
+     * WooCommerce says "Return to shop", but this site has no shop page anyone
+     * is meant to browse - services are booked from Find a Caregiver, Lab Tests
+     * and Ambulance. Sending someone to a bare product archive is a dead end.
+     * Filters verified against WooCommerce 11 (templates/cart/cart-empty.php).
+     */
+    public static function return_to_shop_text($text) {
+        return __('Return to Home', 'ecare-health-services');
+    }
+
+    /** ...and it should land on the home page, not the shop archive. */
+    public static function return_to_shop_redirect($url) {
+        return home_url('/');
     }
 
     public static function cart_item_name($name, $cart_item, $cart_item_key) {

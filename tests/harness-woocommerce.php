@@ -79,6 +79,7 @@ function is_admin() { return $GLOBALS['is_admin']; }
 function wp_doing_ajax() { return $GLOBALS['doing_ajax']; }
 function absint($v) { return abs((int) $v); }
 function apply_filters($hook, $value) { return $value; }
+function home_url($path = '/') { return 'https://tech.meditaj.com' . $path; }
 class Fake_WC { public $payment_gateways; public $cart; public function __construct() { $this->payment_gateways = new Fake_Gateways(); $this->cart = new Fake_Cart(); } }
 function WC() { static $wc = null; if ($wc === null) { $wc = new Fake_WC(); } return $wc; }
 
@@ -406,6 +407,17 @@ $GLOBALS['orders'] = array(4001 => new Fake_Order(4001, array(), array(new Fake_
 check('a caregiver order on that page keeps COD',
       array_keys(call_user_func($restrict, $BOTH)), array('cod', 'sslcommerz'));
 $GLOBALS['endpoint'] = '';
+
+echo "\n=== K. the empty cart points somewhere that exists ===\n";
+// "Return to shop" sends people to a product archive this site does not use;
+// everything is booked from the service pages.
+$txt = $GLOBALS['filters']['woocommerce_return_to_shop_text'][0] ?? null;
+$url = $GLOBALS['filters']['woocommerce_return_to_shop_redirect'][0] ?? null;
+check('the label filter is registered', is_callable($txt), true);
+check('it reads Return to Home', $txt ? call_user_func($txt, 'Return to shop') : null, 'Return to Home');
+check('the destination filter is registered', is_callable($url), true);
+check('and it points at the home page',
+      $url ? call_user_func($url, 'https://tech.meditaj.com/shop/') : null, 'https://tech.meditaj.com/');
 
 printf("\n---------------------------------------\n%d passed, %d failed\n", $pass, $fail);
 exit($fail === 0 ? 0 : 1);
