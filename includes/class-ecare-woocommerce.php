@@ -31,6 +31,70 @@ class ECare_WooCommerce {
 
         // Add custom location metadata to order items
         add_action('woocommerce_checkout_create_order_line_item', array(__CLASS__, 'save_location_metadata_to_order_item'), 10, 4);
+
+        // Name the submit button after what actually happens next, and clear
+        // the boilerplate off the order-pay page.
+        add_filter('woocommerce_pay_order_button_text', array(__CLASS__, 'pay_order_button_text'));
+        add_action('woocommerce_pay_order_before_payment', array(__CLASS__, 'tidy_pay_page'));
+        add_action('wp_head', array(__CLASS__, 'pay_page_styles'));
+    }
+
+    /**
+     * Label for the submit button on the order-pay page.
+     *
+     * WooCommerce ships "Pay for order", which reads like a card payment is
+     * coming. Nothing is paid here: the customer confirms and settles in cash
+     * when the caregiver arrives. Filter name verified against WooCommerce 11
+     * (includes/shortcodes/class-wc-shortcode-checkout.php:208).
+     *
+     * The standard checkout button is a different filter,
+     * woocommerce_order_button_text, and is deliberately left alone.
+     */
+    public static function pay_order_button_text($text) {
+        return __('Pay After Service', 'ecare-health-services');
+    }
+
+    /**
+     * Strip the boilerplate WooCommerce prints on the order-pay page.
+     *
+     * The privacy notice ("Your personal data will be used to process your
+     * order...") is written for a page that collects personal data. This one
+     * collects none: the order already exists, the customer is confirming it.
+     *
+     * Fires from woocommerce_pay_order_before_payment, which runs before
+     * checkout/terms.php renders, so the removal lands in time.
+     */
+    public static function tidy_pay_page() {
+        remove_action('woocommerce_checkout_terms_and_conditions', 'wc_checkout_privacy_policy_text', 20);
+    }
+
+    /**
+     * Hide the payment-method list on the order-pay page when there is nothing
+     * to choose between.
+     *
+     * With Cash on Delivery as the only gateway, the radio, its "Cash on
+     * delivery" label and the "Pay with cash upon delivery." box repeat what
+     * the button already says. The radio stays in the DOM - display:none still
+     * submits - so $_POST['payment_method'] is unaffected.
+     *
+     * The single-gateway guard matters: add a second gateway later and this
+     * turns itself off rather than leaving customers unable to pick one.
+     */
+    public static function pay_page_styles() {
+        if (!function_exists('is_wc_endpoint_url') || !is_wc_endpoint_url('order-pay')) {
+            return;
+        }
+
+        if (!function_exists('WC') || !WC()->payment_gateways) {
+            return;
+        }
+
+        $gateways = (array) WC()->payment_gateways->get_available_payment_gateways();
+        if (count($gateways) !== 1) {
+            return;
+        }
+
+        echo '<style id="ecare-pay-page">#order_review .payment_methods{display:none;}</style>' . "\n";
     }
 
     public static function cart_item_name($name, $cart_item, $cart_item_key) {

@@ -9,8 +9,12 @@
 
 define('ABSPATH', sys_get_temp_dir() . '/wc-harness/');
 
-function add_action() {}
-function add_filter() {}
+$GLOBALS['actions'] = array();
+$GLOBALS['removed'] = array();
+function add_action($hook, $cb, $priority = 10, $args = 1) { $GLOBALS['actions'][$hook][] = $cb; }
+function remove_action($hook, $cb, $priority = 10) { $GLOBALS['removed'][] = $hook . '@' . $priority . ':' . (is_string($cb) ? $cb : 'closure'); return true; }
+$GLOBALS['filters'] = array();
+function add_filter($hook, $cb, $priority = 10, $args = 1) { $GLOBALS['filters'][$hook][] = $cb; }
 function __($s, $d = null) { return $s; }
 
 /** Order double, exposing only what the class uses. */
@@ -22,6 +26,13 @@ class Fake_Order {
     public function get_items() { return array(); }
     public function get_customer_id() { return 0; }
 }
+
+$GLOBALS['endpoint'] = '';
+$GLOBALS['gateways'] = array();
+function is_wc_endpoint_url($ep) { return $GLOBALS['endpoint'] === $ep; }
+class Fake_Gateways { public function get_available_payment_gateways() { return $GLOBALS['gateways']; } }
+class Fake_WC { public $payment_gateways; public function __construct() { $this->payment_gateways = new Fake_Gateways(); } }
+function WC() { static $wc = null; if ($wc === null) { $wc = new Fake_WC(); } return $wc; }
 
 $GLOBALS['orders'] = array();
 function wc_get_order($id) {
@@ -193,6 +204,45 @@ check('an order object is accepted without error', true, true);
 
 $reflection = new ReflectionMethod('ECare_WooCommerce', 'create_lab_bookings_from_order');
 check('the handler takes one required argument', $reflection->getNumberOfRequiredParameters(), 1);
+
+echo "\n=== H. the order-pay button says what happens next ===\n";
+// WooCommerce ships "Pay for order" on this page, which reads like a card is
+// about to be charged. Nothing is paid there - the customer confirms, and pays
+// the caregiver in cash on arrival.
+ECare_WooCommerce::init();
+$cb = $GLOBALS['filters']['woocommerce_pay_order_button_text'][0] ?? null;
+check('the order-pay button text filter is registered', is_callable($cb), true);
+check('it reads Pay After Service', $cb ? call_user_func($cb, 'Pay for order') : null, 'Pay After Service');
+check('the standard checkout button is left alone',
+      isset($GLOBALS['filters']['woocommerce_order_button_text']), false);
+
+// The privacy notice is written for a page that collects personal data. The
+// order-pay page collects none: the order exists already.
+$tidy = $GLOBALS['actions']['woocommerce_pay_order_before_payment'][0] ?? null;
+check('the page is tidied before the payment section renders', is_callable($tidy), true);
+$GLOBALS['removed'] = array();
+if ($tidy) { call_user_func($tidy); }
+check('the privacy boilerplate is removed at the priority it was added',
+      $GLOBALS['removed'], array('woocommerce_checkout_terms_and_conditions@20:wc_checkout_privacy_policy_text'));
+
+$styles = $GLOBALS['actions']['wp_head'][0] ?? null;
+check('the pay-page style hook is registered', is_callable($styles), true);
+
+$GLOBALS['endpoint'] = 'order-pay';
+$GLOBALS['gateways'] = array('cod' => true);
+ob_start(); call_user_func($styles); $one = ob_get_clean();
+check('one gateway: the payment list is hidden', strpos($one, 'payment_methods{display:none') !== false, true);
+
+// The guard that matters: add a second gateway and the customer must still be
+// able to choose one.
+$GLOBALS['gateways'] = array('cod' => true, 'sslcommerz' => true);
+ob_start(); call_user_func($styles); $two = ob_get_clean();
+check('two gateways: it leaves the list alone', $two, '');
+
+$GLOBALS['endpoint'] = '';
+$GLOBALS['gateways'] = array('cod' => true);
+ob_start(); call_user_func($styles); $elsewhere = ob_get_clean();
+check('and it prints nothing on any other page', $elsewhere, '');
 
 printf("\n---------------------------------------\n%d passed, %d failed\n", $pass, $fail);
 exit($fail === 0 ? 0 : 1);
