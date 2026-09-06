@@ -25,6 +25,11 @@ class ECare_WooCommerce {
         add_action('woocommerce_thankyou', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 1);
         add_action('woocommerce_payment_complete', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 1);
         add_action('woocommerce_order_status_processing', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 1);
+        add_action('woocommerce_order_status_completed', array(__CLASS__, 'create_lab_bookings_from_order'), 10, 1);
+
+        // Cash on Delivery makes no sense for a lab test - the sample is taken
+        // and the result issued long before anyone would turn up to collect.
+        add_filter('woocommerce_available_payment_gateways', array(__CLASS__, 'restrict_lab_test_gateways'));
 
         // Display custom location metadata on cart and checkout pages
         add_filter('woocommerce_get_item_data', array(__CLASS__, 'display_cart_item_location_metadata'), 10, 2);
@@ -95,6 +100,79 @@ class ECare_WooCommerce {
         }
 
         echo '<style id="ecare-pay-page">#order_review .payment_methods{display:none;}</style>' . "\n";
+    }
+
+    /**
+     * Take Cash on Delivery off the table when a lab test is being bought.
+     *
+     * There is one guard that matters more than the rule itself: if removing
+     * COD would leave no way to pay at all, the rule stands down. Until an
+     * online gateway is installed COD is the only one available, and a
+     * checkout with zero payment methods is worse than the wrong one. Enable
+     * SSLCommerz and this starts enforcing itself, with nothing to switch on.
+     *
+     * @param array $gateways Available gateways, keyed by id.
+     * @return array
+     */
+    public static function restrict_lab_test_gateways($gateways) {
+        if (is_admin() && !wp_doing_ajax()) {
+            return $gateways;   // order screens in wp-admin are not a customer checkout
+        }
+
+        if (!self::buying_a_lab_test()) {
+            return $gateways;
+        }
+
+        $disallowed = (array) apply_filters('ecare_lab_test_disallowed_gateways', array('cod'));
+
+        $remaining = $gateways;
+        foreach ($disallowed as $id) {
+            unset($remaining[$id]);
+        }
+
+        return empty($remaining) ? $gateways : $remaining;
+    }
+
+    /**
+     * Is a lab test part of what is being paid for right now?
+     *
+     * Checks the order on the order-pay page - where the cart is empty and the
+     * order is the only record of what was bought - and the cart everywhere
+     * else.
+     */
+    private static function buying_a_lab_test() {
+        if (function_exists('is_wc_endpoint_url') && is_wc_endpoint_url('order-pay')) {
+            global $wp;
+            $order_id = isset($wp->query_vars['order-pay']) ? absint($wp->query_vars['order-pay']) : 0;
+            $order    = $order_id ? wc_get_order($order_id) : null;
+
+            if ($order) {
+                foreach ($order->get_items() as $item) {
+                    if (self::is_lab_test_product($item->get_product())) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        if (!function_exists('WC') || !WC()->cart) {
+            return false;
+        }
+
+        foreach (WC()->cart->get_cart() as $cart_item) {
+            $product = isset($cart_item['data']) ? $cart_item['data'] : null;
+            if (self::is_lab_test_product($product)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** Lab tests are the products whose SKU starts ecare-lab_test-. */
+    private static function is_lab_test_product($product) {
+        return $product && strpos((string) $product->get_sku(), 'ecare-lab_test-') === 0;
     }
 
     public static function cart_item_name($name, $cart_item, $cart_item_key) {
@@ -219,10 +297,28 @@ class ECare_WooCommerce {
         global $wpdb;
         $table = $wpdb->prefix . 'ecare_bookings';
 
+        // Nothing is booked until the order is paid for.
+        //
+        // Five hooks lead here and two of them - woocommerce_checkout_order_processed
+        // and woocommerce_thankyou - fire while the order is still unpaid. With
+        // Cash on Delivery that was harmless. With a gateway it is not: every
+        // customer who reaches the payment page and closes the tab would leave a
+        // lab booking behind, and the dashboard would fill with work nobody has
+        // paid for. is_paid() covers processing and completed; on-hold and
+        // pending do not qualify.
+        if (!$order->is_paid()) return;
+
         // Check if we already created lab bookings for this order to prevent duplicate insertions.
         // Under HPOS order meta lives in wp_wc_orders_meta, which get_post_meta() cannot read.
         $already_created = $order->get_meta('_ecare_lab_bookings_created');
         if ($already_created) return;
+
+        // The row used to be written as 'pending' and promoted a moment later by
+        // advance_booking_status(). That no longer works: both run on
+        // woocommerce_payment_complete, and the sweep goes first, so it would
+        // look for a row that does not exist yet. Since we only get here on a
+        // paid order, the status is known outright.
+        $booking_status = $order->has_status('completed') ? 'completed' : 'approved';
 
         $has_lab_tests = false;
         foreach ($order->get_items() as $item_id => $item) {
@@ -253,7 +349,7 @@ class ECare_WooCommerce {
                         'contact_phone'  => $order->get_billing_phone(),
                         'address'        => $order->get_billing_address_1() . ' ' . $order->get_billing_address_2() . $locations_info,
                         'total_amount'   => $item->get_total(),
-                        'status'         => 'pending',
+                        'status'         => $booking_status,
                         'order_id'       => $order_id,
                         'lab_test_ids'   => $test_id,
                     ));

@@ -17,21 +17,69 @@ $GLOBALS['filters'] = array();
 function add_filter($hook, $cb, $priority = 10, $args = 1) { $GLOBALS['filters'][$hook][] = $cb; }
 function __($s, $d = null) { return $s; }
 
+/** Product double: only the SKU matters to the code under test. */
+class Fake_Product {
+    private $sku;
+    public function __construct($sku) { $this->sku = $sku; }
+    public function get_sku() { return $this->sku; }
+}
+
+/** Line item double. */
+class Fake_Item {
+    private $product, $meta, $total;
+    public function __construct($sku, $meta = array(), $total = 300) {
+        $this->product = $sku === null ? null : new Fake_Product($sku);
+        $this->meta = $meta; $this->total = $total;
+    }
+    public function get_product() { return $this->product; }
+    public function get_meta($key, $single = true) { return isset($this->meta[$key]) ? $this->meta[$key] : ''; }
+    public function get_total() { return $this->total; }
+}
+
 /** Order double, exposing only what the class uses. */
 class Fake_Order {
-    private $id, $meta;
-    public function __construct($id, $meta = array()) { $this->id = $id; $this->meta = $meta; }
+    private $id, $meta, $items, $status;
+    public function __construct($id, $meta = array(), $items = array(), $status = 'pending') {
+        $this->id = $id; $this->meta = $meta; $this->items = $items; $this->status = $status;
+    }
     public function get_id() { return $this->id; }
     public function get_meta($key, $single = true) { return isset($this->meta[$key]) ? $this->meta[$key] : ''; }
-    public function get_items() { return array(); }
+    public function update_meta_data($key, $value) { $this->meta[$key] = $value; }
+    public function save_meta_data() { return true; }
+    public function get_items() { return $this->items; }
     public function get_customer_id() { return 0; }
+    public function get_status() { return $this->status; }
+    public function has_status($s) { return $this->status === $s; }
+    // Mirrors wc_get_is_paid_statuses(): processing and completed, nothing else.
+    public function is_paid() { return in_array($this->status, array('processing', 'completed'), true); }
+    public function get_billing_first_name() { return 'Kamrul'; }
+    public function get_billing_last_name() { return 'Hasan'; }
+    public function get_billing_phone() { return '+8801700000000'; }
+    public function get_billing_address_1() { return 'Dhanmondi'; }
+    public function get_billing_address_2() { return ''; }
 }
 
 $GLOBALS['endpoint'] = '';
 $GLOBALS['gateways'] = array();
 function is_wc_endpoint_url($ep) { return $GLOBALS['endpoint'] === $ep; }
 class Fake_Gateways { public function get_available_payment_gateways() { return $GLOBALS['gateways']; } }
-class Fake_WC { public $payment_gateways; public function __construct() { $this->payment_gateways = new Fake_Gateways(); } }
+$GLOBALS['cart_skus'] = array();
+class Fake_Cart {
+    public function get_cart() {
+        $out = array();
+        foreach ($GLOBALS['cart_skus'] as $i => $sku) {
+            $out['key' . $i] = array('data' => new Fake_Product($sku));
+        }
+        return $out;
+    }
+}
+$GLOBALS['is_admin'] = false;
+$GLOBALS['doing_ajax'] = false;
+function is_admin() { return $GLOBALS['is_admin']; }
+function wp_doing_ajax() { return $GLOBALS['doing_ajax']; }
+function absint($v) { return abs((int) $v); }
+function apply_filters($hook, $value) { return $value; }
+class Fake_WC { public $payment_gateways; public $cart; public function __construct() { $this->payment_gateways = new Fake_Gateways(); $this->cart = new Fake_Cart(); } }
 function WC() { static $wc = null; if ($wc === null) { $wc = new Fake_WC(); } return $wc; }
 
 $GLOBALS['orders'] = array();
@@ -64,6 +112,12 @@ class Fake_WPDB {
             $out .= $query[$p];
         }
         return $out;
+    }
+
+    public $inserted = array();
+    public function insert($table, $data, $format = null) {
+        $this->inserted[] = array('table' => $table, 'data' => $data);
+        return 1;
     }
 
     public function query($sql) {
@@ -243,6 +297,115 @@ $GLOBALS['endpoint'] = '';
 $GLOBALS['gateways'] = array('cod' => true);
 ob_start(); call_user_func($styles); $elsewhere = ob_get_clean();
 check('and it prints nothing on any other page', $elsewhere, '');
+
+echo "\n=== I. a lab booking is not created until the order is paid ===\n";
+// Before this, five hooks led into create_lab_bookings_from_order() and two of
+// them fired while the order was still unpaid. Harmless with Cash on Delivery.
+// With a gateway it means every abandoned payment leaves a lab booking behind.
+$LAB = array(new Fake_Item('ecare-lab_test-77', array('Division' => 'Dhaka', 'Area' => 'Dhanmondi')));
+
+function lab_rows($wpdb) {
+    $out = array();
+    foreach ($wpdb->inserted as $row) {
+        if (($row['data']['booking_type'] ?? '') === 'lab') { $out[] = $row['data']; }
+    }
+    return $out;
+}
+
+foreach (array('pending', 'on-hold', 'failed', 'cancelled') as $unpaid) {
+    $wpdb->inserted = array();
+    $order = new Fake_Order(3000, array(), $LAB, $unpaid);
+    $GLOBALS['orders'] = array(3000 => $order);
+    ECare_WooCommerce::create_lab_bookings_from_order(3000);
+    check("an order sitting at '$unpaid' books nothing", count(lab_rows($wpdb)), 0);
+}
+
+$wpdb->inserted = array();
+$order = new Fake_Order(3001, array(), $LAB, 'processing');
+$GLOBALS['orders'] = array(3001 => $order);
+ECare_WooCommerce::create_lab_bookings_from_order(3001);
+$rows = lab_rows($wpdb);
+check('a paid order books the lab test', count($rows), 1);
+check('the test id comes out of the SKU', $rows ? $rows[0]['provider_id'] : null, 77);
+check('the order id is recorded', $rows ? $rows[0]['order_id'] : null, 3001);
+check('location meta is folded into the address',
+      $rows ? (strpos($rows[0]['address'], 'Division: Dhaka') !== false && strpos($rows[0]['address'], 'Area: Dhanmondi') !== false) : false, true);
+
+// The row used to be written 'pending' and promoted by advance_booking_status()
+// a moment later. Both run on woocommerce_payment_complete and the sweep goes
+// first, so on a deferred create it would sweep a row that does not exist yet.
+check('it is written approved, not left pending for a sweep that already ran',
+      $rows ? $rows[0]['status'] : null, 'approved');
+
+$wpdb->inserted = array();
+$order = new Fake_Order(3002, array(), $LAB, 'completed');
+$GLOBALS['orders'] = array(3002 => $order);
+ECare_WooCommerce::create_lab_bookings_from_order(3002);
+$rows = lab_rows($wpdb);
+check('an order that lands completed books it completed', $rows ? $rows[0]['status'] : null, 'completed');
+
+// Idempotency still holds across the five hooks.
+$wpdb->inserted = array();
+$order = new Fake_Order(3003, array(), $LAB, 'processing');
+$GLOBALS['orders'] = array(3003 => $order);
+foreach (range(1, 5) as $ignored) {
+    ECare_WooCommerce::create_lab_bookings_from_order(3003);
+}
+check('five hooks firing still book it once', count(lab_rows($wpdb)), 1);
+
+// A caregiver booking is not a lab test.
+$wpdb->inserted = array();
+$order = new Fake_Order(3004, array(), array(new Fake_Item('ecare-booking-cg922-daily-12-hours')), 'processing');
+$GLOBALS['orders'] = array(3004 => $order);
+ECare_WooCommerce::create_lab_bookings_from_order(3004);
+check('a caregiver order books no lab row', count(lab_rows($wpdb)), 0);
+
+echo "\n=== J. Cash on Delivery is off the table for lab tests ===\n";
+$restrict = $GLOBALS['filters']['woocommerce_available_payment_gateways'][0] ?? null;
+check('the gateway filter is registered', is_callable($restrict), true);
+
+$BOTH = array('cod' => 'COD', 'sslcommerz' => 'SSLCommerz');
+
+$GLOBALS['endpoint'] = '';
+$GLOBALS['cart_skus'] = array('ecare-lab_test-77');
+check('lab test in the cart: COD is removed',
+      array_keys(call_user_func($restrict, $BOTH)), array('sslcommerz'));
+
+$GLOBALS['cart_skus'] = array('ecare-booking-cg922-daily-12-hours');
+check('caregiver booking: COD stays',
+      array_keys(call_user_func($restrict, $BOTH)), array('cod', 'sslcommerz'));
+
+$GLOBALS['cart_skus'] = array('ecare-booking-cg922-daily-12-hours', 'ecare-lab_test-9');
+check('mixed cart counts as a lab test',
+      array_keys(call_user_func($restrict, $BOTH)), array('sslcommerz'));
+
+$GLOBALS['cart_skus'] = array();
+check('empty cart: nothing is touched',
+      array_keys(call_user_func($restrict, $BOTH)), array('cod', 'sslcommerz'));
+
+// The guard that keeps this shippable today: no online gateway is installed
+// yet, so removing COD would leave a checkout with no way to pay at all.
+$GLOBALS['cart_skus'] = array('ecare-lab_test-77');
+check('COD alone: the rule stands down rather than break checkout',
+      array_keys(call_user_func($restrict, array('cod' => 'COD'))), array('cod'));
+
+$GLOBALS['is_admin'] = true;
+check('wp-admin order screens are left alone',
+      array_keys(call_user_func($restrict, $BOTH)), array('cod', 'sslcommerz'));
+$GLOBALS['is_admin'] = false;
+
+// On the order-pay page the cart is empty; the order is what counts.
+$GLOBALS['cart_skus'] = array();
+$GLOBALS['endpoint'] = 'order-pay';
+$GLOBALS['wp'] = (object) array('query_vars' => array('order-pay' => 4001));
+$GLOBALS['orders'] = array(4001 => new Fake_Order(4001, array(), $LAB, 'pending'));
+check('order-pay page reads the order, not the cart',
+      array_keys(call_user_func($restrict, $BOTH)), array('sslcommerz'));
+
+$GLOBALS['orders'] = array(4001 => new Fake_Order(4001, array(), array(new Fake_Item('ecare-booking-cg922-daily-12-hours')), 'pending'));
+check('a caregiver order on that page keeps COD',
+      array_keys(call_user_func($restrict, $BOTH)), array('cod', 'sslcommerz'));
+$GLOBALS['endpoint'] = '';
 
 printf("\n---------------------------------------\n%d passed, %d failed\n", $pass, $fail);
 exit($fail === 0 ? 0 : 1);

@@ -48,10 +48,19 @@ Bengali filename could reach the code under test, so #27 was invisible here
 until the stub was corrected. When a harness says a bug cannot happen, check
 the stubs before believing it.
 
-**harness-woocommerce.php** (20 assertions) — finding #3.
+**harness-woocommerce.php** (52 assertions) — finding #3, plus the checkout work.
 The HPOS meta read, and the status whitelist that stops a re-fired order hook
 from dragging an 'assigned' ambulance back to 'approved' or reviving a
 cancelled booking.
+
+Sections I and J cover the payment rules. A lab booking is now created only
+once the order is paid: five hooks lead into that function and two of them fire
+while the order is still unpaid, which was harmless under Cash on Delivery and
+would not be under a gateway — every abandoned payment would leave a booking
+behind. And COD is filtered out when a lab test is being bought, with the guard
+that matters: if removing it would leave no payment method at all, the rule
+stands down rather than produce a checkout nobody can complete. Seven of these
+fail against the pre-change code.
 
 **harness-caregiver-pricing.php** (15 assertions) — finding #10.
 The one function both the booking modal and the booking handler price from.
