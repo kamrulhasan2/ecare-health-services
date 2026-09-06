@@ -42,7 +42,20 @@ function untrailingslashit($s) { return rtrim($s, '/\\'); }
 function trailingslashit($s) { return untrailingslashit($s) . '/'; }
 function wp_normalize_path($p) { return str_replace('\\', '/', $p); }
 function wp_mkdir_p($d) { return is_dir($d) || @mkdir($d, 0777, true); }
-function sanitize_file_name($n) { return preg_replace('/[^a-zA-Z0-9._-]/', '-', $n); }
+/**
+ * Close enough to WordPress's sanitize_file_name() for these tests. The point
+ * that matters: it strips a fixed list of special characters and collapses
+ * whitespace, but it does NOT strip non-ASCII. The stub that used to live here
+ * replaced every non-ASCII byte with a dash, which quietly made the Bengali
+ * filenames this site actually receives impossible to test - and hid #27.
+ */
+function sanitize_file_name($n) {
+    $special = array('?', '[', ']', '/', '\\', '=', '<', '>', ':', ';', ',', "'", '"', '&',
+                     '$', '#', '*', '(', ')', '|', '~', '`', '!', '{', '}', '%', '+', chr(0));
+    $n = str_replace($special, '', $n);
+    $n = preg_replace('/[\r\n\t -]+/', '-', $n);
+    return trim($n, '.-_');
+}
 function wp_generate_password($len, $special = true, $extra = false) {
     return substr(bin2hex(random_bytes($len)), 0, $len);
 }
@@ -417,6 +430,66 @@ $GLOBALS['ecare_transients'][$key] = 20;
 $GLOBALS['ecare_filter_ret']['ecare_upload_rate_limit'] = 100;
 check('throttle is filterable (clinic on one IP)', ECare_Secure_Files::check_rate_limit(), true);
 unset($GLOBALS['ecare_filter_ret']['ecare_upload_rate_limit']);
+
+echo "\n=== J. #27 - multi-byte filenames survive the length cap ===\n";
+ecare_reset_rate();
+
+// The real filename from booking #12 on tech.meditaj.com. Bengali runs three
+// bytes to the character, so this is 23 characters in 61 bytes. The old code
+// did substr($base, 0, 40), which lands inside a character; $wpdb then refuses
+// the reference and returns false with no error, leaving the file on disk and
+// the booking with no document attached.
+$BN = 'তারিখঃ-১৮-জুলাই-২০২৬-ইং';
+check('fixture is the case that bit us: over 40 bytes, under 40 characters',
+      strlen($BN) > 40 && preg_match_all('/./u', $BN) < 40, true);
+check('a naive byte cut of it is not valid UTF-8',
+      (bool) preg_match('//u', substr($BN, 0, 40)), false);
+
+fixture('booking_file', $BN . '.pdf', $BODY);
+$ref_bn = ECare_TF::upload('booking_file');
+check('the upload succeeds', is_string($ref_bn), true);
+check('the stored reference is valid UTF-8', (bool) preg_match('//u', (string) $ref_bn), true);
+check('it still carries the 32-character token',
+      (bool) preg_match('#/[0-9a-f]{32}-#', (string) $ref_bn), true);
+check('the extension survives', substr((string) $ref_bn, -4), '.pdf');
+check('the file is really on disk under that name',
+      is_file((string) ECare_Secure_Files::reference_to_path($ref_bn)), true);
+
+$readable = preg_replace('#^.*/[0-9a-f]{32}-#', '', (string) $ref_bn);
+$readable = preg_replace('/\.pdf$/', '', $readable);
+check('the readable part stays within the 40-byte cap', strlen($readable) <= 40, true);
+check('the readable part is itself valid UTF-8', (bool) preg_match('//u', $readable), true);
+check('it is a whole-character prefix of the original name', strpos($BN, $readable) === 0, true);
+check('and it did not collapse to nothing', $readable !== '', true);
+
+// A pure-ASCII name must still use the full budget - the fix must not shorten
+// names that were never a problem.
+ecare_reset_rate();
+fixture('booking_file', str_repeat('a', 100) . '.pdf', $BODY);
+$ref_ascii = ECare_TF::upload('booking_file');
+check('an ASCII name still uses all 40 bytes',
+      preg_replace('#^.*/[0-9a-f]{32}-#', '', (string) $ref_ascii),
+      str_repeat('a', 40) . '.pdf');
+
+// A short multi-byte name is left alone entirely.
+ecare_reset_rate();
+fixture('booking_file', 'রিপোর্ট.pdf', $BODY);
+$ref_short = ECare_TF::upload('booking_file');
+check('a short Bengali name is not truncated at all',
+      preg_replace('#^.*/[0-9a-f]{32}-#', '', (string) $ref_short), 'রিপোর্ট.pdf');
+
+// Nothing readable left after sanitising.
+ecare_reset_rate();
+fixture('booking_file', '---.pdf', $BODY);
+$ref_doc = ECare_TF::upload('booking_file');
+check('a name that sanitises away falls back to "document"',
+      (bool) preg_match('#/[0-9a-f]{32}-document\.pdf$#', (string) $ref_doc), true);
+
+// Extensions are ASCII. A non-ASCII one is not smuggled into the filename.
+ecare_reset_rate();
+fixture('booking_file', 'report.পিডিএফ', $BODY);
+$ref_ext = ECare_TF::upload('booking_file');
+check('a non-ASCII extension is refused rather than stored', is_string($ref_ext), false);
 
 printf("\n---------------------------------------\n%d passed, %d failed\n", $pass, $fail);
 exit($fail === 0 ? 0 : 1);

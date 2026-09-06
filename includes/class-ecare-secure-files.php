@@ -20,6 +20,9 @@ class ECare_Secure_Files {
     /** admin-post.php action used for delivery. */
     const ACTION = 'ecare_view_secure_file';
 
+    /** Longest readable part of a stored filename, in bytes. */
+    const MAX_BASENAME_BYTES = 40;
+
     /** Contexts a stored reference can belong to. */
     const CTX_PROVIDER = 'provider';
     const CTX_BOOKING  = 'booking';
@@ -369,6 +372,31 @@ class ECare_Secure_Files {
     }
 
     /**
+     * Trim a string to at most $max BYTES without splitting a character.
+     *
+     * strlen() and substr() count bytes, not characters. A Bengali filename
+     * runs three bytes to the character, so cutting at a byte offset lands in
+     * the middle of one and leaves a string that is not valid UTF-8. $wpdb
+     * refuses such a value and returns false without raising an error, so the
+     * file would land on disk while its reference silently failed to save -
+     * an upload the patient believes went through and the record does not
+     * have. Chop back to the last whole character; three passes at most.
+     */
+    private static function truncate_bytes($string, $max) {
+        if (strlen($string) <= $max) {
+            return $string;
+        }
+
+        $string = substr($string, 0, $max);
+
+        while ($string !== '' && !preg_match('//u', $string)) {
+            $string = substr($string, 0, -1);
+        }
+
+        return $string;
+    }
+
+    /**
      * Give the file an unguessable name, so the file stays unreachable even on a
      * server that ignores .htaccess.
      */
@@ -378,18 +406,33 @@ class ECare_Secure_Files {
         }
 
         $name = isset($file['name']) ? $file['name'] : '';
-        $ext  = pathinfo($name, PATHINFO_EXTENSION);
+        $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
         $base = pathinfo($name, PATHINFO_FILENAME);
         $base = sanitize_file_name($base);
 
-        if (strlen($base) > 40) {
-            $base = substr($base, 0, 40);
+        // Extensions are ASCII. Anything else is not one, and has no business
+        // in a filename we are about to store a reference to.
+        if (!preg_match('/^[a-z0-9]{1,10}$/', $ext)) {
+            $ext = '';
         }
+
+        $base = self::truncate_bytes($base, self::MAX_BASENAME_BYTES);
+
         if ($base === '') {
             $base = 'document';
         }
 
-        $file['name'] = wp_generate_password(32, false, false) . '-' . $base . ($ext ? '.' . strtolower($ext) : '');
+        $token = wp_generate_password(32, false, false);
+        $named = $token . '-' . $base . ($ext ? '.' . $ext : '');
+
+        // Last line of defence. The random token alone is a perfectly good
+        // filename; a readable one is only a convenience for whoever reads the
+        // directory later, and never worth a broken reference.
+        if (!preg_match('//u', $named)) {
+            $named = $token . ($ext ? '.' . $ext : '');
+        }
+
+        $file['name'] = $named;
 
         return $file;
     }

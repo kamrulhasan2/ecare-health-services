@@ -607,7 +607,7 @@ class ECare_Admin {
                                 $loc    = 'Mirpur'; // Location placeholder matching Page 3
                                 $status = get_post_meta($p->ID, '_provider_status', true) ?: 'pending';
                                 
-                                $first_letter = strtoupper(substr($p->post_title, 0, 1));
+                                $first_letter = self::first_letter($p->post_title);
                             ?>
                                 <tr>
                                     <td><input type="checkbox" /></td>
@@ -1172,7 +1172,7 @@ class ECare_Admin {
                                 $doc_url     = ECare_Secure_Files::get_view_url($doc_ref, ECare_Secure_Files::CTX_PROVIDER, $amb->ID);
                                 $status      = get_post_meta($amb->ID, '_ambulance_status', true) ?: 'pending';
                                 
-                                $first_letter = strtoupper(substr($amb->post_title, 0, 1));
+                                $first_letter = self::first_letter($amb->post_title);
                             ?>
                                 <tr>
                                     <td><input type="checkbox" /></td>
@@ -1240,6 +1240,34 @@ class ECare_Admin {
      * later. Prefixing with an apostrophe keeps the text readable while making
      * the cell inert.
      */
+    /**
+     * First character of a name, for the round avatar in the provider lists.
+     *
+     * substr($title, 0, 1) takes the first BYTE, which for a Bengali name is
+     * a third of a character and renders as a replacement glyph. Same bug as
+     * the upload filenames, in a place where it only looks wrong rather than
+     * losing data.
+     */
+    private static function first_letter($title) {
+        $title = trim((string) $title);
+
+        if ($title === '') {
+            return '?';
+        }
+
+        $letter = function_exists('mb_substr')
+            ? mb_substr($title, 0, 1, 'UTF-8')
+            : substr($title, 0, 1);
+
+        if ($letter === '' || !preg_match('//u', $letter)) {
+            return '?';
+        }
+
+        return function_exists('mb_strtoupper')
+            ? mb_strtoupper($letter, 'UTF-8')
+            : strtoupper($letter);
+    }
+
     private static function csv_cell($value) {
         $value = (string) $value;
         if ($value !== '' && strpbrk($value[0], "=+-@\t\r") !== false) {

@@ -26,10 +26,26 @@ Each PHP harness exits 0 on success, 1 on any failure, so they chain:
 
 ## What each one covers
 
-**harness-secure-files.php** (76 assertions) — findings #1, #2, #5.
+**harness-secure-files.php** (91 assertions) — findings #1, #2, #5, #27.
 Private-storage guards, unguessable filenames, path-traversal containment,
 IDOR on the delivery endpoint, upload size caps, the mime whitelist including
 content sniffing (a PHP file renamed .png), and the per-IP throttle.
+
+Section J covers #27: filenames that are not ASCII. `strlen()` and `substr()`
+count bytes, and Bengali runs three bytes to the character, so cutting the
+readable part at byte 40 landed inside a character. `$wpdb` refuses a value
+that is not valid UTF-8 and returns false without raising anything, so the
+file reached disk while its reference silently failed to save — an upload the
+patient believes went through, and a booking with no document on it. The
+fixture is the real filename from booking #12 on the live site
+(তারিখঃ-১৮-জুলাই-২০২৬-ইং.docx, 23 characters in 61 bytes); two of those
+assertions fail against the pre-fix code.
+
+Worth knowing: the stub for `sanitize_file_name()` in this harness used to
+replace every non-ASCII byte with a dash, which is not what WordPress does. No
+Bengali filename could reach the code under test, so #27 was invisible here
+until the stub was corrected. When a harness says a bug cannot happen, check
+the stubs before believing it.
 
 **harness-woocommerce.php** (20 assertions) — finding #3.
 The HPOS meta read, and the status whitelist that stops a re-fired order hook
