@@ -300,10 +300,10 @@ class ECare_Ajax {
         $html .= '    </div>';
         $html .= '  </div>';
         
-        $html .= '  <div style="display:flex; gap:15px; align-items:center;">';
-        $html .= '    <a href="#" class="ecare-change-family-link" style="font-weight:600; color:#22D3EE; font-size:13px; text-decoration:none;">Change Family Member</a>';
-        $html .= '    <span style="color:#CBD5E1;">|</span>';
-        $html .= '    <a href="#" class="ecare-edit-active-family-link" style="font-weight:600; color:#475569; font-size:13px; text-decoration:none;">Edit Active Details</a>';
+        $html .= '  <div class="ecare-family-actions">';
+        $html .= '    <a href="#" class="ecare-change-family-link">Change Family Member</a>';
+        $html .= '    <span class="ecare-family-actions-sep" aria-hidden="true">|</span>';
+        $html .= '    <a href="#" class="ecare-edit-active-family-link">Edit Active Details</a>';
         $html .= '  </div>';
         
         // Dynamic list wrapper

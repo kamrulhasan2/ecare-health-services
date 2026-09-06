@@ -1675,6 +1675,66 @@
   padding: 28px;
 }
 
+/* Selects: room for the descenders.
+   The theme gives selects height:40px and line-height:24px. With the 11px
+   padding above and below, the line box has 16px to sit in and the tail of a
+   "y" is cut off - "Elderly" read as "Elderlv". Trimming the padding lets the
+   line fit while the box stays 40px, so selects still line up with the inputs
+   beside them. */
+.ecare-container select,
+.ecare-modal-backdrop select {
+  /* height:auto with a floor rather than a fixed 40px, so the box grows if the
+     font ever gets bigger instead of cutting the text off again. The booking
+     modal is appended to <body>, outside .ecare-container, which is why it has
+     to be named separately. */
+  height: auto;
+  min-height: 40px;
+  line-height: 1.4;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+/* Change Family Member | Edit Active Details */
+.ecare-family-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+/* Astra adds margin-top to links sitting in page content, which pushed the
+   first one 14px below the other two and broke the row. */
+.ecare-family-actions > * {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.ecare-family-actions a {
+  font-weight: 600;
+  text-decoration: none;
+}
+.ecare-family-actions a:hover,
+.ecare-family-actions a:focus {
+  text-decoration: underline;
+}
+/* Was #22D3EE, which measures 1.81:1 on white - a link you cannot read. */
+.ecare-change-family-link {
+  color: var(--brand-navy);
+}
+.ecare-change-family-link:hover,
+.ecare-change-family-link:focus {
+  color: var(--brand-navy-dark);
+}
+.ecare-edit-active-family-link {
+  color: var(--text-muted);
+}
+.ecare-edit-active-family-link:hover,
+.ecare-edit-active-family-link:focus {
+  color: var(--text-dark);
+}
+.ecare-family-actions-sep {
+  color: #CBD5E1;
+}
+
 /* Password fields: show/hide toggle */
 .ecare-password-wrap {
   position: relative;
