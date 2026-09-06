@@ -182,6 +182,7 @@ function reset_world($opt_in, $bulk = 0) {
 
     $GLOBALS['options'] = array(
         'ecare_activation_date'              => '2026-01-01',
+        'ecare_rewrite_version'              => '1.1.2',
         'ecare_default_daily_12_price'       => 1700,
         'ecare_default_daily_24_price'       => 2200,
         'ecare_default_monthly_12_price'     => 30000,
@@ -332,7 +333,7 @@ check('ids are cast, never interpolated as strings', $GLOBALS['wpdb']->deletes[4
 echo "\n=== E. options and transients ===\n";
 // ===========================================================================
 sort($GLOBALS['deleted_options']);
-check('the seven plugin options plus the flag', $GLOBALS['deleted_options'], array(
+check('the eight plugin options plus the flag', $GLOBALS['deleted_options'], array(
     'ecare_activation_date',
     'ecare_default_daily_12_price',
     'ecare_default_daily_24_price',
@@ -341,6 +342,7 @@ check('the seven plugin options plus the flag', $GLOBALS['deleted_options'], arr
     'ecare_default_physio_premium_price',
     'ecare_default_physio_regular_price',
     'ecare_delete_data_on_uninstall',
+    'ecare_rewrite_version',
 ));
 check("WooCommerce's option is untouched", get_option('woocommerce_currency'), 'BDT');
 check('the opt-in flag clears itself', array_key_exists('ecare_delete_data_on_uninstall', $GLOBALS['options']), false);

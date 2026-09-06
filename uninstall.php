@@ -117,6 +117,7 @@ foreach ((array) $ecare_terms as $ecare_term) {
 // ---------------------------------------------------------------------------
 $ecare_options = array(
     'ecare_activation_date',
+    'ecare_rewrite_version',
     'ecare_default_daily_12_price',
     'ecare_default_daily_24_price',
     'ecare_default_monthly_12_price',

@@ -39,6 +39,8 @@ final class ECare_Health_Services {
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
 
         add_action('plugins_loaded', array($this, 'init_plugin'));
+        // Priority 99: after every post type and taxonomy has registered.
+        add_action('init', array($this, 'maybe_flush_rewrites'), 99);
         add_action('plugins_loaded', array($this, 'init_elementor'), 20);
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
         // Priority 20: WooCommerce registers selectWoo on this same hook, and
@@ -83,6 +85,26 @@ final class ECare_Health_Services {
 
     public function deactivate() {
         // Cleanup if needed
+    }
+
+    /**
+     * Flush rewrite rules once after an upgrade.
+     *
+     * Uploading a new zip over an installed plugin does not fire the activation
+     * hook, so a release that changes post type registration would otherwise
+     * leave the old rules in the database until somebody happened to re-save
+     * permalinks. That matters here: the archive rules this version removes are
+     * what stopped a page at /lab-test/ from resolving.
+     *
+     * Soft flush - the .htaccess is not touched.
+     */
+    public function maybe_flush_rewrites() {
+        if (get_option('ecare_rewrite_version') === ECARE_VERSION) {
+            return;
+        }
+
+        flush_rewrite_rules(false);
+        update_option('ecare_rewrite_version', ECARE_VERSION, false);
     }
 
     public function init_plugin() {

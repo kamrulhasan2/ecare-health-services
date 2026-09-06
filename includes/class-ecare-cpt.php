@@ -30,13 +30,22 @@ class ECare_CPT {
         );
 
         register_post_type('ecare_caregiver', array(
-            'labels'       => $labels,
-            'public'       => true,
-            'has_archive'  => true,
-            'supports'     => array('title', 'editor', 'thumbnail', 'excerpt'),
-            'menu_icon'    => 'dashicons-nametag',
-            'show_in_menu' => false,
-            'rewrite'      => array('slug' => 'care-provider'),
+            'labels'              => $labels,
+            // These posts are catalogue data. Everything a visitor sees is
+            // rendered by the shortcodes; the plugin ships no single or archive
+            // template and never links to one. Left public, WordPress hands the
+            // theme a bare post to render, and - worse - the archive rewrite
+            // outranks any page sharing its slug. A page at /lab-test/ simply
+            // stopped resolving the moment something flushed rewrite rules.
+            'public'              => false,
+            'show_ui'             => true,
+            'publicly_queryable'  => false,
+            'exclude_from_search' => true,
+            'has_archive'         => false,
+            'rewrite'             => false,
+            'supports'            => array('title', 'editor', 'thumbnail', 'excerpt'),
+            'menu_icon'           => 'dashicons-nametag',
+            'show_in_menu'        => false,
         ));
     }
 
@@ -53,11 +62,15 @@ class ECare_CPT {
                 'new_item_name'     => __('New Caregiver Type Name', 'ecare-health-services'),
                 'menu_name'         => __('Caregiver Types', 'ecare-health-services'),
             ),
-            'hierarchical'      => true,
-            'show_ui'           => true,
-            'show_admin_column' => true,
-            'query_var'         => true,
-            'rewrite'           => array('slug' => 'caregiver-type'),
+            'hierarchical'       => true,
+            'show_ui'            => true,
+            'show_admin_column'  => true,
+            // Same reasoning as the post types: /caregiver-type/nurse/ was an
+            // accidental theme-rendered page nothing links to.
+            'public'             => false,
+            'publicly_queryable' => false,
+            'query_var'          => false,
+            'rewrite'            => false,
         ));
 
         // Seed default terms
@@ -83,13 +96,22 @@ class ECare_CPT {
         );
 
         register_post_type('ecare_lab_test', array(
-            'labels'       => $labels,
-            'public'       => true,
-            'has_archive'  => true,
-            'supports'     => array('title', 'editor'),
-            'menu_icon'    => 'dashicons-microscope',
-            'show_in_menu' => false,
-            'rewrite'      => array('slug' => 'lab-test'),
+            'labels'              => $labels,
+            // These posts are catalogue data. Everything a visitor sees is
+            // rendered by the shortcodes; the plugin ships no single or archive
+            // template and never links to one. Left public, WordPress hands the
+            // theme a bare post to render, and - worse - the archive rewrite
+            // outranks any page sharing its slug. A page at /lab-test/ simply
+            // stopped resolving the moment something flushed rewrite rules.
+            'public'              => false,
+            'show_ui'             => true,
+            'publicly_queryable'  => false,
+            'exclude_from_search' => true,
+            'has_archive'         => false,
+            'rewrite'             => false,
+            'supports'            => array('title', 'editor'),
+            'menu_icon'           => 'dashicons-microscope',
+            'show_in_menu'        => false,
         ));
     }
 
@@ -107,13 +129,22 @@ class ECare_CPT {
         );
 
         register_post_type('ecare_ambulance', array(
-            'labels'       => $labels,
-            'public'       => true,
-            'has_archive'  => true,
-            'supports'     => array('title', 'editor', 'thumbnail'),
-            'menu_icon'    => 'dashicons-ambulance',
-            'show_in_menu' => false,
-            'rewrite'      => array('slug' => 'ambulance-provider'),
+            'labels'              => $labels,
+            // These posts are catalogue data. Everything a visitor sees is
+            // rendered by the shortcodes; the plugin ships no single or archive
+            // template and never links to one. Left public, WordPress hands the
+            // theme a bare post to render, and - worse - the archive rewrite
+            // outranks any page sharing its slug. A page at /lab-test/ simply
+            // stopped resolving the moment something flushed rewrite rules.
+            'public'              => false,
+            'show_ui'             => true,
+            'publicly_queryable'  => false,
+            'exclude_from_search' => true,
+            'has_archive'         => false,
+            'rewrite'             => false,
+            'supports'            => array('title', 'editor', 'thumbnail'),
+            'menu_icon'           => 'dashicons-ambulance',
+            'show_in_menu'        => false,
         ));
     }
 
