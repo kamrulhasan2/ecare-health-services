@@ -35,6 +35,9 @@ class ECare_WooCommerce {
         add_filter('woocommerce_return_to_shop_text', array(__CLASS__, 'return_to_shop_text'));
         add_filter('woocommerce_return_to_shop_redirect', array(__CLASS__, 'return_to_shop_redirect'));
 
+        // Nothing here is shipped.
+        add_filter('woocommerce_new_order_note_data', array(__CLASS__, 'rewrite_shipping_language'));
+
         // Display custom location metadata on cart and checkout pages
         add_filter('woocommerce_get_item_data', array(__CLASS__, 'display_cart_item_location_metadata'), 10, 2);
 
@@ -194,6 +197,38 @@ class ECare_WooCommerce {
     /** ...and it should land on the home page, not the shop archive. */
     public static function return_to_shop_redirect($url) {
         return home_url('/');
+    }
+
+    /**
+     * Take shipping language out of the order notes.
+     *
+     * The SSLCommerz gateway writes "...We will be shipping your order to you
+     * soon." on every successful payment (sslcommerz-class.php:513). Nothing on
+     * this site is shipped - a nurse arrives, a sample is collected, an
+     * ambulance is dispatched - and the note is what an operator reads when
+     * they open the order.
+     *
+     * The string is hard-coded there with no filter of its own, so it is
+     * matched and replaced as the note is written. Matching on a distinctive
+     * fragment rather than the whole sentence, so a reworded upstream release
+     * is still caught; if it ever stops matching, the worst case is the
+     * original wording comes back.
+     */
+    public static function rewrite_shipping_language($commentdata) {
+        if (empty($commentdata['comment_content'])) {
+            return $commentdata;
+        }
+
+        if (stripos($commentdata['comment_content'], 'shipping your order') === false) {
+            return $commentdata;
+        }
+
+        $commentdata['comment_content'] = __(
+            'Payment received. The booking is confirmed and the service will be arranged as scheduled.',
+            'ecare-health-services'
+        );
+
+        return $commentdata;
     }
 
     public static function cart_item_name($name, $cart_item, $cart_item_key) {

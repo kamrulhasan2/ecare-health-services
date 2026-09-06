@@ -419,5 +419,26 @@ check('the destination filter is registered', is_callable($url), true);
 check('and it points at the home page',
       $url ? call_user_func($url, 'https://tech.meditaj.com/shop/') : null, 'https://tech.meditaj.com/');
 
+echo "\n=== L. no shipping language in the order notes ===\n";
+$note = $GLOBALS['filters']['woocommerce_new_order_note_data'][0] ?? null;
+check('the order-note filter is registered', is_callable($note), true);
+
+// The exact string SSLCommerz writes on every successful payment.
+$ssl = 'Thank you for shopping with us. Your account has been charged and your transaction is successful. We will be shipping your order to you soon.';
+$out = call_user_func($note, array('comment_content' => $ssl));
+check('the shipping sentence is replaced',
+      strpos($out['comment_content'], 'shipping') === false, true);
+check('and says something true instead',
+      strpos($out['comment_content'], 'booking is confirmed') !== false, true);
+
+// Everything else must pass through untouched - these notes are the audit
+// trail an operator reads.
+foreach (array('Payment complete.', 'Order status changed from Pending to Processing.', '') as $other) {
+    $r = call_user_func($note, array('comment_content' => $other));
+    check("'" . substr($other, 0, 24) . "' is left alone", $r['comment_content'], $other);
+}
+check('other keys survive the filter',
+      call_user_func($note, array('comment_content' => $ssl, 'comment_type' => 'order_note'))['comment_type'], 'order_note');
+
 printf("\n---------------------------------------\n%d passed, %d failed\n", $pass, $fail);
 exit($fail === 0 ? 0 : 1);
