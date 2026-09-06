@@ -9,6 +9,10 @@
   --brand-teal-light: #E6F7F5;
   --brand-purple: #8B2C7A;
   --admin-green: #0E9F6E;
+  /* The navy the Meditaj site paints its buttons and header with, sampled
+     from tech.meditaj.com rather than guessed. White on it measures 9.4:1. */
+  --brand-navy: #00468A;
+  --brand-navy-dark: #003366;
   --admin-green-light: #DEF7EC;
   --bg-main: #FFFFFF;
   --bg-page: #F8FAFC;
@@ -1427,9 +1431,67 @@
   gap: 6px;
   text-decoration: none;
 }
-.ecare-admin-btn-outline:hover {
-  background: var(--bg-page);
-  border-color: #CBD5E1;
+.ecare-admin-btn-outline:hover,
+.ecare-admin-btn-outline:focus,
+.ecare-admin-btn-outline:focus-visible,
+.ecare-admin-btn-outline:active {
+  /* Every state names colour, background AND border. These are bare <button>
+     elements sitting in page content, so the active theme styles them too -
+     Astra's own button hover can leave light text on a light background, which
+     is how "Back to Options" turned into an empty rounded rectangle. Naming all
+     three here means no theme can take half the pair away. */
+  background: #E2E8F0;
+  color: var(--text-dark);
+  border-color: #94A3B8;
+}
+.ecare-admin-btn-outline:focus-visible {
+  outline: 2px solid var(--admin-green);
+  outline-offset: 2px;
+}
+
+/* On the front end these buttons belong to the site, not to wp-admin, so they
+   take the Meditaj navy. Scoped to .ecare-container on purpose: the same class
+   is used 17 times inside .ecare-admin-wrap, where the neutral outline above
+   is right and no theme is competing for it. */
+.ecare-container .ecare-admin-btn-outline {
+  background: var(--brand-navy);
+  color: #FFFFFF;
+  border-color: var(--brand-navy);
+  font-weight: 600;
+}
+.ecare-container .ecare-admin-btn-outline:hover,
+.ecare-container .ecare-admin-btn-outline:focus,
+.ecare-container .ecare-admin-btn-outline:focus-visible,
+.ecare-container .ecare-admin-btn-outline:active {
+  background: var(--brand-navy-dark);
+  color: #FFFFFF;
+  border-color: var(--brand-navy-dark);
+}
+
+/* Bank / Mobile Banking chooser on the registration forms.
+   The JS toggles .active on these; until now nothing rendered it, so the
+   selected tab was indistinguishable from the other one. */
+.ecare-container .ecare-bank-type-btn {
+  background: var(--bg-main);
+  color: var(--brand-navy);
+  border: 1px solid #CBD5E1;
+  font-weight: 600;
+}
+.ecare-container .ecare-bank-type-btn:hover,
+.ecare-container .ecare-bank-type-btn:focus,
+.ecare-container .ecare-bank-type-btn:focus-visible {
+  background: #EAF2FA;
+  color: var(--brand-navy);
+  border-color: var(--brand-navy);
+}
+.ecare-container .ecare-bank-type-btn.active,
+.ecare-container .ecare-bank-type-btn.active:hover,
+.ecare-container .ecare-bank-type-btn.active:focus,
+.ecare-container .ecare-bank-type-btn.active:focus-visible,
+.ecare-container .ecare-bank-type-btn.active:active {
+  background: var(--brand-navy);
+  color: #FFFFFF;
+  border-color: var(--brand-navy);
 }
 .ecare-admin-btn-green {
   padding: 8px 18px;
