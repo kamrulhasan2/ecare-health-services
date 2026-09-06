@@ -1415,4 +1415,52 @@
         });
     });
 
+    function ecareToggleHidden($el, hide) {
+        if (hide) {
+            $el.attr('hidden', 'hidden');
+        } else {
+            $el.removeAttr('hidden');
+        }
+    }
+
+    // ================================================================
+    // PASSWORD VISIBILITY TOGGLE
+    // ================================================================
+    // Delegated, so it also covers a form rendered after page load.
+    $(document).on('click', '.ecare-password-toggle', function () {
+        var $btn   = $(this);
+        var $input = $btn.closest('.ecare-password-wrap').find('input').first();
+
+        if (!$input.length) { return; }
+
+        var show = $input.attr('type') === 'password';
+
+        $input.attr('type', show ? 'text' : 'password');
+        $btn.attr('aria-pressed', show ? 'true' : 'false');
+
+        var label = show ? 'Hide password' : 'Show password';
+        $btn.attr('aria-label', label).attr('title', label);
+
+        // attr(), not prop(). These are <svg> elements, and SVGElement does
+        // not reflect a `hidden` IDL property the way HTMLElement does - so
+        // prop('hidden', true) sets a JavaScript field the CSS never sees, and
+        // the icon silently never changes.
+        ecareToggleHidden($btn.find('.ecare-eye-show'), show);
+        ecareToggleHidden($btn.find('.ecare-eye-hide'), !show);
+
+        // Clicking the button moves focus off the field; put the caret back at
+        // the end so typing can continue where it left off.
+        var el = $input.get(0);
+        var value = $input.val();
+        $input.trigger('focus');
+        if (el.setSelectionRange) {
+            try { el.setSelectionRange(value.length, value.length); } catch (e) {}
+        }
+    });
+
+    // A revealed password must never survive the page it was typed on.
+    $(window).on('pagehide', function () {
+        $('.ecare-password-wrap input[type="text"]').attr('type', 'password');
+    });
+
 })(jQuery);

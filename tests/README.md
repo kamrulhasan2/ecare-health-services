@@ -19,6 +19,7 @@ There is also an optional layout test, which needs Node and Playwright:
 
     npm i -D playwright && npx playwright install chromium
     node tests/layout/check.js
+    node tests/layout/check-password.js
 
 Each PHP harness exits 0 on success, 1 on any failure, so they chain:
 
@@ -111,6 +112,20 @@ Loads the real stylesheet and measures the Create Family Member modal at 390px,
 growing to 412px inside a 390px viewport (a flex item will not shrink below its
 min-content unless you say so), and the Date of Birth dropdowns coming out at
 58-72px on tablet and desktop, not only on phones.
+
+**tests/layout/check-password.js** — the password show/hide toggle.
+Loads the real stylesheet and the real `ecare-script.js` (with jQuery taken
+from the WordPress install this plugin sits inside, by relative path, so the
+page needs no network) and drives the shipped handler: the type flips, the
+button is `type=button` and does not submit the form, focus and caret come
+back to the field, the two fields toggle independently.
+
+The assertion that earns its keep is "the icon really swaps". The icons are
+`<svg>`, and `SVGElement` does not reflect a `hidden` IDL property the way
+`HTMLElement` does, so jQuery's `.prop('hidden', true)` set a JavaScript field
+no CSS ever reads. Every other symptom looked correct — the type flipped, the
+label changed, `aria-pressed` moved — and the eye simply never changed. Only
+reading `getComputedStyle().display` in a real browser showed it.
 
 ## A note on the one seam in production code
 

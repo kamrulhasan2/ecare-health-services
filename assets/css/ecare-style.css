@@ -1613,73 +1613,46 @@
   padding: 28px;
 }
 
-/* Registration banners */
-.ecare-registration-banner-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
-  border-radius: 12px;
-  padding: 20px 24px;
-  margin-bottom: 24px;
-  gap: 16px;
+/* Password fields: show/hide toggle */
+.ecare-password-wrap {
+  position: relative;
+  display: block;
 }
-.ecare-banner-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
-  min-width: 0;
+/* Room for the button, so a long password never runs underneath it. */
+.ecare-password-wrap input {
+  padding-right: 44px;
 }
-.ecare-banner-icon {
-  width: 48px;
-  height: 48px;
-  background: #FFFFFF;
-  border-radius: 10px;
+.ecare-password-toggle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 4px;
+  width: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  color: #2563EB;
-  border: 1px solid #DBEAFE;
-  flex-shrink: 0;
-}
-.ecare-banner-title {
-  font-weight: 800;
-  font-size: 15px;
-  color: #1E3A8A;
-  margin-bottom: 4px;
-}
-.ecare-banner-desc {
-  font-size: 12px;
-  color: #1E40AF;
-  margin: 0;
-}
-.ecare-banner-enroll-link {
-  font-weight: 700;
-  font-size: 13px;
-  color: #2563EB;
-  text-decoration: none;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border: 1.5px solid #2563EB;
-  padding: 8px 16px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
   border-radius: 6px;
-  background: #FFFFFF;
-  transition: all 0.2s;
-  flex-shrink: 0;
+  transition: color 0.2s, background 0.2s;
 }
-.ecare-banner-enroll-link:hover {
-  background: #2563EB;
-  color: #FFFFFF;
+.ecare-password-toggle:hover {
+  color: var(--brand-teal, #0F766E);
+  background: rgba(15, 118, 110, 0.08);
 }
-@media (max-width: 600px) {
-  .ecare-registration-banner-card { padding: 16px; }
-  .ecare-banner-enroll-link { width: 100%; justify-content: center; }
+.ecare-password-toggle:focus-visible {
+  outline: 2px solid var(--brand-teal, #0F766E);
+  outline-offset: 2px;
+}
+.ecare-password-toggle .ecare-eye {
+  display: block;
+  pointer-events: none;
+}
+.ecare-password-toggle .ecare-eye[hidden] {
+  display: none;
 }
 
 /* Photo upload preview (admin backend) */
