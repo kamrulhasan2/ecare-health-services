@@ -114,7 +114,7 @@
             $box.append($err);
         }
         $err.text(problem);
-        $box.find('.ecare-doc-preview-wrap').hide().empty();
+        ecareClearDocPreview($box.find('.ecare-doc-preview-wrap'));
         ecareClearProfilePreview($box.find('.ecare-profile-preview'));
     });
 
@@ -1353,9 +1353,29 @@
     });
 
     // ================================================================
-    // 11. REGISTRATION FILE UPLOAD PREVIEW & CANCEL HANDLERS
+    // 11. FILE UPLOAD PREVIEW & CANCEL HANDLERS
+    //     Bound to the .ecare-file-box pattern rather than one field name.
+    //     The caregiver booking modal has always used this same markup, but
+    //     the handler was keyed to credentials_doc, so a patient attaching a
+    //     prescription got no sign at all that a file had been picked. Any
+    //     box built this way now previews, wherever it is rendered.
     // ================================================================
-    $(document).on('change', 'input[type="file"][name="credentials_doc"]', function(e) {
+
+    /** Empty a preview and let go of the image it was holding open. */
+    function ecareClearDocPreview($previewWrap) {
+        if (!$previewWrap || !$previewWrap.length) { return; }
+
+        // An object URL keeps the whole file in memory until it is revoked;
+        // without this every re-pick would pin another copy for the life of
+        // the page.
+        $previewWrap.find('img[src^="blob:"]').each(function() {
+            if (window.URL && URL.revokeObjectURL) { URL.revokeObjectURL(this.src); }
+        });
+
+        $previewWrap.hide().empty();
+    }
+
+    $(document).on('change', '.ecare-file-box input[type="file"]', function(e) {
         var file = e.target.files[0];
         var $input = $(this);
         var $fileBox = $input.closest('.ecare-file-box');
@@ -1366,8 +1386,9 @@
             $fileBox.append($previewWrap);
         }
 
+        ecareClearDocPreview($previewWrap);
+
         if (!file) {
-            $previewWrap.hide().empty();
             return;
         }
 
@@ -1412,7 +1433,8 @@
         var $previewWrap = $fileBox.find('.ecare-doc-preview-wrap');
 
         $input.val('');
-        $previewWrap.hide().empty();
+        $fileBox.find('.ecare-upload-error').remove();
+        ecareClearDocPreview($previewWrap);
     });
 
     // ================================================================
