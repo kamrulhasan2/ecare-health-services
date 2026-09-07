@@ -674,6 +674,55 @@
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
+/* Thumbnail of the photo that is about to be uploaded. The wrapper is
+   position:relative so the remove control can sit on its corner, and the
+   [hidden] rule is spelled out because the display below would otherwise
+   beat the browser's own [hidden] { display: none }. */
+.ecare-profile-preview {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.ecare-profile-preview[hidden] {
+  display: none;
+}
+.ecare-profile-preview-img {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  border: 2px solid var(--brand-teal-light);
+  background: var(--bg-main);
+  box-shadow: var(--shadow-sm);
+}
+.ecare-profile-preview-remove {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  background: #fff;
+  color: #64748B;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+.ecare-profile-preview-remove:hover,
+.ecare-profile-preview-remove:focus-visible {
+  border-color: #DC2626;
+  color: #DC2626;
+  background: #FEF2F2;
+}
 .ecare-upload-icon {
   width: 18px;
   height: 18px;
@@ -1848,6 +1897,15 @@
     width: 100%;
     justify-content: space-between;
     margin-left: 0;
+  }
+  .ecare-profile-preview {
+    order: -1;
+  }
+  /* The row is space-between here, which would throw the thumbnail and its
+     label to opposite edges. An auto margin swallows the free space instead,
+     so the two stay together and the full-width button wraps below them. */
+  .ecare-profile-upload-copy {
+    margin-right: auto;
   }
   .ecare-profile-upload-btn {
     width: 100%;

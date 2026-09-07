@@ -118,6 +118,10 @@ class ECare_Shortcodes {
                     <h3 style="font-size:14px;font-weight:700;color:var(--admin-green);text-transform:uppercase;margin:0;"><?php _e('Personal Information', 'ecare-health-services'); ?></h3>
                     <!-- Profile Photo upload box -->
                     <label class="ecare-profile-upload">
+                        <span class="ecare-profile-preview" hidden>
+                            <img class="ecare-profile-preview-img" src="" alt="" />
+                            <button type="button" class="ecare-profile-preview-remove" title="<?php esc_attr_e('Remove photo', 'ecare-health-services'); ?>" aria-label="<?php esc_attr_e('Remove photo', 'ecare-health-services'); ?>">&times;</button>
+                        </span>
                         <span class="ecare-profile-upload-copy">
                             <span class="ecare-profile-upload-title"><?php _e('Profile Photo', 'ecare-health-services'); ?></span>
                             <span class="ecare-profile-upload-hint"><?php _e('JPG, PNG up to 2MB', 'ecare-health-services'); ?></span>

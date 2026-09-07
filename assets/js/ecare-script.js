@@ -115,6 +115,7 @@
         }
         $err.text(problem);
         $box.find('.ecare-doc-preview-wrap').hide().empty();
+        ecareClearProfilePreview($box.find('.ecare-profile-preview'));
     });
 
 
@@ -1287,6 +1288,68 @@
                 $btn.prop('disabled', false);
             });
         }
+    });
+
+    // ================================================================
+    // 10b. PROFILE PHOTO PREVIEW
+    //      The registration form asked for a photo and then showed nothing
+    //      back, so there was no way to tell a mis-picked file from the right
+    //      one until the profile was already live. The object URL is revoked
+    //      on every replacement - without that each re-pick would pin another
+    //      copy of the image in memory for the life of the page.
+    // ================================================================
+    function ecareClearProfilePreview($preview) {
+        if (!$preview || !$preview.length) { return; }
+
+        var $img = $preview.find('.ecare-profile-preview-img');
+        var old  = $img.attr('src');
+
+        if (old && old.indexOf('blob:') === 0 && window.URL && URL.revokeObjectURL) {
+            URL.revokeObjectURL(old);
+        }
+
+        $img.attr('src', '').attr('alt', '');
+        $preview.attr('hidden', 'hidden');
+    }
+
+    $(document).on('change', 'input[type="file"][name="care_photo"]', function() {
+        var $preview = $(this).closest('.ecare-profile-upload').find('.ecare-profile-preview');
+        if (!$preview.length) { return; }
+
+        var file = this.files && this.files[0];
+
+        // Always drop the previous one first, so a cancelled picker or a
+        // non-image never leaves the last photo sitting there looking chosen.
+        ecareClearProfilePreview($preview);
+
+        if (!file || !window.URL || !URL.createObjectURL) { return; }
+        if (file.type && file.type.indexOf('image/') !== 0) { return; }
+
+        $preview.find('.ecare-profile-preview-img')
+            .attr('src', URL.createObjectURL(file))
+            .attr('alt', file.name);
+        $preview.removeAttr('hidden');
+    });
+
+    $(document).on('click', '.ecare-profile-preview-remove', function(e) {
+        // The control sits inside the <label>, so without this the click would
+        // reopen the file picker it is meant to undo.
+        e.preventDefault();
+        e.stopPropagation();
+
+        var $label = $(this).closest('.ecare-profile-upload');
+
+        $label.find('input[type="file"]').val('');
+        $label.find('.ecare-upload-error').remove();
+        ecareClearProfilePreview($label.find('.ecare-profile-preview'));
+    });
+
+    // A successful registration calls form.reset(), which empties the input
+    // but says nothing about markup we added ourselves.
+    $(document).on('reset', 'form', function() {
+        var $preview = $(this).find('.ecare-profile-preview');
+        // reset() runs after this event, so read the input on the next tick.
+        setTimeout(function() { ecareClearProfilePreview($preview); }, 0);
     });
 
     // ================================================================
