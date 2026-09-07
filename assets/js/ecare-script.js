@@ -64,6 +64,29 @@
         return { max: u.doc_max_bytes, maxLabel: u.doc_max_label, types: u.doc_types || [], typesLabel: u.doc_types_label };
     }
 
+    /**
+     * A file size a person can read.
+     *
+     * Everything used to be divided by a megabyte and printed to two decimals,
+     * so a 69 KB prescription came out as "0.07 MB" and a small photo as
+     * "0.00 MB" - which reads as though nothing was attached at all. Steps of
+     * 1024, matching PHP's size_format(), so this and the limit the server
+     * prints in the same box are measuring the same thing.
+     */
+    function ecareFormatBytes(bytes) {
+        bytes = Number(bytes) || 0;
+
+        if (bytes < 1024) {
+            return bytes + ' B';
+        }
+
+        if (bytes < 1024 * 1024) {
+            return Math.round(bytes / 1024) + ' KB';
+        }
+
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
     function ecareFileProblem(file, kind) {
         var lim = ecareUploadLimits(kind);
 
@@ -75,7 +98,7 @@
             return 'That file type is not accepted. Please upload one of: ' + (lim.typesLabel || '') + '.';
         }
         if (lim.max && file.size > lim.max) {
-            return 'That file is too large (' + (file.size / (1024 * 1024)).toFixed(1) + ' MB). The limit is ' + lim.maxLabel + '.';
+            return 'That file is too large (' + ecareFormatBytes(file.size) + '). The limit is ' + lim.maxLabel + '.';
         }
         return null;
     }
@@ -1402,7 +1425,7 @@
                           '  <img src="' + imgUrl + '" style="width:40px;height:40px;border-radius:6px;object-fit:cover;border:1px solid var(--border-light);" />' +
                           '  <div class="ecare-doc-preview-details">' +
                           '    <span class="ecare-doc-preview-name">' + file.name + '</span>' +
-                          '    <span class="ecare-doc-preview-size">' + (file.size / (1024 * 1024)).toFixed(2) + ' MB</span>' +
+                          '    <span class="ecare-doc-preview-size">' + ecareFormatBytes(file.size) + '</span>' +
                           '  </div>' +
                           '</div>' +
                           '<button type="button" class="ecare-doc-preview-cancel-btn" title="Cancel">✕</button>';
@@ -1414,7 +1437,7 @@
                           '  <span class="ecare-doc-preview-icon">' + icon + '</span>' +
                           '  <div class="ecare-doc-preview-details">' +
                           '    <span class="ecare-doc-preview-name">' + file.name + '</span>' +
-                          '    <span class="ecare-doc-preview-size">' + (file.size / (1024 * 1024)).toFixed(2) + ' MB</span>' +
+                          '    <span class="ecare-doc-preview-size">' + ecareFormatBytes(file.size) + '</span>' +
                           '  </div>' +
                           '</div>' +
                           '<button type="button" class="ecare-doc-preview-cancel-btn" title="Cancel">✕</button>';
