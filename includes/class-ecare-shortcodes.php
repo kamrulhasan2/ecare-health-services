@@ -117,7 +117,11 @@ class ECare_Shortcodes {
                 <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--brand-teal-light);padding-bottom:6px;margin-bottom:20px;">
                     <h3 style="font-size:14px;font-weight:700;color:var(--admin-green);text-transform:uppercase;margin:0;"><?php _e('Personal Information', 'ecare-health-services'); ?></h3>
                     <!-- Profile Photo upload box -->
-                    <label class="ecare-profile-upload">
+                    <!-- for/id is not decoration: without it the label takes the first
+                         labelable descendant as its control, and the preview's remove
+                         button sits before the input. Naming the input outright keeps
+                         Choose File opening the picker whatever order the markup is in. -->
+                    <label class="ecare-profile-upload" for="ecare_care_photo">
                         <span class="ecare-profile-preview" hidden>
                             <img class="ecare-profile-preview-img" src="" alt="" />
                             <button type="button" class="ecare-profile-preview-remove" title="<?php esc_attr_e('Remove photo', 'ecare-health-services'); ?>" aria-label="<?php esc_attr_e('Remove photo', 'ecare-health-services'); ?>">&times;</button>
@@ -132,7 +136,7 @@ class ECare_Shortcodes {
                             </svg>
                             <span><?php _e('Choose File', 'ecare-health-services'); ?></span>
                         </span>
-                        <input type="file" name="care_photo" accept="<?php echo esc_attr(implode(',', array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_IMAGE)))); ?>" required />
+                        <input type="file" id="ecare_care_photo" name="care_photo" accept="<?php echo esc_attr(implode(',', array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_IMAGE)))); ?>" required />
                     </label>
                 </div>
 

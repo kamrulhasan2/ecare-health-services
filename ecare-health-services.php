@@ -3,7 +3,7 @@
  * Plugin Name:       E-Care Health Services
  * Plugin URI:        https://github.com/kamrulhasan2/ecare-health-services
  * Description:       Comprehensive healthcare service booking and management – connects patients with caregivers, lab tests, and ambulance dispatch with WooCommerce payments. Shortcodes: [ecare_caregiver_booking] – filter & book caregivers; [ecare_caregiver_registration] – provider signup; [ecare_lab_tests] – diagnostic catalog; [ecare_ambulance_request] – ambulance dispatch; [ecare_ambulance_registration] – ambulance provider signup.
- * Version:           1.2.2
+ * Version:           1.2.3
  * Author:            Md. Kamrul Hasan
  * License:           GPL v2 or later
  * Text Domain:       ecare-health-services
@@ -15,7 +15,7 @@
 
 defined('ABSPATH') || exit;
 
-define('ECARE_VERSION', '1.2.2');
+define('ECARE_VERSION', '1.2.3');
 define('ECARE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('ECARE_PLUGIN_URL', plugin_dir_url(__FILE__));
 
