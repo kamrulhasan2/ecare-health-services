@@ -704,7 +704,7 @@ class ECare_Ajax {
             }
         } else {
             if (!get_option('users_can_register')) {
-                wp_send_json_error(array('message' => __('User registration is currently disabled on this site.', 'ecare-health-services')));
+                wp_send_json_error(array('message' => __('Please sign in to your Meditaj account first, then submit this form again. You can create one from the Sign Up page.', 'ecare-health-services')));
             }
 
             if (empty($password) || $password !== $confirm_pass) {
@@ -1227,7 +1227,7 @@ class ECare_Ajax {
             }
         } else {
             if (!get_option('users_can_register')) {
-                wp_send_json_error(array('message' => __('User registration is currently disabled on this site.', 'ecare-health-services')));
+                wp_send_json_error(array('message' => __('Please sign in to your Meditaj account first, then submit this form again. You can create one from the Sign Up page.', 'ecare-health-services')));
             }
 
             if (empty($password) || $password !== $confirm_pass) {

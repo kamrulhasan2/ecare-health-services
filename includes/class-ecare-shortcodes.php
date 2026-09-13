@@ -101,7 +101,7 @@ class ECare_Shortcodes {
      */
     public static function render_caregiver_registration() {
         if (!is_user_logged_in() && !get_option('users_can_register')) {
-            return '<div class="ecare-container"><div class="ecare-alert ecare-alert-warning" style="background:#FFFBEB;border:1px solid #FCD34D;color:#92400E;padding:15px;border-radius:8px;margin:20px 0;">' . esc_html__('User registration is currently disabled on this site.', 'ecare-health-services') . '</div></div>';
+            return self::sign_in_first_notice(__('a caregiver', 'ecare-health-services'));
         }
         ob_start();
         ?>
@@ -535,7 +535,7 @@ class ECare_Shortcodes {
      */
     public static function render_ambulance_registration() {
         if (!is_user_logged_in() && !get_option('users_can_register')) {
-            return '<div class="ecare-container"><div class="ecare-alert ecare-alert-warning" style="background:#FFFBEB;border:1px solid #FCD34D;color:#92400E;padding:15px;border-radius:8px;margin:20px 0;">' . esc_html__('User registration is currently disabled on this site.', 'ecare-health-services') . '</div></div>';
+            return self::sign_in_first_notice(__('an ambulance provider', 'ecare-health-services'));
         }
         ob_start();
         ?>
@@ -700,6 +700,91 @@ class ECare_Shortcodes {
                 
                 <div class="ecare-form-response"></div>
             </form>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    /* ---------------------------------------------------------------------
+     * "Sign in first"
+     *
+     * Both registration forms create a WordPress account for the applicant, so
+     * a signed-out visitor can only use them while users_can_register is on.
+     * It is off on this site, and it stays off on purpose: it also governs
+     * /wp-login.php?action=register, which nobody should be arriving through.
+     *
+     * The site's own Sign In and Sign Up pages create accounts without that
+     * option, so the way through is simply to make an account first. What
+     * follows says so, instead of telling the visitor the door is shut.
+     * ------------------------------------------------------------------- */
+
+    /**
+     * Where to send the visitor back to once they have an account.
+     *
+     * @return string
+     */
+    private static function current_page_url() {
+        $url = is_singular() ? get_permalink() : '';
+
+        return $url ? $url : home_url('/');
+    }
+
+    /**
+     * Ask a signed-out visitor to make an account before registering as a
+     * provider.
+     *
+     * wp_login_url() and wp_registration_url() are used rather than a hardcoded
+     * slug: a site that redirects its login elsewhere (this one sends both to
+     * its own Sign In / Sign Up pages) is followed automatically, and a plain
+     * WordPress install still gets a link that works.
+     *
+     * @param string $role What they are trying to register as, article included
+     *                      ("a caregiver") so the sentence reads correctly - "a"
+     *                      in the format string would give "a ambulance provider".
+     * @return string
+     */
+    private static function sign_in_first_notice($role) {
+        $return  = self::current_page_url();
+        $sign_in = apply_filters('ecare_sign_in_url', wp_login_url($return), $return);
+        $sign_up = apply_filters(
+            'ecare_sign_up_url',
+            add_query_arg('redirect_to', rawurlencode($return), wp_registration_url()),
+            $return
+        );
+
+        ob_start();
+        ?>
+        <div class="ecare-container">
+            <div class="ecare-signin-first">
+                <span class="ecare-signin-first-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                    </svg>
+                </span>
+
+                <h2><?php esc_html_e('Please sign in first', 'ecare-health-services'); ?></h2>
+
+                <p class="ecare-signin-first-lead">
+                    <?php
+                    printf(
+                        /* translators: %s: "a caregiver", "an ambulance provider" */
+                        esc_html__('Registering as %s adds a provider profile to your Meditaj account, so we need to know who you are before you fill in the form.', 'ecare-health-services'),
+                        esc_html($role)
+                    );
+                    ?>
+                </p>
+
+                <ol class="ecare-signin-first-steps">
+                    <li><?php esc_html_e('Create a free Meditaj account, or sign in if you already have one.', 'ecare-health-services'); ?></li>
+                    <li><?php esc_html_e('You will come straight back to this page to finish your provider registration.', 'ecare-health-services'); ?></li>
+                </ol>
+
+                <div class="ecare-signin-first-actions">
+                    <a class="ecare-admin-btn-green" href="<?php echo esc_url($sign_up); ?>"><?php esc_html_e('Create an account', 'ecare-health-services'); ?></a>
+                    <a class="ecare-admin-btn-outline" href="<?php echo esc_url($sign_in); ?>"><?php esc_html_e('I already have one', 'ecare-health-services'); ?></a>
+                </div>
+            </div>
         </div>
         <?php
         return ob_get_clean();

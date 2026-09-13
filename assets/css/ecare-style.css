@@ -2187,3 +2187,95 @@
     font-size: 14px;
   }
 }
+
+/* --- "Please sign in first", shown in place of a provider registration form
+       when a signed-out visitor opens it. --------------------------------- */
+
+.ecare-signin-first {
+  max-width: 560px;
+  margin: 32px auto;
+  padding: 32px 28px;
+  background: #fff;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  text-align: center;
+}
+
+.ecare-signin-first-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: var(--brand-teal-light);
+  color: var(--brand-teal);
+}
+
+.ecare-signin-first h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--admin-green);
+}
+
+.ecare-signin-first-lead {
+  margin: 0 0 20px;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: #475569;
+}
+
+/* Numbered, left-aligned inside a centred card: the steps are read in order,
+   so they should not be centred with the prose above them. */
+.ecare-signin-first-steps {
+  margin: 0 0 24px;
+  padding: 16px 20px 16px 40px;
+  text-align: left;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #334155;
+}
+
+.ecare-signin-first-steps li + li {
+  margin-top: 8px;
+}
+
+.ecare-signin-first-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* The buttons are links here, not <button>, so the shared button classes need
+   the bits a browser only gives to form controls. The shared padding is sized
+   for dense admin toolbars and lands at 31px here, under the 44px a thumb
+   needs - these two are the only thing on the page to press, so they are
+   given a proper target rather than the toolbar size. */
+.ecare-signin-first-actions .ecare-admin-btn-green,
+.ecare-signin-first-actions .ecare-admin-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 22px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+@media (max-width: 480px) {
+  .ecare-signin-first {
+    padding: 26px 18px;
+  }
+
+  .ecare-signin-first-actions .ecare-admin-btn-green,
+  .ecare-signin-first-actions .ecare-admin-btn-outline {
+    width: 100%;
+  }
+}
