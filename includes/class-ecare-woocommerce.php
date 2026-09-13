@@ -49,6 +49,13 @@ class ECare_WooCommerce {
         add_filter('woocommerce_pay_order_button_text', array(__CLASS__, 'pay_order_button_text'));
         add_action('woocommerce_pay_order_before_payment', array(__CLASS__, 'tidy_pay_page'));
         add_action('wp_head', array(__CLASS__, 'pay_page_styles'));
+
+        // Everything this shop sells is an E-Care booking, and the booking
+        // flow has already asked where the patient is. Cut the checkout down
+        // to what still has to be typed, then fill the rest in behind it.
+        add_filter('woocommerce_checkout_fields', array(__CLASS__, 'slim_checkout_fields'));
+        add_filter('default_checkout_billing_country', array(__CLASS__, 'default_billing_country'));
+        add_filter('woocommerce_checkout_posted_data', array(__CLASS__, 'fill_hidden_checkout_data'));
     }
 
     /**
@@ -418,5 +425,252 @@ class ECare_WooCommerce {
             $order->update_meta_data('_ecare_lab_bookings_created', '1');
             $order->save_meta_data();
         }
+    }
+
+    /* ---------------------------------------------------------------------
+     * Checkout form
+     *
+     * The form a patient fills in and the data the payment gateway needs are
+     * two different lists, and they had been treated as one. SSLCommerz's v4
+     * hosted API takes cus_name, cus_email, cus_city, cus_postcode,
+     * cus_country and cus_phone as mandatory, and the gateway plugin reads
+     * every one of them straight off the billing fields
+     * (wc-sslcommerz-easycheckout/lib/sslcommerz-class.php). Deleting a field
+     * from the form therefore does not just tidy the page - it empties a
+     * parameter the payment session will not open without.
+     *
+     * So: slim_checkout_fields() decides what the patient sees, and
+     * fill_hidden_checkout_data() supplies what the gateway reads. Country,
+     * city and postcode never appear on screen again but are never empty in
+     * the order either.
+     * ------------------------------------------------------------------- */
+
+    /**
+     * The billing form, reduced to what a patient still has to answer.
+     *
+     * @param array $fields Checkout fields.
+     * @return array
+     */
+    public static function slim_checkout_fields($fields) {
+        if (empty($fields['billing']) || !is_array($fields['billing'])) {
+            return $fields;
+        }
+
+        // Off the form. The first four are dead weight for a service booked
+        // online and delivered in person; the last two are supplied by
+        // fill_hidden_checkout_data() instead of being asked for twice.
+        $drop = array(
+            'billing_company',
+            'billing_address_2',
+            'billing_last_name',
+            'billing_country',
+            'billing_city',
+            'billing_postcode',
+        );
+
+        foreach ($drop as $key) {
+            unset($fields['billing'][$key]);
+        }
+
+        // One name box. The two halves are put back in the posted data, so the
+        // order list, the invoice and cus_name all still read normally.
+        if (isset($fields['billing']['billing_first_name'])) {
+            $fields['billing']['billing_first_name']['label']        = __('Full Name', 'ecare-health-services');
+            $fields['billing']['billing_first_name']['placeholder']  = __('e.g. Sumaiya Akter', 'ecare-health-services');
+            $fields['billing']['billing_first_name']['autocomplete'] = 'name';
+            $fields['billing']['billing_first_name']['class']        = array('form-row-wide');
+            $fields['billing']['billing_first_name']['priority']     = 10;
+        }
+
+        // "Street address" reads oddly for a flat in Dhaka, and the second
+        // line is gone, so this is simply the address.
+        if (isset($fields['billing']['billing_address_1'])) {
+            $fields['billing']['billing_address_1']['label']       = __('Address', 'ecare-health-services');
+            $fields['billing']['billing_address_1']['placeholder'] = __('House, road, area', 'ecare-health-services');
+            $fields['billing']['billing_address_1']['class']       = array('form-row-wide');
+            $fields['billing']['billing_address_1']['priority']    = 20;
+        }
+
+        // WooCommerce labels billing_state "District" under the Bangladesh
+        // locale - it is not a custom field. cus_state is optional at the
+        // gateway, so this can be optional here too.
+        if (isset($fields['billing']['billing_state'])) {
+            $fields['billing']['billing_state']['required'] = false;
+            $fields['billing']['billing_state']['priority'] = 30;
+        }
+
+        if (isset($fields['billing']['billing_phone'])) {
+            $fields['billing']['billing_phone']['required'] = true;
+            $fields['billing']['billing_phone']['priority'] = 40;
+        }
+
+        // Optional on the form; fill_hidden_checkout_data() still hands the
+        // gateway an address, because cus_email is mandatory there.
+        if (isset($fields['billing']['billing_email'])) {
+            $fields['billing']['billing_email']['required'] = false;
+            $fields['billing']['billing_email']['priority'] = 50;
+        }
+
+        return $fields;
+    }
+
+    /**
+     * The country the checkout starts on, with no country field to choose it.
+     *
+     * @return string
+     */
+    public static function default_billing_country() {
+        return apply_filters('ecare_checkout_country', 'BD');
+    }
+
+    /**
+     * Supply the values the form no longer asks for.
+     *
+     * Runs on woocommerce_checkout_posted_data, which WC_Checkout applies
+     * before it validates and before it builds the order, so everything set
+     * here reaches the customer session, the order and the gateway.
+     *
+     * @param array $data Posted checkout data.
+     * @return array
+     */
+    public static function fill_hidden_checkout_data($data) {
+        // The gateway does wc()->countries->countries[ $country ] with this
+        // value. Empty is not merely missing data, it is an undefined index.
+        $data['billing_country'] = self::default_billing_country();
+
+        if (!empty($data['billing_first_name']) && empty($data['billing_last_name'])) {
+            list($first, $last) = self::split_full_name($data['billing_first_name']);
+
+            $data['billing_first_name'] = $first;
+            $data['billing_last_name']  = $last;
+        }
+
+        if (empty($data['billing_city'])) {
+            $data['billing_city'] = self::checkout_city($data);
+        }
+
+        if (empty($data['billing_postcode'])) {
+            $data['billing_postcode'] = apply_filters('ecare_checkout_fallback_postcode', '1000');
+        }
+
+        if (empty($data['billing_email'])) {
+            $data['billing_email'] = self::checkout_email($data);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Split one name box into the two halves WooCommerce stores.
+     *
+     * The last word is the surname; everything before it is the given name, so
+     * "Md. Kamrul Hasan" keeps "Md. Kamrul" together. A single word is left as
+     * a first name rather than having a surname invented for it. mb_* because
+     * the name may well be in Bengali.
+     *
+     * @param string $name Whatever was typed in the one box.
+     * @return array{0:string,1:string} First name, last name.
+     */
+    private static function split_full_name($name) {
+        $name = (string) $name;
+        $name = preg_replace('/[\s\x{00A0}]+/u', ' ', $name);
+        $name = trim($name);
+
+        if ('' === $name) {
+            return array('', '');
+        }
+
+        $break = function_exists('mb_strrpos') ? mb_strrpos($name, ' ') : strrpos($name, ' ');
+
+        if (false === $break) {
+            return array($name, '');
+        }
+
+        if (function_exists('mb_substr')) {
+            return array(mb_substr($name, 0, $break), mb_substr($name, $break + 1));
+        }
+
+        return array(substr($name, 0, $break), substr($name, $break + 1));
+    }
+
+    /**
+     * A city for the gateway, taken from what the patient already told us.
+     *
+     * The booking flow stores division, district and area on the cart item
+     * (see save_location_metadata_to_order_item), so the area the patient
+     * picked is a truer answer than any box on this page would have been.
+     *
+     * @param array $data Posted checkout data.
+     * @return string
+     */
+    private static function checkout_city($data) {
+        foreach (array('area', 'district') as $key) {
+            $value = self::cart_location_value($key);
+
+            if ('' !== $value) {
+                return $value;
+            }
+        }
+
+        // Nothing in the cart said where this is - fall back to the District
+        // select, if the patient happened to fill it in.
+        if (!empty($data['billing_state']) && function_exists('WC') && WC()->countries) {
+            $states = WC()->countries->get_states(self::default_billing_country());
+
+            if (!empty($states[$data['billing_state']])) {
+                return $states[$data['billing_state']];
+            }
+
+            return (string) $data['billing_state'];
+        }
+
+        return apply_filters('ecare_checkout_fallback_city', 'Dhaka');
+    }
+
+    /**
+     * Read one piece of E-Care location data off the cart.
+     *
+     * @param string $key division|district|area|lab_provider.
+     * @return string Empty string when no cart item carries it.
+     */
+    private static function cart_location_value($key) {
+        if (!function_exists('WC') || !WC()->cart) {
+            return '';
+        }
+
+        foreach (WC()->cart->get_cart() as $cart_item) {
+            if (!empty($cart_item['ecare_location_data'][$key])) {
+                return (string) $cart_item['ecare_location_data'][$key];
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * An email address for the gateway when the patient left the box empty.
+     *
+     * A signed-in patient has one on their account already. For anyone else it
+     * is built from the phone number, on a subdomain that holds no mailbox -
+     * so an operator can still tell whose order it is, and nothing is ever
+     * sent into the void.
+     *
+     * @param array $data Posted checkout data.
+     * @return string
+     */
+    private static function checkout_email($data) {
+        $user = wp_get_current_user();
+
+        if ($user && $user->exists() && is_email($user->user_email)) {
+            return $user->user_email;
+        }
+
+        $digits = preg_replace('/\D+/', '', isset($data['billing_phone']) ? (string) $data['billing_phone'] : '');
+        $local  = '' !== $digits ? $digits : 'guest-' . wp_generate_password(8, false, false);
+
+        $host = wp_parse_url(home_url(), PHP_URL_HOST);
+        $host = $host ? 'no-email.' . preg_replace('/^www\./', '', $host) : 'no-email.invalid';
+
+        return apply_filters('ecare_checkout_fallback_email', $local . '@' . $host, $data);
     }
 }
