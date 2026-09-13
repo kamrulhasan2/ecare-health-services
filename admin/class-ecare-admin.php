@@ -600,11 +600,16 @@ class ECare_Admin {
                             <?php foreach ($providers as $p):
                                 $type   = get_post_meta($p->ID, '_provider_type', true);
                                 $exp    = get_post_meta($p->ID, '_experience', true);
-                                $email  = get_post_meta($p->ID, '_email', true) ?: 'n/a';
-                                $phone  = get_post_meta($p->ID, '_phone', true) ?: 'n/a';
-                                $cat    = get_post_meta($p->ID, '_category', true) ?: 'Labaid';
-                                $nid    = get_post_meta($p->ID, '_nid_passport', true) ?: '0987654321';
-                                $loc    = 'Mirpur'; // Location placeholder matching Page 3
+                                // An empty field reads as N/A. It used to read as
+                                // "Labaid", "0987654321" and "Mirpur" - invented values a
+                                // reader had no way to tell from real ones, and since
+                                // Organization and NID became optional on the registration
+                                // form they would have been invented for almost everybody.
+                                $email  = get_post_meta($p->ID, '_email', true) ?: 'N/A';
+                                $phone  = get_post_meta($p->ID, '_phone', true) ?: 'N/A';
+                                $cat    = get_post_meta($p->ID, '_category', true) ?: 'N/A';
+                                $nid    = get_post_meta($p->ID, '_nid_passport', true) ?: 'N/A';
+                                $loc    = get_post_meta($p->ID, '_address_line', true) ?: 'N/A';
                                 $status = get_post_meta($p->ID, '_provider_status', true) ?: 'pending';
                                 
                                 $first_letter = self::first_letter($p->post_title);
