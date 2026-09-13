@@ -552,7 +552,7 @@ class ECare_Shortcodes {
                 
                 <div class="ecare-form-row">
                     <div class="ecare-form-field">
-                        <label><?php _e('Ambulance Type', 'ecare-health-services'); ?> <span>*</span></label>
+                        <label><?php _e('Ambulance Type', 'ecare-health-services'); ?></label>
                         <select name="ambulance_type" required>
                             <option value="Standard"><?php _e('Standard (Non-AC)', 'ecare-health-services'); ?></option>
                             <option value="ICU"><?php _e('ICU (AC)', 'ecare-health-services'); ?></option>
@@ -560,19 +560,19 @@ class ECare_Shortcodes {
                         </select>
                     </div>
                     <div class="ecare-form-field">
-                        <label><?php _e('Vehicle Plate Number', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="text" name="license_plate" placeholder="e.g. Dhaka-Metro-1234" required />
+                        <label><?php _e('Vehicle Plate Number', 'ecare-health-services'); ?></label>
+                        <input type="text" name="license_plate" placeholder="e.g. Dhaka-Metro-1234" />
                     </div>
                 </div>
 
                 <div class="ecare-form-row">
                     <div class="ecare-form-field">
-                        <label><?php _e('Vehicle Model', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="text" name="vehicle_model" placeholder="e.g. Toyota Hiace 2022" required />
+                        <label><?php _e('Vehicle Model', 'ecare-health-services'); ?></label>
+                        <input type="text" name="vehicle_model" placeholder="e.g. Toyota Hiace 2022" />
                     </div>
                     <div class="ecare-form-field">
-                        <label><?php _e('Base Dispatch Price (৳)', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="number" step="0.01" name="base_price" placeholder="1500" required />
+                        <label><?php _e('Base Dispatch Price (৳)', 'ecare-health-services'); ?></label>
+                        <input type="number" step="0.01" name="base_price" placeholder="1500" />
                     </div>
                 </div>
 
@@ -589,12 +589,12 @@ class ECare_Shortcodes {
 
                 <div class="ecare-form-row">
                     <div class="ecare-form-field">
-                        <label><?php _e('Insurance Expiry Date', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="date" name="insurance_expiry" required />
+                        <label><?php _e('Insurance Expiry Date', 'ecare-health-services'); ?></label>
+                        <input type="date" name="insurance_expiry" />
                     </div>
                     <div class="ecare-form-field">
-                        <label><?php _e('Fitness Certificate Expiry', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="date" name="fitness_expiry" required />
+                        <label><?php _e('Fitness Certificate Expiry', 'ecare-health-services'); ?></label>
+                        <input type="date" name="fitness_expiry" />
                     </div>
                 </div>
 
@@ -618,25 +618,25 @@ class ECare_Shortcodes {
                         <input type="email" name="email" placeholder="driver@example.com" required />
                     </div>
                     <div class="ecare-form-field">
-                        <label><?php _e('Driving License No', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="text" name="driver_license" placeholder="License Number" required />
+                        <label><?php _e('Driving License No', 'ecare-health-services'); ?></label>
+                        <input type="text" name="driver_license" placeholder="License Number" />
                     </div>
                 </div>
 
                 <div class="ecare-form-row">
                     <div class="ecare-form-field">
-                        <label><?php _e('NID Number', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="text" name="driver_nid" placeholder="NID Number" required />
+                        <label><?php _e('NID Number', 'ecare-health-services'); ?></label>
+                        <input type="text" name="driver_nid" placeholder="NID Number" />
                     </div>
                     <div class="ecare-form-field">
-                        <label><?php _e('Years of Experience', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="number" name="experience" min="0" placeholder="e.g. 5" required />
+                        <label><?php _e('Years of Experience', 'ecare-health-services'); ?></label>
+                        <input type="number" name="experience" min="0" placeholder="e.g. 5" />
                     </div>
                 </div>
 
                 <div class="ecare-form-row">
                     <div class="ecare-form-field">
-                        <label><?php _e('Blood Group', 'ecare-health-services'); ?> <span>*</span></label>
+                        <label><?php _e('Blood Group', 'ecare-health-services'); ?></label>
                         <select name="blood_group" required>
                             <option value="A+">A+</option>
                             <option value="A-">A-</option>
@@ -649,8 +649,8 @@ class ECare_Shortcodes {
                         </select>
                     </div>
                     <div class="ecare-form-field">
-                        <label><?php _e('Present Address', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="text" name="address_line" placeholder="Street address, city" required />
+                        <label><?php _e('Present Address', 'ecare-health-services'); ?></label>
+                        <input type="text" name="address_line" placeholder="Street address, city" />
                     </div>
                 </div>
 
@@ -690,7 +690,7 @@ class ECare_Shortcodes {
                             ECare_Secure_Files::allowed_extensions_label(ECare_Secure_Files::KIND_DOCUMENT),
                             size_format(ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_DOCUMENT))
                         )); ?></span>
-                        <input type="file" id="reg_amb_credentials" name="credentials_doc" accept="<?php echo esc_attr(implode(',', array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_DOCUMENT)))); ?>" style="display:none;" required />
+                        <input type="file" id="reg_amb_credentials" name="credentials_doc" accept="<?php echo esc_attr(implode(',', array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_DOCUMENT)))); ?>" style="display:none;" />
                     </div>
                 </div>
 

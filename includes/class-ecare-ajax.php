@@ -1185,13 +1185,27 @@ class ECare_Ajax {
         $driver_license = sanitize_text_field($_POST['driver_license'] ?? '');
         $driver_nid     = sanitize_text_field($_POST['driver_nid'] ?? '');
         $ambulance_type = sanitize_text_field($_POST['ambulance_type'] ?? '');
-        $base_price     = floatval($_POST['base_price'] ?? 0);
+        $engine_number  = sanitize_text_field($_POST['engine_number'] ?? '');
+        $chassis_number = sanitize_text_field($_POST['chassis_number'] ?? '');
+        $insurance_exp  = sanitize_text_field($_POST['insurance_expiry'] ?? '');
+        $fitness_exp    = sanitize_text_field($_POST['fitness_expiry'] ?? '');
+        $experience     = sanitize_text_field($_POST['experience'] ?? '');
+        $blood_group    = sanitize_text_field($_POST['blood_group'] ?? '');
+        $address_line   = sanitize_text_field($_POST['address_line'] ?? '');
+
+        // Left blank means "not stated", which is not the same as free. Storing
+        // 0 would read as a price on the admin screen.
+        $raw_price      = isset($_POST['base_price']) ? trim((string) $_POST['base_price']) : '';
+        $base_price     = '' === $raw_price ? '' : floatval($raw_price);
 
         $password       = $_POST['password'] ?? '';
         $confirm_pass   = $_POST['confirm_password'] ?? '';
 
-        if (!$provider_name || !$email || !$phone || !$license_plate || !$driver_name || !$driver_license) {
-            wp_send_json_error(array('message' => 'Please fill in all required fields.'));
+        // The driver's name and phone are what the client asks for. The email
+        // stays because it becomes the WordPress user_login, and it is the only
+        // thing stopping a guest from registering the same vehicle repeatedly.
+        if (!$driver_name || !$phone || !$email) {
+            wp_send_json_error(array('message' => __('Please fill in all required fields.', 'ecare-health-services')));
         }
 
         if (is_user_logged_in()) {
@@ -1280,6 +1294,14 @@ class ECare_Ajax {
         update_post_meta($post_id, '_driver_nid', $driver_nid);
         update_post_meta($post_id, '_ambulance_type', $ambulance_type);
         update_post_meta($post_id, '_base_price', $base_price);
+        update_post_meta($post_id, '_engine_number', $engine_number);
+        update_post_meta($post_id, '_chassis_number', $chassis_number);
+        update_post_meta($post_id, '_insurance_expiry', $insurance_exp);
+        update_post_meta($post_id, '_fitness_expiry', $fitness_exp);
+        update_post_meta($post_id, '_experience', $experience);
+        update_post_meta($post_id, '_blood_group', $blood_group);
+        update_post_meta($post_id, '_address_line', $address_line);
+
         update_post_meta($post_id, '_ambulance_status', 'pending');
         update_post_meta($post_id, '_email', $email);
         update_post_meta($post_id, '_phone', $phone);

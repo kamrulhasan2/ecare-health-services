@@ -434,6 +434,13 @@ class ECare_CPT {
             'driver_nid'      => get_post_meta($post->ID, '_driver_nid', true),
             'ambulance_type'  => get_post_meta($post->ID, '_ambulance_type', true),
             'base_price'      => get_post_meta($post->ID, '_base_price', true),
+            'engine_number'   => get_post_meta($post->ID, '_engine_number', true),
+            'chassis_number'  => get_post_meta($post->ID, '_chassis_number', true),
+            'insurance_expiry'=> get_post_meta($post->ID, '_insurance_expiry', true),
+            'fitness_expiry'  => get_post_meta($post->ID, '_fitness_expiry', true),
+            'experience'      => get_post_meta($post->ID, '_experience', true),
+            'blood_group'     => get_post_meta($post->ID, '_blood_group', true),
+            'address'         => get_post_meta($post->ID, '_address_line', true),
             'status'          => get_post_meta($post->ID, '_ambulance_status', true) ?: 'pending',
             'phone'           => get_post_meta($post->ID, '_phone', true),
             'email'           => get_post_meta($post->ID, '_email', true),
@@ -445,9 +452,16 @@ class ECare_CPT {
             <tr><th><label>Email</label></th><td><input type="email" name="_email" value="<?php echo esc_attr($fields['email']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>License Plate</label></th><td><input type="text" name="_license_plate" value="<?php echo esc_attr($fields['license_plate']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Vehicle Model</label></th><td><input type="text" name="_vehicle_model" value="<?php echo esc_attr($fields['vehicle_model']); ?>" class="regular-text" /></td></tr>
+            <tr><th><label>Engine Number</label></th><td><input type="text" name="_engine_number" value="<?php echo esc_attr($fields['engine_number']); ?>" class="regular-text" /></td></tr>
+            <tr><th><label>Chassis Number</label></th><td><input type="text" name="_chassis_number" value="<?php echo esc_attr($fields['chassis_number']); ?>" class="regular-text" /></td></tr>
+            <tr><th><label>Insurance Expiry</label></th><td><input type="date" name="_insurance_expiry" value="<?php echo esc_attr($fields['insurance_expiry']); ?>" class="regular-text" /></td></tr>
+            <tr><th><label>Fitness Certificate Expiry</label></th><td><input type="date" name="_fitness_expiry" value="<?php echo esc_attr($fields['fitness_expiry']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Driver Name</label></th><td><input type="text" name="_driver_name" value="<?php echo esc_attr($fields['driver_name']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Driving License No</label></th><td><input type="text" name="_driver_license" value="<?php echo esc_attr($fields['driver_license']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Driver NID</label></th><td><input type="text" name="_driver_nid" value="<?php echo esc_attr($fields['driver_nid']); ?>" class="regular-text" /></td></tr>
+            <tr><th><label>Experience (years)</label></th><td><input type="number" name="_experience" value="<?php echo esc_attr($fields['experience']); ?>" class="regular-text" /></td></tr>
+            <tr><th><label>Blood Group</label></th><td><input type="text" name="_blood_group" value="<?php echo esc_attr($fields['blood_group']); ?>" class="regular-text" /></td></tr>
+            <tr><th><label>Present Address</label></th><td><input type="text" name="_address_line" value="<?php echo esc_attr($fields['address']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Ambulance Type</label></th><td><select name="_ambulance_type"><option value="Standard" <?php selected($fields['ambulance_type'], 'Standard'); ?>>Standard (Non-AC)</option><option value="ICU" <?php selected($fields['ambulance_type'], 'ICU'); ?>>ICU (AC)</option><option value="Freezer" <?php selected($fields['ambulance_type'], 'Freezer'); ?>>Freezer Type</option></select></td></tr>
             <tr>
                 <th><label>Base Price (৳)</label></th>
@@ -550,7 +564,7 @@ class ECare_CPT {
 
         if ($post_type === 'ecare_ambulance') {
             if (!isset($_POST['ecare_ambulance_meta_nonce']) || !wp_verify_nonce($_POST['ecare_ambulance_meta_nonce'], 'ecare_ambulance_meta')) return;
-            $keys = array('_license_plate', '_vehicle_model', '_driver_name', '_driver_license', '_driver_nid', '_ambulance_type', '_base_price', '_ambulance_status', '_phone', '_email', '_verification_doc');
+            $keys = array('_license_plate', '_vehicle_model', '_driver_name', '_driver_license', '_driver_nid', '_ambulance_type', '_base_price', '_ambulance_status', '_phone', '_email', '_engine_number', '_chassis_number', '_insurance_expiry', '_fitness_expiry', '_experience', '_blood_group', '_address_line', '_verification_doc');
             foreach ($keys as $key) {
                 if (isset($_POST[$key])) {
                     update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));
