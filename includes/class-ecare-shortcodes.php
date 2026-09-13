@@ -545,61 +545,10 @@ class ECare_Shortcodes {
                     <h2 class="ecare-section-title" style="margin:0;font-size:20px;"><?php _e('E-CARE Service Registration', 'ecare-health-services'); ?></h2>
                     <button type="button" class="ecare-admin-btn-outline" onclick="window.history.back()"><?php _e('← Back to Options', 'ecare-health-services'); ?></button>
                 </div>
-                <p class="ecare-section-subtitle" style="margin-bottom:30px;"><?php _e('Register your vehicle and driver details to offer dispatch services.', 'ecare-health-services'); ?></p>
-
-                <!-- Section: Vehicle Specifications -->
-                <h3 style="font-size:14px;font-weight:700;color:var(--admin-green);text-transform:uppercase;border-bottom:2px solid var(--brand-teal-light);padding-bottom:6px;margin:0 0 20px 0;"><?php _e('Vehicle Specifications', 'ecare-health-services'); ?></h3>
-                
-                <div class="ecare-form-row">
-                    <div class="ecare-form-field">
-                        <label><?php _e('Ambulance Type', 'ecare-health-services'); ?></label>
-                        <select name="ambulance_type" required>
-                            <option value="Standard"><?php _e('Standard (Non-AC)', 'ecare-health-services'); ?></option>
-                            <option value="ICU"><?php _e('ICU (AC)', 'ecare-health-services'); ?></option>
-                            <option value="Freezer"><?php _e('Freezer Type', 'ecare-health-services'); ?></option>
-                        </select>
-                    </div>
-                    <div class="ecare-form-field">
-                        <label><?php _e('Vehicle Plate Number', 'ecare-health-services'); ?></label>
-                        <input type="text" name="license_plate" placeholder="e.g. Dhaka-Metro-1234" />
-                    </div>
-                </div>
-
-                <div class="ecare-form-row">
-                    <div class="ecare-form-field">
-                        <label><?php _e('Vehicle Model', 'ecare-health-services'); ?></label>
-                        <input type="text" name="vehicle_model" placeholder="e.g. Toyota Hiace 2022" />
-                    </div>
-                    <div class="ecare-form-field">
-                        <label><?php _e('Base Dispatch Price (৳)', 'ecare-health-services'); ?></label>
-                        <input type="number" step="0.01" name="base_price" placeholder="1500" />
-                    </div>
-                </div>
-
-                <div class="ecare-form-row">
-                    <div class="ecare-form-field">
-                        <label><?php _e('Engine Number', 'ecare-health-services'); ?></label>
-                        <input type="text" name="engine_number" placeholder="Engine serial" />
-                    </div>
-                    <div class="ecare-form-field">
-                        <label><?php _e('Chassis Number', 'ecare-health-services'); ?></label>
-                        <input type="text" name="chassis_number" placeholder="Chassis serial" />
-                    </div>
-                </div>
-
-                <div class="ecare-form-row">
-                    <div class="ecare-form-field">
-                        <label><?php _e('Insurance Expiry Date', 'ecare-health-services'); ?></label>
-                        <input type="date" name="insurance_expiry" />
-                    </div>
-                    <div class="ecare-form-field">
-                        <label><?php _e('Fitness Certificate Expiry', 'ecare-health-services'); ?></label>
-                        <input type="date" name="fitness_expiry" />
-                    </div>
-                </div>
+                <p class="ecare-section-subtitle" style="margin-bottom:30px;"><?php _e('Register your driver and vehicle details to offer dispatch services.', 'ecare-health-services'); ?></p>
 
                 <!-- Section: Driver Credentials -->
-                <h3 style="font-size:14px;font-weight:700;color:var(--admin-green);text-transform:uppercase;border-bottom:2px solid var(--brand-teal-light);padding-bottom:6px;margin:30px 0 20px;"><?php _e('Driver Credentials', 'ecare-health-services'); ?></h3>
+                <h3 style="font-size:14px;font-weight:700;color:var(--admin-green);text-transform:uppercase;border-bottom:2px solid var(--brand-teal-light);padding-bottom:6px;margin:0 0 20px 0;"><?php _e('Driver Credentials', 'ecare-health-services'); ?></h3>
                 
                 <div class="ecare-form-row">
                     <div class="ecare-form-field">
@@ -674,6 +623,57 @@ class ECare_Shortcodes {
                                 <svg class="ecare-eye ecare-eye-hide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" hidden><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Section: Vehicle Specifications -->
+                <h3 style="font-size:14px;font-weight:700;color:var(--admin-green);text-transform:uppercase;border-bottom:2px solid var(--brand-teal-light);padding-bottom:6px;margin:30px 0 20px;"><?php _e('Vehicle Specifications', 'ecare-health-services'); ?></h3>
+                
+                <div class="ecare-form-row">
+                    <div class="ecare-form-field">
+                        <label><?php _e('Ambulance Type', 'ecare-health-services'); ?></label>
+                        <select name="ambulance_type" required>
+                            <option value="Standard"><?php _e('Standard (Non-AC)', 'ecare-health-services'); ?></option>
+                            <option value="ICU"><?php _e('ICU (AC)', 'ecare-health-services'); ?></option>
+                            <option value="Freezer"><?php _e('Freezer Type', 'ecare-health-services'); ?></option>
+                        </select>
+                    </div>
+                    <div class="ecare-form-field">
+                        <label><?php _e('Vehicle Plate Number', 'ecare-health-services'); ?></label>
+                        <input type="text" name="license_plate" placeholder="e.g. Dhaka-Metro-1234" />
+                    </div>
+                </div>
+
+                <div class="ecare-form-row">
+                    <div class="ecare-form-field">
+                        <label><?php _e('Vehicle Model', 'ecare-health-services'); ?></label>
+                        <input type="text" name="vehicle_model" placeholder="e.g. Toyota Hiace 2022" />
+                    </div>
+                    <div class="ecare-form-field">
+                        <label><?php _e('Base Dispatch Price (৳)', 'ecare-health-services'); ?></label>
+                        <input type="number" step="0.01" name="base_price" placeholder="1500" />
+                    </div>
+                </div>
+
+                <div class="ecare-form-row">
+                    <div class="ecare-form-field">
+                        <label><?php _e('Engine Number', 'ecare-health-services'); ?></label>
+                        <input type="text" name="engine_number" placeholder="Engine serial" />
+                    </div>
+                    <div class="ecare-form-field">
+                        <label><?php _e('Chassis Number', 'ecare-health-services'); ?></label>
+                        <input type="text" name="chassis_number" placeholder="Chassis serial" />
+                    </div>
+                </div>
+
+                <div class="ecare-form-row">
+                    <div class="ecare-form-field">
+                        <label><?php _e('Insurance Expiry Date', 'ecare-health-services'); ?></label>
+                        <input type="date" name="insurance_expiry" />
+                    </div>
+                    <div class="ecare-form-field">
+                        <label><?php _e('Fitness Certificate Expiry', 'ecare-health-services'); ?></label>
+                        <input type="date" name="fitness_expiry" />
                     </div>
                 </div>
 
