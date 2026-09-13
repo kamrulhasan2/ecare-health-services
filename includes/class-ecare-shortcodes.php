@@ -136,7 +136,7 @@ class ECare_Shortcodes {
                             </svg>
                             <span><?php _e('Choose File', 'ecare-health-services'); ?></span>
                         </span>
-                        <input type="file" id="ecare_care_photo" name="care_photo" accept="<?php echo esc_attr(implode(',', array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_IMAGE)))); ?>" required />
+                        <input type="file" id="ecare_care_photo" name="care_photo" accept="<?php echo esc_attr(implode(',', array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_IMAGE)))); ?>" />
                     </label>
                 </div>
 
@@ -157,15 +157,15 @@ class ECare_Shortcodes {
                         <input type="text" name="phone" placeholder="+880" required />
                     </div>
                     <div class="ecare-form-field">
-                        <label><?php _e('Date of Birth', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="date" name="dob" required />
+                        <label><?php _e('Date of Birth', 'ecare-health-services'); ?></label>
+                        <input type="date" name="dob" />
                     </div>
                 </div>
 
                 <div class="ecare-form-row single">
                     <div class="ecare-form-field">
-                        <label><?php _e('Full Address', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="text" name="address_line" placeholder="e.g. 123 Health St, Dhaka" required />
+                        <label><?php _e('Full Address', 'ecare-health-services'); ?></label>
+                        <input type="text" name="address_line" placeholder="e.g. 123 Health St, Dhaka" />
                     </div>
                 </div>
 
@@ -206,6 +206,7 @@ class ECare_Shortcodes {
                     <div class="ecare-form-field">
                         <label><?php _e('Gender Selection', 'ecare-health-services'); ?> <span>*</span></label>
                         <select name="gender" required>
+                            <option value=""><?php _e('Select gender', 'ecare-health-services'); ?></option>
                             <option value="Male"><?php _e('Male', 'ecare-health-services'); ?></option>
                             <option value="Female"><?php _e('Female', 'ecare-health-services'); ?></option>
                             <option value="Other"><?php _e('Other', 'ecare-health-services'); ?></option>
@@ -218,19 +219,19 @@ class ECare_Shortcodes {
                 
                 <div class="ecare-form-row">
                     <div class="ecare-form-field">
-                        <label><?php _e('NID Number / Passport', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="text" name="nid_passport" placeholder="NID or Passport number" required />
+                        <label><?php _e('NID Number / Passport', 'ecare-health-services'); ?></label>
+                        <input type="text" name="nid_passport" placeholder="NID or Passport number" />
                     </div>
                     <div class="ecare-form-field">
-                        <label><?php _e('Years of Experience', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="number" name="experience" min="0" placeholder="e.g. 5" required />
+                        <label><?php _e('Years of Experience', 'ecare-health-services'); ?></label>
+                        <input type="number" name="experience" min="0" placeholder="e.g. 5" />
                     </div>
                 </div>
 
                 <div class="ecare-form-row">
                     <div class="ecare-form-field">
-                        <label><?php _e('Nationality', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="text" name="nationality" value="Bangladeshi" required />
+                        <label><?php _e('Nationality', 'ecare-health-services'); ?></label>
+                        <input type="text" name="nationality" value="Bangladeshi" />
                     </div>
                     <div class="ecare-form-field">
                         <label><?php _e('Organization / Clinic', 'ecare-health-services'); ?></label>
@@ -240,8 +241,8 @@ class ECare_Shortcodes {
 
                 <div class="ecare-form-row single">
                     <div class="ecare-form-field">
-                        <label><?php _e('Skills & Competencies', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="text" name="skills" placeholder="e.g. ICU, Wound Care, BLS" required />
+                        <label><?php _e('Skills & Competencies', 'ecare-health-services'); ?></label>
+                        <input type="text" name="skills" placeholder="e.g. ICU, Wound Care, BLS" />
                     </div>
                 </div>
 
@@ -258,18 +259,18 @@ class ECare_Shortcodes {
 
                 <div class="ecare-form-row">
                     <div class="ecare-form-field">
-                        <label class="bank-field-lbl"><?php _e('Bank Name & Branch', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="text" name="bank_name" placeholder="Bank name" required />
+                        <label class="bank-field-lbl"><?php _e('Bank Name & Branch', 'ecare-health-services'); ?></label>
+                        <input type="text" name="bank_name" placeholder="Bank name" />
                     </div>
                     <div class="ecare-form-field">
-                        <label><?php _e('Account Name', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="text" name="bank_account_name" placeholder="Name on account" required />
+                        <label><?php _e('Account Name', 'ecare-health-services'); ?></label>
+                        <input type="text" name="bank_account_name" placeholder="Name on account" />
                     </div>
                 </div>
                 <div class="ecare-form-row">
                     <div class="ecare-form-field" style="grid-column:1/-1;">
-                        <label class="bank-acc-lbl"><?php _e('Account Number', 'ecare-health-services'); ?> <span>*</span></label>
-                        <input type="text" name="bank_account" placeholder="Account Number" required />
+                        <label class="bank-acc-lbl"><?php _e('Account Number', 'ecare-health-services'); ?></label>
+                        <input type="text" name="bank_account" placeholder="Account Number" />
                     </div>
                 </div>
 
@@ -292,14 +293,14 @@ class ECare_Shortcodes {
                             ECare_Secure_Files::allowed_extensions_label(ECare_Secure_Files::KIND_DOCUMENT),
                             size_format(ECare_Secure_Files::max_bytes(ECare_Secure_Files::KIND_DOCUMENT))
                         )); ?></span>
-                        <input type="file" id="reg_credentials" name="credentials_doc" accept="<?php echo esc_attr(implode(',', array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_DOCUMENT)))); ?>" style="display:none;" required />
+                        <input type="file" id="reg_credentials" name="credentials_doc" accept="<?php echo esc_attr(implode(',', array_values(ECare_Secure_Files::allowed_mimes(ECare_Secure_Files::KIND_DOCUMENT)))); ?>" style="display:none;" />
                     </div>
                 </div>
 
                 <div class="ecare-form-row single">
                     <div class="ecare-form-field">
-                        <label><?php _e('Professional Bio', 'ecare-health-services'); ?> <span>*</span></label>
-                        <textarea name="education" placeholder="Describe your credentials, education, and caregiver philosophy..." required style="min-height:120px;"></textarea>
+                        <label><?php _e('Professional Bio', 'ecare-health-services'); ?></label>
+                        <textarea name="education" placeholder="Describe your credentials, education, and caregiver philosophy..." style="min-height:120px;"></textarea>
                     </div>
                 </div>
 

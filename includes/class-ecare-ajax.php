@@ -670,6 +670,10 @@ class ECare_Ajax {
         $skills        = sanitize_textarea_field($_POST['skills'] ?? '');
         $education     = sanitize_textarea_field($_POST['education'] ?? '');
         $nid_passport  = sanitize_text_field($_POST['nid_passport'] ?? '');
+        $gender        = sanitize_text_field($_POST['gender'] ?? '');
+        $dob           = sanitize_text_field($_POST['dob'] ?? '');
+        $address_line  = sanitize_text_field($_POST['address_line'] ?? '');
+        $nationality   = sanitize_text_field($_POST['nationality'] ?? '');
         $bank_name     = sanitize_text_field($_POST['bank_name'] ?? '');
         $bank_acc_name = sanitize_text_field($_POST['bank_account_name'] ?? '');
         $bank_account  = sanitize_text_field($_POST['bank_account'] ?? '');
@@ -677,8 +681,8 @@ class ECare_Ajax {
         $password      = $_POST['password'] ?? '';
         $confirm_pass  = $_POST['confirm_password'] ?? '';
 
-        if (!$full_name || !$email || !$phone || !$provider_type || !$nid_passport) {
-            wp_send_json_error(array('message' => 'Please fill in all required fields.'));
+        if (!$full_name || !$email || !$phone || !$provider_type || !$gender) {
+            wp_send_json_error(array('message' => __('Please fill in all required fields.', 'ecare-health-services')));
         }
 
         if (is_user_logged_in()) {
@@ -796,6 +800,11 @@ class ECare_Ajax {
         update_post_meta($post_id, '_bank_account_name', $bank_acc_name);
         update_post_meta($post_id, '_bank_account', $bank_account);
         
+        update_post_meta($post_id, '_gender', $gender);
+        update_post_meta($post_id, '_dob', $dob);
+        update_post_meta($post_id, '_address_line', $address_line);
+        update_post_meta($post_id, '_nationality', $nationality);
+
         update_post_meta($post_id, '_provider_status', 'pending');
         update_post_meta($post_id, '_email', $email);
         update_post_meta($post_id, '_phone', $phone);

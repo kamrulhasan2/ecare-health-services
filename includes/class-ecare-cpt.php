@@ -262,6 +262,8 @@ class ECare_CPT {
             'email'          => get_post_meta($post->ID, '_email', true),
             'gender'         => get_post_meta($post->ID, '_gender', true),
             'address'        => get_post_meta($post->ID, '_address_line', true),
+            'dob'            => get_post_meta($post->ID, '_dob', true),
+            'nationality'    => get_post_meta($post->ID, '_nationality', true),
             'verification_doc' => get_post_meta($post->ID, '_verification_doc', true),
         );
         $photo_url = esc_url($fields['photo_url']);
@@ -311,8 +313,10 @@ class ECare_CPT {
             <tr><th><label>Provider Type</label></th><td><select name="_provider_type"><?php foreach (array('Nurse', 'Senior Care', 'Nanny', 'Physiotherapist') as $t): ?><option value="<?php echo esc_attr($t); ?>" <?php selected($fields['provider_type'], $t); ?>><?php echo esc_html($t); ?></option><?php endforeach; ?></select></td></tr>
             <tr><th><label>Phone</label></th><td><input type="text" name="_phone" value="<?php echo esc_attr($fields['phone']); ?>" class="regular-text" placeholder="+880..." /></td></tr>
             <tr><th><label>Email</label></th><td><input type="email" name="_email" value="<?php echo esc_attr($fields['email']); ?>" class="regular-text" /></td></tr>
-            <tr><th><label>Gender</label></th><td><select name="_gender"><option value="Male" <?php selected($fields['gender'], 'Male'); ?>>Male</option><option value="Female" <?php selected($fields['gender'], 'Female'); ?>>Female</option><option value="Other" <?php selected($fields['gender'], 'Other'); ?>>Other</option></select></td></tr>
+            <tr><th><label>Gender</label></th><td><select name="_gender"><option value="" <?php selected($fields['gender'], ''); ?>>&mdash;</option><option value="Male" <?php selected($fields['gender'], 'Male'); ?>>Male</option><option value="Female" <?php selected($fields['gender'], 'Female'); ?>>Female</option><option value="Other" <?php selected($fields['gender'], 'Other'); ?>>Other</option></select></td></tr>
             <tr><th><label>Address</label></th><td><input type="text" name="_address_line" value="<?php echo esc_attr($fields['address']); ?>" class="regular-text" /></td></tr>
+            <tr><th><label>Date of Birth</label></th><td><input type="date" name="_dob" value="<?php echo esc_attr($fields['dob']); ?>" class="regular-text" /></td></tr>
+            <tr><th><label>Nationality</label></th><td><input type="text" name="_nationality" value="<?php echo esc_attr($fields['nationality']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Experience (years)</label></th><td><input type="number" name="_experience" value="<?php echo esc_attr($fields['experience']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Category</label></th><td><input type="text" name="_category" value="<?php echo esc_attr($fields['category']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Skills</label></th><td><textarea name="_skills" class="large-text" rows="3"><?php echo esc_textarea($fields['skills']); ?></textarea></td></tr>
@@ -490,7 +494,7 @@ class ECare_CPT {
 
         if ($post_type === 'ecare_caregiver') {
             if (!isset($_POST['ecare_caregiver_meta_nonce']) || !wp_verify_nonce($_POST['ecare_caregiver_meta_nonce'], 'ecare_caregiver_meta')) return;
-            $keys = array('_provider_type', '_experience', '_category', '_nid_passport', '_bank_name', '_bank_account', '_provider_status', '_phone', '_email', '_gender', '_address_line', '_verification_doc', '_daily_12_price', '_daily_24_price', '_monthly_12_price', '_monthly_24_price');
+            $keys = array('_provider_type', '_experience', '_category', '_nid_passport', '_bank_name', '_bank_account', '_provider_status', '_phone', '_email', '_gender', '_address_line', '_dob', '_nationality', '_verification_doc', '_daily_12_price', '_daily_24_price', '_monthly_12_price', '_monthly_24_price');
             foreach ($keys as $key) {
                 if (isset($_POST[$key])) {
                     update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));
