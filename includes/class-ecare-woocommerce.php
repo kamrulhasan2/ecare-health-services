@@ -56,6 +56,7 @@ class ECare_WooCommerce {
         add_filter('woocommerce_checkout_fields', array(__CLASS__, 'slim_checkout_fields'));
         add_filter('default_checkout_billing_country', array(__CLASS__, 'default_billing_country'));
         add_filter('woocommerce_checkout_posted_data', array(__CLASS__, 'fill_hidden_checkout_data'));
+        add_filter('get_post_metadata', array(__CLASS__, 'hide_checkout_page_title'), 10, 4);
     }
 
     /**
@@ -672,5 +673,63 @@ class ECare_WooCommerce {
         $host = $host ? 'no-email.' . preg_replace('/^www\./', '', $host) : 'no-email.invalid';
 
         return apply_filters('ecare_checkout_fallback_email', $local . '@' . $host, $data);
+    }
+
+    /**
+     * Take the "Checkout" heading off the checkout page.
+     *
+     * The heading is the theme's page title, not ours. Astra decides whether to
+     * print it from a per-page setting stored as the post meta
+     * `site-post-title`, which its "Disable Title" checkbox writes as
+     * "disabled". Answering that one meta read for the checkout page does the
+     * same thing the checkbox would, without anybody having to find it and
+     * without this plugin knowing a single one of the theme's class names - so
+     * there is no selector here to go stale when the theme is updated.
+     *
+     * On a theme that does not read that meta this is simply never consulted.
+     * It cannot leave the page looking broken; the heading would just stay.
+     *
+     * The thank-you page keeps its heading: "Order received" is the whole
+     * message there, and losing it would leave a customer staring at a receipt
+     * with no confirmation on it.
+     *
+     * @param mixed  $value     Short-circuit value; null lets the database answer.
+     * @param int    $object_id Post being asked about.
+     * @param string $meta_key  Meta key being read.
+     * @param bool   $single    Whether one value was asked for.
+     * @return mixed
+     */
+    public static function hide_checkout_page_title($value, $object_id, $meta_key, $single = false) {
+        if ('site-post-title' !== $meta_key) {
+            return $value;
+        }
+
+        // Conditional tags are meaningless until the main query has run, and
+        // calling them earlier earns a _doing_it_wrong notice.
+        if (is_admin() || !did_action('wp') || !function_exists('is_checkout')) {
+            return $value;
+        }
+
+        if (!is_checkout()) {
+            return $value;
+        }
+
+        if (function_exists('is_wc_endpoint_url') && is_wc_endpoint_url('order-received')) {
+            return $value;
+        }
+
+        // Only the page being displayed. Another post's meta read during this
+        // request is none of our business.
+        if ((int) $object_id !== (int) get_queried_object_id()) {
+            return $value;
+        }
+
+        if (!apply_filters('ecare_hide_checkout_page_title', true)) {
+            return $value;
+        }
+
+        // get_metadata_raw() hands a non-null answer straight back, so the
+        // shape has to match what the caller asked for.
+        return $single ? 'disabled' : array('disabled');
     }
 }
