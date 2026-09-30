@@ -92,7 +92,7 @@ foreach ($ecare_post_types as $ecare_post_type) {
 }
 
 // ---------------------------------------------------------------------------
-// Caregiver types
+// Caregiver types and lab locations
 //
 // The taxonomy is not registered during uninstall - the plugin's files are not
 // loaded - so get_terms() and wp_delete_term() are unavailable to us here. The
@@ -100,8 +100,9 @@ foreach ($ecare_post_types as $ecare_post_type) {
 // ---------------------------------------------------------------------------
 $ecare_terms = $wpdb->get_results(
     $wpdb->prepare(
-        "SELECT term_id, term_taxonomy_id FROM {$wpdb->term_taxonomy} WHERE taxonomy = %s",
-        'ecare_caregiver_type'
+        "SELECT term_id, term_taxonomy_id FROM {$wpdb->term_taxonomy} WHERE taxonomy IN (%s, %s)",
+        'ecare_caregiver_type',
+        'ecare_location'
     )
 );
 
@@ -118,6 +119,7 @@ foreach ((array) $ecare_terms as $ecare_term) {
 $ecare_options = array(
     'ecare_activation_date',
     'ecare_rewrite_version',
+    'ecare_locations_seed_version',
     'ecare_default_daily_12_price',
     'ecare_default_daily_24_price',
     'ecare_default_monthly_12_price',

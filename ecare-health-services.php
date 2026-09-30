@@ -75,12 +75,15 @@ final class ECare_Health_Services {
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-secure-files.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-cpt.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-activator.php';
+        require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-locations.php';
 
         // The taxonomy is normally registered on init, which has not run during
         // activation, so register it here before seeding depends on it.
         ECare_CPT::register_caregiver_type_taxonomy();
+        ECare_Locations::register_taxonomy();
 
         ECare_Activator::activate();
+        ECare_Locations::maybe_seed();
     }
 
     public function deactivate() {
@@ -122,6 +125,7 @@ final class ECare_Health_Services {
     private function load_dependencies() {
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-secure-files.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-cpt.php';
+        require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-locations.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-ajax.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-woocommerce.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-shortcodes.php';
@@ -129,6 +133,7 @@ final class ECare_Health_Services {
 
         ECare_Secure_Files::init();
         ECare_CPT::init();
+        ECare_Locations::init();
         ECare_Ajax::init();
         ECare_WooCommerce::init();
         ECare_Shortcodes::init();
