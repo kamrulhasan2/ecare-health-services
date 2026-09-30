@@ -42,8 +42,6 @@ class ECare_Locations {
         add_action('pre_delete_term', array(__CLASS__, 'guard_delete'), 10, 2);
 
         if (is_admin()) {
-            add_action('admin_menu', array(__CLASS__, 'add_menu'), 30);
-            add_filter('parent_file', array(__CLASS__, 'highlight_menu'));
             add_filter('taxonomy_parent_dropdown_args', array(__CLASS__, 'parent_dropdown_args'), 10, 2);
             add_action(self::TAXONOMY . '_pre_add_form', array(__CLASS__, 'render_add_form_help'));
             add_filter('manage_edit-' . self::TAXONOMY . '_columns', array(__CLASS__, 'columns'));
@@ -363,25 +361,6 @@ class ECare_Locations {
 
     public static function menu_slug() {
         return 'edit-tags.php?taxonomy=' . self::TAXONOMY . '&post_type=ecare_lab_test';
-    }
-
-    public static function add_menu() {
-        add_submenu_page(
-            'ecare-dashboard',
-            __('Lab Locations', 'ecare-health-services'),
-            __('Lab Locations', 'ecare-health-services'),
-            'manage_options',
-            self::menu_slug()
-        );
-    }
-
-    public static function highlight_menu($parent_file) {
-        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-        if ($screen && $screen->taxonomy === self::TAXONOMY) {
-            $GLOBALS['submenu_file'] = self::menu_slug();
-            return 'ecare-dashboard';
-        }
-        return $parent_file;
     }
 
     /** The parent picker lists divisions and districts only, never areas. */

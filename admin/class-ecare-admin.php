@@ -17,6 +17,7 @@ class ECare_Admin {
     }
 
     public static function add_admin_menus() {
+        // Lab Catalog and Lab Orders moved to the Lab menu (ECare_Lab_Admin).
         $icon = 'dashicons-heart';
 
         add_menu_page(
@@ -63,24 +64,6 @@ class ECare_Admin {
             'manage_options',
             'ecare-care-providers',
             array(__CLASS__, 'render_care_providers')
-        );
-
-        add_submenu_page(
-            'ecare-dashboard',
-            __('Lab Catalog', 'ecare-health-services'),
-            __('Lab Catalog', 'ecare-health-services'),
-            'manage_options',
-            'ecare-lab-catalog',
-            array(__CLASS__, 'render_lab_catalog')
-        );
-
-        add_submenu_page(
-            'ecare-dashboard',
-            __('Lab Orders', 'ecare-health-services'),
-            __('Lab Orders', 'ecare-health-services'),
-            'manage_options',
-            'ecare-lab-orders',
-            array(__CLASS__, 'render_lab_orders')
         );
 
         add_submenu_page(

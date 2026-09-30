@@ -28,8 +28,6 @@ class ECare_Lab_Providers {
         add_action('save_post_' . self::POST_TYPE, array(__CLASS__, 'save'), 10, 2);
 
         if (is_admin()) {
-            add_action('admin_menu', array(__CLASS__, 'add_menu'), 30);
-            add_filter('parent_file', array(__CLASS__, 'highlight_menu'));
             add_action('add_meta_boxes_' . self::POST_TYPE, array(__CLASS__, 'add_meta_boxes'));
             add_action('admin_notices', array(__CLASS__, 'render_notice'));
             add_filter('manage_' . self::POST_TYPE . '_posts_columns', array(__CLASS__, 'columns'));
@@ -291,25 +289,6 @@ class ECare_Lab_Providers {
 
     public static function menu_slug() {
         return 'edit.php?post_type=' . self::POST_TYPE;
-    }
-
-    public static function add_menu() {
-        add_submenu_page(
-            'ecare-dashboard',
-            __('Lab Providers', 'ecare-health-services'),
-            __('Lab Providers', 'ecare-health-services'),
-            'manage_options',
-            self::menu_slug()
-        );
-    }
-
-    public static function highlight_menu($parent_file) {
-        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-        if ($screen && $screen->post_type === self::POST_TYPE) {
-            $GLOBALS['submenu_file'] = self::menu_slug();
-            return 'ecare-dashboard';
-        }
-        return $parent_file;
     }
 
     public static function title_placeholder($text, $post) {
