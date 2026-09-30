@@ -40,6 +40,11 @@ function get_option($name, $default = false) {
     return array_key_exists($name, $GLOBALS['options']) ? $GLOBALS['options'][$name] : $default;
 }
 
+function delete_metadata($type, $id, $key, $value = '', $all = false) {
+    $GLOBALS['deleted_meta'][] = array($type, $id, $key, $value, $all);
+    return true;
+}
+
 function delete_option($name) {
     if (!array_key_exists($name, $GLOBALS['options'])) {
         return false;
@@ -180,6 +185,8 @@ function rm_tree($path) {
 function reset_world($opt_in, $bulk = 0) {
     global $wpdb;
 
+    $GLOBALS['deleted_meta'] = array();
+
     $GLOBALS['options'] = array(
         'ecare_activation_date'              => '2026-01-01',
         'ecare_rewrite_version'              => '1.1.2',
@@ -292,6 +299,7 @@ check('no table is dropped', sql_matching('DROP TABLE'), 0);
 check('no SQL is run at all', count($GLOBALS['wpdb']->queries), 0);
 check('no term row is deleted', count($GLOBALS['wpdb']->deletes), 0);
 check('no option is deleted', $GLOBALS['deleted_options'], array());
+check('no lab cart is touched', $GLOBALS['deleted_meta'], array());
 check('the price defaults are still readable', get_option('ecare_default_daily_12_price'), 1700);
 check('the private directory is still there', is_dir($base . '/ecare-private'), true);
 check('the prescription is still on disk', is_file($base . '/ecare-private/2026/09/abc-prescription.pdf'), true);
@@ -370,6 +378,7 @@ check('the opt-in flag clears itself', array_key_exists('ecare_delete_data_on_un
 check('rate-limit transients are swept', sql_matching('LIKE \'\_transient\_ecare\_ul\_%\''), 1);
 check('and their timeout rows with them', sql_matching('LIKE \'\_transient\_timeout\_ecare\_ul\_%\''), 1);
 check('one statement, not a wildcard delete', sql_matching('DELETE FROM wp_options'), 1);
+check("every patient's lab cart goes, and only that key", $GLOBALS['deleted_meta'], array(array('user', 0, '_ecare_lab_cart', '', true)));
 
 // ===========================================================================
 echo "\n=== F. the private document store ===\n";

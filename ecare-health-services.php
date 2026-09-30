@@ -135,6 +135,7 @@ final class ECare_Health_Services {
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-settings.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-migration.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-catalog.php';
+        require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-cart.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-front.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-ajax.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-woocommerce.php';

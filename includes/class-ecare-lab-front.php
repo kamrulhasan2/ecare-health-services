@@ -22,6 +22,11 @@ class ECare_Lab_Front {
     public static function init() {
         add_shortcode('ecare_lab_home', array(__CLASS__, 'render_home'));
         add_shortcode('ecare_lab_catalog', array(__CLASS__, 'render_catalog'));
+        add_filter('document_title_parts', array(__CLASS__, 'document_title'));
+        add_action('wp_ajax_ecare_lab_book_options', array(__CLASS__, 'ajax_book_options'));
+        add_action('wp_ajax_nopriv_ecare_lab_book_options', array(__CLASS__, 'ajax_book_options'));
+        add_action('wp_ajax_ecare_lab_cart_add', array(__CLASS__, 'ajax_cart_add'));
+        add_action('wp_ajax_nopriv_ecare_lab_cart_add', array(__CLASS__, 'ajax_cart_add'));
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue'), 20);
         add_action('elementor/widgets/register', array(__CLASS__, 'register_widgets'));
         // A page gained or lost a lab shortcode: look again.
@@ -120,7 +125,47 @@ class ECare_Lab_Front {
             'ajax'  => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('ecare_lab'),
             'urls'  => array('tests' => self::url('tests'), 'cart' => self::url('cart')),
+            'i18n'  => self::js_strings(),
         ));
+    }
+
+    /** The booking modal's words, translatable here; %s is filled in by the script. */
+    public static function js_strings() {
+        $d = 'ecare-health-services';
+        return array(
+            'book'       => __('Book Test', $d),
+            'loading'    => __('Loading…', $d),
+            'failed'     => __('Could not load this test. Please try again.', $d),
+            'chooseLab'  => __('Choose a lab', $d),
+            'patients'   => __('Number of patients', $d),
+            'price'      => __('Price', $d),
+            'save'       => __('You save', $d),
+            'total'      => __('Total', $d),
+            'add'        => __('Add to Cart', $d),
+            'update'     => __('Update Cart', $d),
+            'adding'     => __('Adding…', $d),
+            'added'      => __('Added to your lab cart', $d),
+            'goCart'     => __('Go to Cart', $d),
+            'keep'       => __('Continue browsing', $d),
+            'loginNeed'  => __('Please log in to book a test.', $d),
+            'login'      => __('Log in / Sign up', $d),
+            'close'      => __('Close', $d),
+            /* translators: %s: lab name */
+            'otherLab'   => __('Your cart already has tests from %s. Only one lab can be selected per order.', $d),
+            /* translators: %s: lab name */
+            'switchTo'   => __('Move my cart to %s', $d),
+            'startNew'   => __('Clear cart and add this test', $d),
+            'cancel'     => __('Cancel', $d),
+            /* translators: %s: lab name */
+            'noSwitch'   => __('%s does not offer every test in your cart.', $d),
+            'sample'     => __('Sample', $d),
+            'report'     => __('Report in', $d),
+            'fasting'    => __('Fasting', $d),
+            'yes'        => __('Yes', $d),
+            'no'         => __('No', $d),
+            'fewer'      => __('One patient fewer', $d),
+            'more'       => __('One patient more', $d),
+        );
     }
 
     public static function register_widgets($manager) {
@@ -378,6 +423,11 @@ class ECare_Lab_Front {
     }
 
     public static function render_catalog() {
+        if (isset($_GET['lab_test'])) {
+            $test = self::requested_test();
+            return $test ? self::render_detail($test)
+                : '<div class="ecl ecl-detail"><div class="ecl-empty">' . self::icon('flask') . '<h2>' . esc_html__('Test not found', 'ecare-health-services') . '</h2><a class="ecl-btn" href="' . esc_url(self::url('tests')) . '">' . esc_html__('See all tests', 'ecare-health-services') . '</a></div></div>';
+        }
         $args    = self::catalog_args($_GET);
         $filters = ECare_Lab_Catalog::filters();
         $result  = ECare_Lab_Catalog::search(array(
@@ -553,5 +603,288 @@ class ECare_Lab_Front {
             <?php if ($page < $result['pages']): ?><a href="<?php echo esc_url(self::catalog_url(array_merge($args, array('pg' => $page + 1)))); ?>" rel="next"><?php echo self::icon('right'); // phpcs:ignore ?><span class="screen-reader-text"><?php esc_html_e('Next', 'ecare-health-services'); ?></span></a><?php endif; ?>
         </nav>
         <?php
+    }
+
+    // =======================================================================
+    // Test detail  (?lab_test=slug on the tests page)
+    // =======================================================================
+
+    /** The test named by ?lab_test=, if it is a real lab test (published or not). */
+    public static function requested_test() {
+        if (!isset($_GET['lab_test'])) {
+            return null;
+        }
+        $key = sanitize_title(wp_unslash((string) $_GET['lab_test']));
+        if ($key === '') {
+            return null;
+        }
+        $found = get_posts(array('post_type' => 'ecare_lab_test', 'name' => $key, 'post_status' => 'publish', 'posts_per_page' => 1, 'suppress_filters' => true));
+        if (!$found && ctype_digit($key)) {
+            $p     = get_post((int) $key);
+            $found = ($p && $p->post_type === 'ecare_lab_test' && $p->post_status === 'publish') ? array($p) : array();
+        }
+        return $found ? $found[0] : null;
+    }
+
+    /** "FBS – Lab Tests – Meditaj" in the browser tab on a detail view. */
+    public static function document_title($parts) {
+        if (self::on_lab_page()) {
+            $t = self::requested_test();
+            if ($t) {
+                $parts['title'] = $t->post_title;
+            }
+        }
+        return $parts;
+    }
+
+    public static function render_detail($post) {
+        $id   = (int) $post->ID;
+        $map  = ECare_Lab_Catalog::bookable_map();
+        $back = self::url('tests');
+        if (!isset($map[$id])) {
+            return '<div class="ecl ecl-detail"><div class="ecl-empty">' . self::icon('flask')
+                . '<h2>' . esc_html__('This test is not available right now', 'ecare-health-services') . '</h2>'
+                . '<p>' . esc_html__('No lab is taking bookings for it at the moment.', 'ecare-health-services') . '</p>'
+                . '<a class="ecl-btn" href="' . esc_url($back) . '">' . esc_html__('See all tests', 'ecare-health-services') . '</a></div></div>';
+        }
+
+        $card    = ECare_Lab_Catalog::card($id);
+        $info    = ECare_Lab_Test_Info::details($id);
+        $package = $card['type'] === 'package';
+        $cats    = wp_get_object_terms($id, ECare_Lab_Taxonomies::CATEGORY);
+        $cats    = is_wp_error($cats) ? array() : $cats;
+        $incl    = $package ? ECare_Lab_Packages::included_test_ids($id) : array();
+        $extra   = $package ? ECare_Lab_Packages::extra_items($id) : array();
+        $related = ECare_Lab_Catalog::related($id, 8);
+        $steps   = (array) ECare_Lab_Settings::get('steps');
+        $content = trim((string) $post->post_content);
+
+        ob_start();
+        ?>
+        <div class="ecl ecl-detail">
+            <nav class="ecl-crumbs" aria-label="<?php esc_attr_e('Breadcrumb', 'ecare-health-services'); ?>">
+                <a href="<?php echo esc_url(home_url('/')); ?>"><?php esc_html_e('Home', 'ecare-health-services'); ?></a>
+                <?php if (self::page_id('home')): ?><span>›</span><a href="<?php echo esc_url(self::url('home')); ?>"><?php esc_html_e('Home Lab', 'ecare-health-services'); ?></a><?php endif; ?>
+                <span>›</span><a href="<?php echo esc_url($back); ?>"><?php esc_html_e('All Lab Tests', 'ecare-health-services'); ?></a>
+                <span>›</span><span aria-current="page"><?php esc_html_e('Test Details', 'ecare-health-services'); ?></span>
+            </nav>
+
+            <div class="ecl-d-top">
+                <div class="ecl-d-media">
+                    <?php if ($card['image']): ?>
+                        <img src="<?php echo esc_url((string) get_the_post_thumbnail_url($id, 'large')); ?>" alt="" />
+                    <?php else: ?>
+                        <span class="ecl-card-ph"><?php echo self::icon($package ? 'box' : 'flask'); // phpcs:ignore ?></span>
+                    <?php endif; ?>
+                    <?php if ($card['discount']): ?><span class="ecl-d-ribbon"><?php echo (int) $card['discount']; ?>%</span><?php endif; ?>
+                </div>
+
+                <div class="ecl-d-info">
+                    <p class="ecl-d-kind"><?php echo $package ? esc_html__('HEALTH PACKAGE', 'ecare-health-services') : esc_html__('SINGLE TEST', 'ecare-health-services'); ?></p>
+                    <h1 class="ecl-d-title"><?php echo esc_html($post->post_title); ?></h1>
+                    <?php if ($info['subtitle'] !== ''): ?><p class="ecl-d-sub"><?php echo esc_html($info['subtitle']); ?></p><?php endif; ?>
+                    <?php if ($info['also_known_as'] !== ''): ?><p class="ecl-d-aka"><strong><?php esc_html_e('Also known as', 'ecare-health-services'); ?></strong> <?php echo esc_html($info['also_known_as']); ?></p><?php endif; ?>
+
+                    <ul class="ecl-d-facts">
+                        <?php if ($info['report'] !== ''): ?><li><?php echo self::icon('clock'); // phpcs:ignore ?> <?php esc_html_e('Report in', 'ecare-health-services'); ?> <strong><?php echo esc_html($info['report']); ?></strong></li><?php endif; ?>
+                        <?php if ($info['fasting'] !== ''): ?><li><?php esc_html_e('Fasting', 'ecare-health-services'); ?> <strong><?php echo $info['fasting'] === 'yes' ? esc_html__('Yes', 'ecare-health-services') : esc_html__('No', 'ecare-health-services'); ?></strong></li><?php endif; ?>
+                        <?php if ($info['sample'] !== ''): ?><li><?php esc_html_e('Sample', 'ecare-health-services'); ?> <strong><?php echo esc_html($info['sample']); ?></strong></li><?php endif; ?>
+                        <?php if ($info['parameters'] > 0): ?><li><strong><?php echo (int) $info['parameters']; ?></strong> <?php echo esc_html(_n('parameter', 'parameters', $info['parameters'], 'ecare-health-services')); ?></li><?php endif; ?>
+                    </ul>
+
+                    <div class="ecl-d-buy">
+                        <div class="ecl-price ecl-price-lg">
+                            <?php if (count($map[$id]['providers']) > 1): ?><small><?php esc_html_e('from', 'ecare-health-services'); ?></small><?php endif; ?>
+                            <strong><?php echo esc_html(self::money($card['price'])); ?></strong>
+                            <?php if ($card['mrp'] > 0): ?><del><?php echo esc_html(self::money($card['mrp'])); ?></del><span class="ecl-off"><?php echo esc_html(sprintf(__('%d%% OFF', 'ecare-health-services'), $card['discount'])); ?></span><?php endif; ?>
+                        </div>
+                        <button type="button" class="ecl-btn ecl-btn-lg" data-ecl-book="<?php echo (int) $id; ?>" id="book"><?php esc_html_e('Book Test', 'ecare-health-services'); ?></button>
+                    </div>
+                    <?php if ($card['labs']): ?>
+                        <p class="ecl-d-labs"><?php echo esc_html(sprintf(_n('Available at %d lab', 'Available at %d labs', count($map[$id]['providers']), 'ecare-health-services'), count($map[$id]['providers']))); ?></p>
+                    <?php endif; ?>
+
+                    <?php if ($package && ($incl || $extra)): ?>
+                        <div class="ecl-d-block">
+                            <h2><?php esc_html_e('Package includes', 'ecare-health-services'); ?></h2>
+                            <ul class="ecl-d-incl">
+                                <?php foreach ($incl as $tid): ?><li><?php echo esc_html(get_the_title($tid)); ?></li><?php endforeach; ?>
+                                <?php foreach ($extra as $name): ?><li><?php echo esc_html($name); ?></li><?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($content !== ''): ?>
+                        <div class="ecl-d-block">
+                            <h2><?php esc_html_e('Description', 'ecare-health-services'); ?></h2>
+                            <div class="ecl-d-desc"><?php echo wpautop(wp_kses_post($content)); // phpcs:ignore ?></div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($cats): ?>
+                        <div class="ecl-d-block">
+                            <h2 class="ecl-d-mini"><?php esc_html_e('Categories', 'ecare-health-services'); ?></h2>
+                            <div class="ecl-chips">
+                                <?php foreach ($cats as $t): ?><a class="ecl-chip" href="<?php echo esc_url(self::url('tests', array('category' => $t->slug))); ?>"><?php echo esc_html($t->name); ?></a><?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($info['available_for'] !== ''): ?>
+                        <div class="ecl-d-block">
+                            <h2 class="ecl-d-mini"><?php esc_html_e('Available for', 'ecare-health-services'); ?></h2>
+                            <p><?php echo esc_html($info['available_for']); ?></p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <?php if ($package && $incl): ?>
+                <section class="ecl-sec">
+                    <div class="ecl-sec-head"><h2><?php echo esc_html(sprintf(_n('%d test covered by this package', '%d tests covered by this package', count($incl) + count($extra), 'ecare-health-services'), count($incl) + count($extra))); ?></h2></div>
+                    <div class="ecl-d-included">
+                        <?php foreach ($incl as $tid): $ti = ECare_Lab_Test_Info::details($tid); $tp = get_post($tid); ?>
+                            <article class="ecl-d-inc">
+                                <h3><?php echo esc_html(get_the_title($tid)); ?></h3>
+                                <?php if ($ti['subtitle'] !== ''): ?><p class="ecl-d-sub"><?php echo esc_html($ti['subtitle']); ?></p><?php endif; ?>
+                                <ul class="ecl-d-facts ecl-d-facts-sm">
+                                    <?php if ($ti['sample'] !== ''): ?><li><?php esc_html_e('Sample', 'ecare-health-services'); ?> <strong><?php echo esc_html($ti['sample']); ?></strong></li><?php endif; ?>
+                                    <?php if ($ti['fasting'] !== ''): ?><li><?php esc_html_e('Fasting', 'ecare-health-services'); ?> <strong><?php echo $ti['fasting'] === 'yes' ? esc_html__('Required', 'ecare-health-services') : esc_html__('Not required', 'ecare-health-services'); ?></strong></li><?php endif; ?>
+                                    <?php if ($ti['report'] !== ''): ?><li><?php esc_html_e('Report in', 'ecare-health-services'); ?> <strong><?php echo esc_html($ti['report']); ?></strong></li><?php endif; ?>
+                                </ul>
+                                <?php if ($tp && trim($tp->post_content) !== ''): ?><p class="ecl-d-inc-text"><?php echo esc_html(wp_trim_words(wp_strip_all_tags($tp->post_content), 40)); ?></p><?php endif; ?>
+                                <?php if (isset($map[$tid])): ?><a class="ecl-link" href="<?php echo esc_url(self::url('test', array('id' => $tid))); ?>"><?php esc_html_e('View', 'ecare-health-services'); ?></a><?php endif; ?>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+            <?php endif; ?>
+
+            <?php if ($info['faq']): ?>
+                <section class="ecl-sec">
+                    <div class="ecl-sec-head"><h2><?php esc_html_e('Frequently asked questions', 'ecare-health-services'); ?></h2></div>
+                    <div class="ecl-faq">
+                        <?php foreach ($info['faq'] as $i => $f): ?>
+                            <details <?php echo $i === 0 ? 'open' : ''; ?>>
+                                <summary><?php echo esc_html($f['q']); ?></summary>
+                                <?php if ($f['a'] !== ''): ?><p><?php echo nl2br(esc_html($f['a'])); // phpcs:ignore ?></p><?php endif; ?>
+                            </details>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+            <?php endif; ?>
+
+            <?php if ($steps): ?>
+                <section class="ecl-sec">
+                    <div class="ecl-sec-head"><h2><?php esc_html_e('How our test process works', 'ecare-health-services'); ?></h2></div>
+                    <ol class="ecl-steps">
+                        <?php foreach ($steps as $i => $step): ?>
+                            <li><span class="ecl-step-n"><?php echo (int) $i + 1; ?></span><h3><?php echo esc_html($step['title']); ?></h3><?php if ($step['text'] !== ''): ?><p><?php echo esc_html($step['text']); ?></p><?php endif; ?></li>
+                        <?php endforeach; ?>
+                    </ol>
+                </section>
+            <?php endif; ?>
+
+            <?php if ($related): $sid = 'ecl-related-' . $id; ?>
+                <section class="ecl-sec">
+                    <?php self::section_head(__('Related tests', 'ecare-health-services'), '', $sid); ?>
+                    <div class="ecl-row" id="<?php echo esc_attr($sid); ?>">
+                        <?php foreach ($related as $c) { echo self::render_card($c); } // phpcs:ignore ?>
+                    </div>
+                </section>
+            <?php endif; ?>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    // =======================================================================
+    // Booking: AJAX
+    // =======================================================================
+
+    /** Where to send someone who must log in first, coming back here. */
+    public static function login_url($back = '') {
+        $back = $back ?: home_url(add_query_arg(array()));
+        if (function_exists('wc_get_page_permalink')) {
+            $acct = wc_get_page_permalink('myaccount');
+            if ($acct) {
+                return add_query_arg('redirect_to', rawurlencode($back), $acct);
+            }
+        }
+        return wp_login_url($back);
+    }
+
+    /** What the booking modal needs for one test. Anyone may ask. */
+    public static function ajax_book_options() {
+        check_ajax_referer('ecare_lab', 'nonce');
+        $id  = (int) ($_POST['test_id'] ?? 0);
+        $map = ECare_Lab_Catalog::bookable_map();
+        if (!$id || !isset($map[$id])) {
+            wp_send_json_error(array('message' => __('This test cannot be booked right now.', 'ecare-health-services')), 404);
+        }
+        $info = ECare_Lab_Test_Info::details($id);
+        $labs = array();
+        foreach (ECare_Lab_Catalog::labs_for_test($id) as $l) {
+            $labs[] = array(
+                'id'       => $l['id'],
+                'name'     => $l['name'],
+                'logo'     => $l['logo'],
+                'price'    => $l['price'],
+                'mrp'      => $l['mrp'] > $l['price'] ? $l['mrp'] : 0,
+                'savings'  => $l['savings'],
+                'discount' => $l['discount'],
+            );
+        }
+        $cart = is_user_logged_in() ? ECare_Lab_Cart::get(get_current_user_id()) : array('provider_id' => 0, 'items' => array());
+        wp_send_json_success(array(
+            'id'         => $id,
+            'title'      => get_the_title($id),
+            'subtitle'   => $info['subtitle'],
+            'type'       => ECare_Lab_Test_Info::type($id),
+            'sample'     => $info['sample'],
+            'report'     => $info['report'],
+            'fasting'    => $info['fasting'],
+            'parameters' => $info['parameters'],
+            'labs'       => $labs,
+            'max'        => ECare_Lab_Cart::MAX_PATIENTS,
+            'logged_in'  => is_user_logged_in(),
+            'login_url'  => self::login_url(wp_get_referer() ?: self::url('test', array('id' => $id))),
+            'cart_lab'   => (int) $cart['provider_id'],
+            'in_cart'    => isset($cart['items'][$id]) ? (int) $cart['items'][$id] : 0,
+            'cart_url'   => self::url('cart'),
+        ));
+    }
+
+    /** Add to the lab cart. Logged-in patients only; prices come from the server. */
+    public static function ajax_cart_add() {
+        check_ajax_referer('ecare_lab', 'nonce');
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('code' => 'login', 'login_url' => self::login_url(wp_get_referer() ?: self::url('tests'))), 401);
+        }
+        $uid = get_current_user_id();
+        $mode = sanitize_key(wp_unslash($_POST['on_conflict'] ?? ''));
+        $r   = ECare_Lab_Cart::add(
+            $uid,
+            (int) ($_POST['test_id'] ?? 0),
+            (int) ($_POST['lab_id'] ?? 0),
+            (int) ($_POST['patients'] ?? 1),
+            in_array($mode, array('switch', 'replace'), true) ? $mode : ''
+        );
+        if (!$r['ok']) {
+            $out = array('code' => $r['code']);
+            if ($r['code'] === 'other_lab') {
+                $out['current_lab'] = get_the_title($r['current_lab']);
+                $out['can_switch']  = $r['can_switch'];
+            }
+            $messages = array(
+                'not_available' => __('That lab is no longer taking this test. Please choose another.', 'ecare-health-services'),
+                'cart_full'     => __('Your lab cart is full.', 'ecare-health-services'),
+                'other_lab'     => __('Only one lab can be selected per order.', 'ecare-health-services'),
+            );
+            $out['message'] = $messages[$r['code']] ?? __('Could not add to cart.', 'ecare-health-services');
+            wp_send_json_error($out, 409);
+        }
+        $priced = ECare_Lab_Cart::priced($uid);
+        wp_send_json_success(array('count' => $priced['count'], 'total' => $priced['subtotal'], 'cart_url' => self::url('cart')));
     }
 }

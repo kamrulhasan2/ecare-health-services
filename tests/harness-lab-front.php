@@ -10,6 +10,10 @@
  *   - a card shows the struck price and % off only when there is a discount,
  *     "Includes N tests" only for packages, and escapes what it prints
  *   - empty collections and category grids are left out of the home page
+ *   - the detail view (?lab_test=slug) shows only published, bookable tests,
+ *     escapes what it prints, and names the test in the browser tab
+ *   - the booking endpoints: anyone may read the options, only a logged-in
+ *     patient may add, and a clash of labs comes back as 409 with the lab named
  */
 
 define('ABSPATH', __DIR__ . '/');
@@ -73,13 +77,65 @@ class ECare_Lab_Catalog {
     public static function filters() { return self::$filters; }
     public static function collection_cards($id) { return self::$rows[$id] ?? array(); }
     public static function search($a) { self::$last = $a; return self::$result; }
+    public static $map = array(); public static $cards = array(); public static $related = array(); public static $labs = array();
+    public static function bookable_map() { return self::$map; }
+    public static function card($id) { return self::$cards[$id]; }
+    public static function related($id, $n) { return self::$related; }
+    public static function labs_for_test($id) { return self::$labs[$id] ?? array(); }
 }
 class ECare_Lab_Taxonomies {
-    const GROUP_ORGAN = 'organ'; const GROUP_CONCERN = 'concern';
+    const GROUP_ORGAN = 'organ'; const GROUP_CONCERN = 'concern'; const CATEGORY = 'ecare_lab_category';
     public static $cols = array(); public static $cats = array();
     public static function collections() { return self::$cols; }
     public static function categories($g = '') { return self::$cats[$g] ?? array(); }
     public static function icon_url($id) { return ''; }
+}
+
+
+// --- step 11: detail page and booking endpoints -----------------------------
+function esc_html__($s, $d = null) { return esc_html($s); }
+function get_posts($a) {
+    $out = array();
+    foreach ($GLOBALS['posts'] as $p) {
+        if (($p->post_type ?? '') === $a['post_type'] && $p->post_name === $a['name'] && $p->post_status === $a['post_status']) { $out[] = $p; }
+    }
+    return array_slice($out, 0, 1);
+}
+function wp_get_object_terms($id, $tax) { return $GLOBALS['terms'][$id] ?? array(); }
+function is_wp_error($x) { return false; }
+function wpautop($s) { return '<p>' . $s . '</p>'; }
+function wp_kses_post($s) { return preg_replace('#<script\b.*?</script>#is', '', (string) $s); }
+function get_the_title($id) { return isset($GLOBALS['posts'][$id]) ? ($GLOBALS['posts'][$id]->post_title ?? '') : ''; }
+function get_the_post_thumbnail_url($id, $size = null) { return ''; }
+function wp_trim_words($s, $n) { return implode(' ', array_slice(preg_split('/\s+/', trim($s)), 0, $n)); }
+function wp_strip_all_tags($s) { return strip_tags($s); }
+function check_ajax_referer($a, $k) { if (($_POST[$k] ?? '') !== 'n') { throw new Json_Out(false, array('nonce' => 'bad'), 403); } return 1; }
+function is_user_logged_in() { return !empty($GLOBALS['uid']); }
+function get_current_user_id() { return (int) ($GLOBALS['uid'] ?? 0); }
+function wp_get_referer() { return 'https://site/lab-tests/?lab_test=fbs'; }
+function wp_login_url($back) { return 'https://site/wp-login.php?redirect_to=' . rawurlencode($back); }
+class Json_Out extends Exception { public $ok; public $data; public $status; public function __construct($ok, $data, $status) { $this->ok = $ok; $this->data = $data; $this->status = $status; } }
+function wp_send_json_success($d = null, $status = 200) { throw new Json_Out(true, $d, $status); }
+function wp_send_json_error($d = null, $status = 400) { throw new Json_Out(false, $d, $status); }
+function ajax($method) { try { ECare_Lab_Front::$method(); } catch (Json_Out $e) { return array($e->ok, $e->status, $e->data); } return null; }
+class ECare_Lab_Test_Info {
+    public static $d = array();
+    public static function details($id) {
+        return (self::$d[$id] ?? array()) + array('type' => 'single', 'subtitle' => '', 'also_known_as' => '', 'parameters' => 0, 'sample' => '', 'fasting' => '', 'report' => '', 'available_for' => '', 'faq' => array());
+    }
+    public static function type($id) { return self::details($id)['type']; }
+}
+class ECare_Lab_Packages {
+    public static $incl = array(); public static $extra = array();
+    public static function included_test_ids($id) { return self::$incl[$id] ?? array(); }
+    public static function extra_items($id) { return self::$extra[$id] ?? array(); }
+}
+class ECare_Lab_Cart {
+    const MAX_PATIENTS = 10;
+    public static $carts = array(); public static $add = null; public static $last_add = null;
+    public static function get($u) { return self::$carts[$u] ?? array('provider_id' => 0, 'items' => array()); }
+    public static function add($u, $t, $l, $n, $mode = '') { self::$last_add = array($u, $t, $l, $n, $mode); return self::$add; }
+    public static function priced($u) { return array('count' => 2, 'subtotal' => 830.0); }
 }
 
 require_once ($argv[1] ?? (__DIR__ . '/../includes/class-ecare-lab-front.php'));
@@ -215,6 +271,122 @@ $GLOBALS['plain'] = true;
 $html = $F::render_catalog();
 check('plain permalinks: page_id rides along as a hidden field', strpos($html, 'name="page_id" value="51"') !== false, true);
 $_GET = array();
+
+
+// ===========================================================================
+echo "\n=== G. the test detail view ===\n";
+// ===========================================================================
+function test_post($id, $slug, $title, $status = 'publish', $content = '') {
+    $GLOBALS['posts'][$id] = (object) array('ID' => $id, 'post_type' => 'ecare_lab_test', 'post_name' => $slug, 'post_title' => $title, 'post_status' => $status, 'post_content' => $content);
+}
+ECare_Lab_Settings::$s = array('page_tests' => 20, 'steps' => array(array('title' => 'Collect', 'text' => 'At home')));
+$GLOBALS['plain'] = false; $GLOBALS['posts'][20]->post_status = 'publish';
+unset($GLOBALS['posts'][30]);   // section B's stand-in used the same slug
+test_post(101, 'fbs', 'FBS <i>', 'publish', "Checks sugar.<script>alert(1)</script>");
+test_post(102, 'old-test', 'Old', 'draft');
+test_post(103, 'no-lab', 'No Lab Yet');
+test_post(105, 'diabetes-care', 'Diabetes Care');
+test_post(106, 'hba1c', 'HbA1c');
+page(107, 'fbs-page', ''); $GLOBALS['posts'][107]->post_type = 'page';
+
+$_GET = array('lab_test' => 'fbs');           check('a published test by slug', $F::requested_test()->ID, 101);
+$_GET = array('lab_test' => 'FBS');           check('the slug is case-insensitive', $F::requested_test()->ID, 101);
+$_GET = array('lab_test' => '101');           check('a bare id works too', $F::requested_test()->ID, 101);
+$_GET = array('lab_test' => 'old-test');      check('a draft is not shown', $F::requested_test(), null);
+$_GET = array('lab_test' => '107');           check('another post type by id is not shown', $F::requested_test(), null);
+$_GET = array('lab_test' => '');              check('empty', $F::requested_test(), null);
+
+ECare_Lab_Catalog::$last = null;
+$_GET = array('lab_test' => 'nothing-here');
+$html = $F::render_catalog();
+check('unknown test: "Test not found", and no search is run', array(strpos($html, 'Test not found') !== false, ECare_Lab_Catalog::$last), array(true, null));
+$_GET = array('lab_test' => 'no-lab');
+check('a test no lab takes: says so, no Book button', array(strpos($F::render_catalog(), 'not available right now') !== false, strpos($F::render_catalog(), 'data-ecl-book')), array(true, false));
+
+ECare_Lab_Catalog::$map = array(101 => array('providers' => array(99 => 1, 103 => 1)), 105 => array('providers' => array(99 => 1)), 106 => array('providers' => array(99 => 1)));
+$base = array('image' => '', 'items' => 0, 'report' => '', 'labs' => array(array('id' => 99, 'name' => 'Popular', 'logo' => '')), 'more_labs' => 0);
+ECare_Lab_Catalog::$cards = array(
+    101 => array('id' => 101, 'title' => 'FBS', 'type' => 'single', 'price' => 380.0, 'mrp' => 450.0, 'discount' => 16) + $base,
+    105 => array('id' => 105, 'title' => 'Diabetes Care', 'type' => 'package', 'price' => 650.0, 'mrp' => 800.0, 'discount' => 19) + $base,
+);
+ECare_Lab_Test_Info::$d = array(101 => array('subtitle' => 'Fasting Blood Sugar', 'also_known_as' => 'Glucose <b>F</b>', 'sample' => 'Blood', 'fasting' => 'yes', 'report' => '12 hours',
+    'faq' => array(array('q' => 'Why fast? <img>', 'a' => "Line one\nLine two"), array('q' => 'How long?', 'a' => ''))));
+$GLOBALS['terms'][101] = array((object) array('slug' => 'diabetes', 'name' => 'Diabetes'));
+ECare_Lab_Catalog::$related = array(ECare_Lab_Catalog::$cards[105]);
+
+$_GET = array('lab_test' => 'fbs');
+$html = $F::render_catalog();
+check('title escaped', array(strpos($html, 'FBS &lt;i&gt;') !== false, strpos($html, 'FBS <i>')), array(true, false));
+check('the Book button is the #book target and carries the id', (bool) preg_match('/data-ecl-book="101" id="book"/', $html), true);
+check('"from" when more than one lab has it', strpos($html, '<small>from</small>') !== false, true);
+check('price, struck MRP, % off', array(strpos($html, '৳380') !== false, strpos($html, '<del>৳450</del>') !== false, strpos($html, '16% OFF') !== false), array(true, true, true));
+check('facts: report, fasting, sample', array(strpos($html, '12 hours') !== false, strpos($html, 'Fasting <strong>Yes') !== false, strpos($html, 'Blood') !== false), array(true, true, true));
+check('also known as, escaped', strpos($html, 'Glucose &lt;b&gt;F&lt;/b&gt;') !== false, true);
+check('a script in the description is stripped', array(strpos($html, 'Checks sugar.') !== false, strpos($html, '<script')), array(true, false));
+check('FAQ question escaped, answer keeps its line break', array(strpos($html, 'Why fast? &lt;img&gt;') !== false, strpos($html, "Line one<br />") !== false), array(true, true));
+check('only the first FAQ starts open', substr_count($html, '<details open'), 1);
+check('category chip links to the filtered list', strpos($html, 'href="https://site/lab-tests/?category=diabetes"') !== false, true);
+check('related tests and how-we-work are shown', array(strpos($html, 'Related tests') !== false, strpos($html, 'At home') !== false), array(true, true));
+check('a single test has no "Package includes"', strpos($html, 'Package includes'), false);
+check('the breadcrumb ends on this page', strpos($html, 'aria-current="page">Test Details') !== false, true);
+
+ECare_Lab_Packages::$incl = array(105 => array(101, 103)); ECare_Lab_Packages::$extra = array(105 => array('Urine R/E'));
+$_GET = array('lab_test' => 'diabetes-care');
+$html = $F::render_catalog();
+check('package: includes list with the extra item', array(strpos($html, 'Package includes') !== false, strpos($html, 'Urine R/E') !== false), array(true, true));
+check('package: "3 tests covered"', strpos($html, '3 tests covered by this package') !== false, true);
+check('one lab only: no "from"', strpos($html, '<small>from</small>'), false);
+check('an included test links to its page only when bookable', array(strpos($html, '?lab_test=fbs') !== false, strpos($html, '?lab_test=no-lab')), array(true, false));
+
+$GLOBALS['current'] = $GLOBALS['posts'][20]; $GLOBALS['posts'][20]->post_content = '[ecare_lab_catalog]';
+$_GET = array('lab_test' => 'fbs');
+check('browser tab names the test on the lab page', $F::document_title(array('title' => 'All Lab Tests', 'site' => 'Meditaj')), array('title' => 'FBS <i>', 'site' => 'Meditaj'));
+$GLOBALS['current'] = $GLOBALS['posts'][11];
+check('...and nowhere else', $F::document_title(array('title' => 'About')), array('title' => 'About'));
+$_GET = array();
+
+// ===========================================================================
+echo "\n=== H. booking endpoints ===\n";
+// ===========================================================================
+$_POST = array('nonce' => 'bad', 'test_id' => '101');
+check('a bad nonce is refused', ajax('ajax_book_options')[1], 403);
+$_POST = array('nonce' => 'n', 'test_id' => '103');
+check('options for a test no lab takes: 404', array_slice(ajax('ajax_book_options'), 0, 2), array(false, 404));
+
+ECare_Lab_Catalog::$labs = array(101 => array(
+    array('id' => 103, 'name' => 'LabAid', 'logo' => '', 'price' => 380.0, 'mrp' => 450.0, 'savings' => 70.0, 'discount' => 16, 'offering_id' => 7, 'material_cost' => 30.0, 'serves_area' => null),
+    array('id' => 99, 'name' => 'Popular', 'logo' => '', 'price' => 400.0, 'mrp' => 400.0, 'savings' => 0.0, 'discount' => 0, 'offering_id' => 8, 'material_cost' => 0.0, 'serves_area' => null),
+));
+$GLOBALS['uid'] = 0;
+$_POST = array('nonce' => 'n', 'test_id' => '101');
+list($ok, $st, $d) = ajax('ajax_book_options');
+check('options for anyone', array($ok, $d['id'], $d['logged_in'], $d['cart_lab'], $d['in_cart'], $d['max']), array(true, 101, false, 0, 0, 10));
+check('labs cheapest first, no struck price without a discount', array_map(function ($l) { return array($l['id'], $l['mrp']); }, $d['labs']), array(array(103, 450.0), array(99, 0)));
+check('material cost and internal ids stay on the server', array_keys($d['labs'][0]), array('id', 'name', 'logo', 'price', 'mrp', 'savings', 'discount'));
+check('login link comes back to the page', $d['login_url'], 'https://site/wp-login.php?redirect_to=' . rawurlencode('https://site/lab-tests/?lab_test=fbs'));
+$GLOBALS['uid'] = 5; ECare_Lab_Cart::$carts[5] = array('provider_id' => 103, 'items' => array(101 => 3));
+list($ok, $st, $d) = ajax('ajax_book_options');
+check('logged in: the cart lab and the count already in it', array($d['logged_in'], $d['cart_lab'], $d['in_cart']), array(true, 103, 3));
+
+$GLOBALS['uid'] = 0; ECare_Lab_Cart::$last_add = null;
+$_POST = array('nonce' => 'n', 'test_id' => '101', 'lab_id' => '103', 'patients' => '2');
+list($ok, $st, $d) = ajax('ajax_cart_add');
+check('adding needs a login: 401 with where to go, nothing added', array($ok, $st, $d['code'], ECare_Lab_Cart::$last_add), array(false, 401, 'login', null));
+$GLOBALS['uid'] = 5;
+ECare_Lab_Cart::$add = array('ok' => false, 'code' => 'other_lab', 'current_lab' => 101, 'can_switch' => true);
+$_POST = array('nonce' => 'n', 'test_id' => '105', 'lab_id' => '99', 'patients' => '2', 'on_conflict' => 'DROP TABLE');
+list($ok, $st, $d) = ajax('ajax_cart_add');
+check('an unknown on_conflict is passed on as none', ECare_Lab_Cart::$last_add, array(5, 105, 99, 2, ''));
+check('a lab clash: 409, the cart\'s lab named, whether it can move', array($ok, $st, $d['code'], $d['current_lab'], $d['can_switch']), array(false, 409, 'other_lab', 'FBS <i>', true));
+$_POST['on_conflict'] = 'switch'; ajax('ajax_cart_add');
+check('"switch" reaches the cart', ECare_Lab_Cart::$last_add[4], 'switch');
+ECare_Lab_Cart::$add = array('ok' => false, 'code' => 'not_available');
+list($ok, $st, $d) = ajax('ajax_cart_add');
+check('a lab that stopped offering it: a message, no lab name', array($st, $d['code'], isset($d['current_lab']), $d['message'] !== ''), array(409, 'not_available', false, true));
+ECare_Lab_Cart::$add = array('ok' => true, 'cart' => array());
+list($ok, $st, $d) = ajax('ajax_cart_add');
+check('added: count, total and the cart link', array($ok, $d['count'], $d['total'], isset($d['cart_url'])), array(true, 2, 830.0, true));
+$_POST = array();
 
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);
