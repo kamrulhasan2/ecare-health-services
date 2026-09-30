@@ -22,6 +22,7 @@ From the plugin root:
     php tests/harness-lab-taxonomies.php
     php tests/harness-lab-offerings.php
     php tests/harness-lab-packages.php
+    php tests/harness-lab-settings.php
 
 There is also an optional layout test, which needs Node and Playwright:
 

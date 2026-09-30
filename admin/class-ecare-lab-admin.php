@@ -10,7 +10,7 @@ defined('ABSPATH') || exit;
  * slugs are unchanged (admin.php?page=ecare-lab-catalog works under any parent),
  * so bookmarks and links elsewhere in the plugin keep working.
  *
- * Settings is added to the same list in a later step.
+ * Settings (ECare_Lab_Settings) closes the list.
  */
 class ECare_Lab_Admin {
 
@@ -37,6 +37,7 @@ class ECare_Lab_Admin {
             ECare_Lab_Providers::menu_slug()         => array(__('Lab Providers', 'ecare-health-services'), null),
             ECare_Locations::menu_slug()             => array(__('Locations', 'ecare-health-services'), null),
             'ecare-lab-orders'                       => array(__('Lab Orders', 'ecare-health-services'), array('ECare_Admin', 'render_lab_orders')),
+            ECare_Lab_Settings::PAGE                 => array(__('Settings', 'ecare-health-services'), array('ECare_Lab_Settings', 'render_page')),
         );
     }
 

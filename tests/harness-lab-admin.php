@@ -30,6 +30,7 @@ function add_submenu_page($parent, $page_title, $menu_title, $cap, $slug, $cb = 
 require_once __DIR__ . '/../includes/class-ecare-locations.php';
 require_once __DIR__ . '/../includes/class-ecare-lab-providers.php';
 require_once __DIR__ . '/../includes/class-ecare-lab-taxonomies.php';
+require_once __DIR__ . '/../includes/class-ecare-lab-settings.php';
 require_once __DIR__ . '/../admin/class-ecare-admin.php';
 require_once ($argv[1] ?? (__DIR__ . '/../admin/class-ecare-lab-admin.php'));
 
@@ -61,10 +62,12 @@ check('its entries, in order', slugs_under('ecare-lab'), array(
     'edit.php?post_type=ecare_lab_provider',
     'edit-tags.php?taxonomy=ecare_location&post_type=ecare_lab_test',
     'ecare-lab-orders',
+    'ecare-lab-settings',
 ));
 $by_slug = array();
 foreach ($GLOBALS['submenus'] as $s) $by_slug[$s['parent'] . '|' . $s['slug']] = $s;
 check('All Tests still renders the catalogue', $by_slug['ecare-lab|ecare-lab-catalog']['cb'], array('ECare_Admin', 'render_lab_catalog'));
+check('Settings renders the settings page', $by_slug['ecare-lab|ecare-lab-settings']['cb'], array('ECare_Lab_Settings', 'render_page'));
 check('Lab Orders still renders the orders', $by_slug['ecare-lab|ecare-lab-orders']['cb'], array('ECare_Admin', 'render_lab_orders'));
 check('core-screen links carry no callback', $by_slug['ecare-lab|edit.php?post_type=ecare_lab_provider']['cb'], '');
 $caps = array_unique(array_column(array_filter($GLOBALS['submenus'], function ($s) { return $s['parent'] === 'ecare-lab'; }), 'cap'));
