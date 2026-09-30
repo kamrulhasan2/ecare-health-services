@@ -81,6 +81,11 @@ class ECare_Lab_Offerings {
         return ($price > 0 && $price <= $mrp) ? $price : $mrp;
     }
 
+    /** "You save": MRP minus what is paid. */
+    public static function savings($row) {
+        return round(max(0, (float) $row->mrp - self::effective_price($row)), 2);
+    }
+
     /** Whole-number percent off MRP, 0 when there is no discount. */
     public static function discount_percent($row) {
         $mrp = (float) $row->mrp;
@@ -271,14 +276,26 @@ class ECare_Lab_Offerings {
             'orderby'        => 'title',
             'order'          => 'ASC',
         ));
-        $options = array();
+        $is_package = ECare_Lab_Test_Info::is_package($post->ID) && ECare_Lab_Packages::included_test_ids($post->ID);
+        $options    = array();
         foreach ($providers as $p) {
             $flags = array();
             if ($p->post_status !== 'publish') { $flags[] = __('draft', 'ecare-health-services'); }
             if (get_post_meta($p->ID, '_ecare_provider_status', true) === ECare_Lab_Providers::STATUS_INACTIVE) { $flags[] = __('inactive', 'ecare-health-services'); }
+            $reach = ECare_Lab_Providers::coverage_summary($p->ID);
+            if ($is_package) {
+                // What this lab would charge for the included tests one by one,
+                // as a guide for the package MRP.
+                list($sum, $missing) = ECare_Lab_Packages::lab_sum($post->ID, $p->ID);
+                $hint = sprintf(__('Tests here one by one: ৳%s', 'ecare-health-services'), number_format_i18n($sum, 0));
+                if ($missing) {
+                    $hint .= ' ' . sprintf(_n('(%d test not offered by this lab)', '(%d tests not offered by this lab)', $missing, 'ecare-health-services'), $missing);
+                }
+                $reach .= ($reach !== '' ? ' — ' : '') . $hint;
+            }
             $options[$p->ID] = array(
                 'label' => $p->post_title . ($flags ? ' (' . implode(', ', $flags) . ')' : ''),
-                'reach' => ECare_Lab_Providers::coverage_summary($p->ID),
+                'reach' => $reach,
             );
         }
         ?>

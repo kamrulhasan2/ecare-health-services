@@ -803,7 +803,16 @@ class ECare_Admin {
                                     <td style="font-weight:700;color:var(--brand-purple);"><?php echo esc_html($code); ?></td>
                                     <td>
                                         <strong><?php echo esc_html($t->post_title); ?></strong><br />
-                                        <small style="font-weight:700;letter-spacing:.04em;color:<?php echo ECare_Lab_Test_Info::is_package($t->ID) ? '#b45309' : '#64748b'; ?>;"><?php echo ECare_Lab_Test_Info::is_package($t->ID) ? esc_html__('PACKAGE', 'ecare-health-services') : esc_html__('SINGLE', 'ecare-health-services'); ?></small>
+                                        <small style="font-weight:700;letter-spacing:.04em;color:<?php echo ECare_Lab_Test_Info::is_package($t->ID) ? '#b45309' : '#64748b'; ?>;"><?php
+                                            if (ECare_Lab_Test_Info::is_package($t->ID)) {
+                                                $n = ECare_Lab_Packages::item_count($t->ID);
+                                                echo esc_html__('PACKAGE', 'ecare-health-services') . ' · ' . ($n
+                                                    ? esc_html(sprintf(_n('%d test', '%d tests', $n, 'ecare-health-services'), $n))
+                                                    : '<span style="color:#b32d2e;">' . esc_html__('empty', 'ecare-health-services') . '</span>');
+                                            } else {
+                                                esc_html_e('SINGLE', 'ecare-health-services');
+                                            }
+                                        ?></small>
                                     </td>
                                     <td>
                                         <?php if ($linked): ?>

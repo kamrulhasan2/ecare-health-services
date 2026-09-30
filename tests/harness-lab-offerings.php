@@ -109,6 +109,8 @@ check('no price means MRP', $O::effective_price($row(600, 0)), 600.0);
 check('a price above MRP means MRP', $O::effective_price($row(600, 900)), 600.0);
 check('percent off', $O::discount_percent($row(600, 500)), 17);
 check('no discount, 0%', $O::discount_percent($row(600, 600)), 0);
+check('you save: 4730 MRP at 1895 (Shukhee\'s example)', $O::savings($row(4730, 1895)), 2835.0);
+check('you save: nothing without a discount', $O::savings($row(300, 0)), 0.0);
 
 // ===========================================================================
 echo "\n=== B. cleaning the form ===\n";
