@@ -189,7 +189,7 @@ class ECare_Lab_Cart_Page {
         }
 
         if (isset($_GET['step']) && $_GET['step'] === 'checkout') {
-            return self::render_checkout_placeholder($d);
+            return ECare_Lab_Checkout_Page::render();
         }
 
         $uid    = get_current_user_id();
@@ -386,13 +386,5 @@ class ECare_Lab_Cart_Page {
         </div>
         <?php
         return ob_get_clean();
-    }
-
-    /** Step 13 replaces this with the real checkout. */
-    private static function render_checkout_placeholder($d) {
-        return '<div class="ecl ecl-cartp">' . self::crumbs($d) . '<div class="ecl-empty">' . ECare_Lab_Front::icon('clock')
-            . '<h2>' . esc_html__('Checkout is almost ready', $d) . '</h2>'
-            . '<p>' . esc_html__('Address, collection time and payment come next.', $d) . '</p>'
-            . '<a class="ecl-btn" href="' . esc_url(ECare_Lab_Front::url('cart')) . '">' . esc_html__('Back to cart', $d) . '</a></div></div>';
     }
 }

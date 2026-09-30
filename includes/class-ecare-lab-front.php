@@ -23,6 +23,7 @@ class ECare_Lab_Front {
         add_shortcode('ecare_lab_home', array(__CLASS__, 'render_home'));
         add_shortcode('ecare_lab_catalog', array(__CLASS__, 'render_catalog'));
         add_filter('document_title_parts', array(__CLASS__, 'document_title'));
+        add_filter('get_post_metadata', array(__CLASS__, 'hide_theme_title'), 10, 4);
         add_action('wp_ajax_ecare_lab_book_options', array(__CLASS__, 'ajax_book_options'));
         add_action('wp_ajax_nopriv_ecare_lab_book_options', array(__CLASS__, 'ajax_book_options'));
         add_action('wp_ajax_ecare_lab_cart_add', array(__CLASS__, 'ajax_cart_add'));
@@ -641,6 +642,34 @@ class ECare_Lab_Front {
             }
         }
         return $parts;
+    }
+
+    /**
+     * The lab cart, checkout and a test's detail view print their own heading,
+     * so the theme's page title above them would say it twice. Astra reads
+     * the per-page meta `site-post-title` to decide; answering "disabled" for
+     * those views only does what its "Disable Title" checkbox would. The same
+     * trick ECare_WooCommerce uses on the shop checkout. Other themes never
+     * ask, and nothing changes there.
+     */
+    public static function hide_theme_title($value, $object_id, $meta_key, $single = false) {
+        if ($meta_key !== 'site-post-title' || is_admin() || !did_action('wp')) {
+            return $value;
+        }
+        if ((int) $object_id !== (int) get_queried_object_id()) {
+            return $value;
+        }
+        $post = get_post((int) $object_id);
+        if (!$post || $post->post_type !== 'page') {
+            return $value;
+        }
+        $hay    = (string) $post->post_content . ' ' . (string) get_post_meta($post->ID, '_elementor_data', true);
+        $cart   = strpos($hay, 'ecare_lab_cart') !== false;
+        $detail = isset($_GET['lab_test']) && strpos($hay, 'ecare_lab_catalog') !== false;
+        if (!($cart || $detail) || !apply_filters('ecare_lab_hide_theme_title', true, $post)) {
+            return $value;
+        }
+        return $single ? 'disabled' : array('disabled');
     }
 
     public static function render_detail($post) {

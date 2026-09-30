@@ -113,6 +113,9 @@ function wp_strip_all_tags($s) { return strip_tags($s); }
 function check_ajax_referer($a, $k) { if (($_POST[$k] ?? '') !== 'n') { throw new Json_Out(false, array('nonce' => 'bad'), 403); } return 1; }
 function is_user_logged_in() { return !empty($GLOBALS['uid']); }
 function get_current_user_id() { return (int) ($GLOBALS['uid'] ?? 0); }
+function is_admin() { return $GLOBALS['is_admin'] ?? false; }
+function did_action($h) { return $GLOBALS['did_wp'] ?? 1; }
+function get_queried_object_id() { return $GLOBALS['queried'] ?? 0; }
 function wp_get_referer() { return 'https://site/lab-tests/?lab_test=fbs'; }
 function wp_login_url($back) { return 'https://site/wp-login.php?redirect_to=' . rawurlencode($back); }
 class Json_Out extends Exception { public $ok; public $data; public $status; public function __construct($ok, $data, $status) { $this->ok = $ok; $this->data = $data; $this->status = $status; } }
@@ -399,6 +402,32 @@ ECare_Lab_Cart::$add = array('ok' => true, 'cart' => array());
 list($ok, $st, $d) = ajax('ajax_cart_add');
 check('added: count, total and the cart link', array($ok, $d['count'], $d['total'], isset($d['cart_url'])), array(true, 2, 830.0, true));
 $_POST = array();
+
+// ===========================================================================
+echo "\n=== I. the theme's page title ===\n";
+// ===========================================================================
+page(60, 'lab-cart', '[ecare_lab_cart]'); $GLOBALS['posts'][60]->post_type = 'page';
+page(61, 'tests', '[ecare_lab_catalog]'); $GLOBALS['posts'][61]->post_type = 'page';
+page(62, 'about', 'Hello'); $GLOBALS['posts'][62]->post_type = 'page';
+$GLOBALS['queried'] = 60;
+check('cart page: Astra is told the title is disabled', $F::hide_theme_title(null, 60, 'site-post-title', true), 'disabled');
+check('...in the shape asked for', $F::hide_theme_title(null, 60, 'site-post-title', false), array('disabled'));
+check('any other meta key is untouched', $F::hide_theme_title(null, 60, '_elementor_data', true), null);
+check('another post read during the request is untouched', $F::hide_theme_title(null, 62, 'site-post-title', true), null);
+$GLOBALS['queried'] = 62;
+check('...even a lab cart page, when it is not the page being shown', $F::hide_theme_title(null, 60, 'site-post-title', true), null);
+$GLOBALS['queried'] = 60;
+$GLOBALS['is_admin'] = true;
+check('never in wp-admin', $F::hide_theme_title(null, 60, 'site-post-title', true), null);
+$GLOBALS['is_admin'] = false; $GLOBALS['did_wp'] = 0;
+check('never before the main query', $F::hide_theme_title(null, 60, 'site-post-title', true), null);
+$GLOBALS['did_wp'] = 1; $GLOBALS['queried'] = 61;
+check('the tests list keeps the theme title', $F::hide_theme_title(null, 61, 'site-post-title', true), null);
+$_GET = array('lab_test' => 'fbs');
+check('a test detail view hides it', $F::hide_theme_title(null, 61, 'site-post-title', true), 'disabled');
+$GLOBALS['queried'] = 62;
+check('an ordinary page keeps it', $F::hide_theme_title(null, 62, 'site-post-title', true), null);
+$_GET = array(); $GLOBALS['queried'] = 0;
 
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);

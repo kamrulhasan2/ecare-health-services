@@ -378,7 +378,10 @@ check('the opt-in flag clears itself', array_key_exists('ecare_delete_data_on_un
 check('rate-limit transients are swept', sql_matching('LIKE \'\_transient\_ecare\_ul\_%\''), 1);
 check('and their timeout rows with them', sql_matching('LIKE \'\_transient\_timeout\_ecare\_ul\_%\''), 1);
 check('one statement, not a wildcard delete', sql_matching('DELETE FROM wp_options'), 1);
-check("every patient's lab cart and area go, and only those keys", $GLOBALS['deleted_meta'], array(array('user', 0, '_ecare_lab_cart', '', true), array('user', 0, '_ecare_lab_area', '', true)));
+check("every patient's lab cart, area, addresses and checkout go, and only those keys", $GLOBALS['deleted_meta'], array(
+    array('user', 0, '_ecare_lab_cart', '', true), array('user', 0, '_ecare_lab_area', '', true),
+    array('user', 0, '_ecare_lab_addresses', '', true), array('user', 0, '_ecare_lab_checkout', '', true),
+));
 
 // ===========================================================================
 echo "\n=== F. the private document store ===\n";

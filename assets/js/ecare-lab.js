@@ -127,6 +127,67 @@
     });
 
     // =====================================================================
+    // Checkout. The server recomputes everything on Place Order; this only
+    // keeps the page in step while the patient fills it in.
+    // =====================================================================
+    document.querySelectorAll('.ecl-co-form').forEach(function (form) {
+        // Enter in the coupon box applies it; in the address box, saves it.
+        [['#ecl-co-coupon', 'coupon'], ['#ecl-co-new-line', 'add_address']].forEach(function (pair) {
+            var input = form.querySelector(pair[0]);
+            var btn = form.querySelector('button[name="do"][value="' + pair[1] + '"]');
+            if (!input || !btn) { return; }
+            input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } });
+        });
+
+        // Report delivery: the fee, total and advance follow the choice.
+        var sum = form.querySelector('#ecl-co-sum');
+        function money(n) {
+            var whole = Math.round(n * 100) % 100 === 0;
+            return '৳' + n.toLocaleString('en-US', { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 });
+        }
+        function resum() {
+            var r = form.querySelector('input[name="delivery"]:checked');
+            if (!sum || !r) { return; }
+            var fee = parseFloat(r.getAttribute('data-fee')) || 0;
+            var total = Math.round(((parseFloat(sum.getAttribute('data-base')) || 0) + fee) * 100) / 100;
+            var adv = Math.min(total, Math.ceil(total * (parseFloat(sum.getAttribute('data-pct')) || 0) / 100));
+            var set = function (k, v) { var el = sum.querySelector('[data-ecl-sum="' + k + '"]'); if (el) { el.textContent = money(v); } };
+            set('delivery', fee); set('total', total); set('advance', adv); set('later', Math.round((total - adv) * 100) / 100);
+        }
+        form.querySelectorAll('input[name="delivery"]').forEach(function (r) { r.addEventListener('change', resum); });
+
+        // Date: show that day's slots straight away.
+        var time = form.querySelector('#ecl-co-time');
+        var box = time ? time.querySelector('.ecl-co-slots') : null;
+        var slots = {};
+        try { slots = JSON.parse(time ? time.getAttribute('data-slots') || '{}' : '{}'); } catch (e) { slots = {}; }
+        form.querySelectorAll('input[name="date"]').forEach(function (r) {
+            r.addEventListener('change', function () {
+                if (!box) { return; }
+                box.textContent = '';
+                (slots[r.value] || []).forEach(function (s) {
+                    var input = document.createElement('input');
+                    input.type = 'radio'; input.name = 'slot'; input.value = s[0];
+                    var span = document.createElement('span');
+                    span.textContent = s[1];
+                    var label = document.createElement('label');
+                    label.className = 'ecl-co-chip';
+                    label.appendChild(input); label.appendChild(document.createTextNode(' ')); label.appendChild(span);
+                    box.appendChild(label);
+                });
+            });
+        });
+
+        // One Place Order at a time.
+        form.addEventListener('submit', function (e) {
+            if (form.getAttribute('data-busy')) { e.preventDefault(); return; }
+            form.setAttribute('data-busy', '1');
+            form.classList.add('is-busy');
+        });
+        window.addEventListener('pageshow', function () { form.removeAttribute('data-busy'); form.classList.remove('is-busy'); });
+    });
+
+    // =====================================================================
     // Book Test modal: choose a lab and how many patients, then add to the
     // lab cart. Every price shown here is only a preview - the server reads
     // the offering again when the test is added.

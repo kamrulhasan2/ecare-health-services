@@ -50,6 +50,7 @@ $GLOBALS['terms'] = array();
 function get_terms($a) { return $GLOBALS['terms']; }
 
 class ECare_Locations { const TAXONOMY = 'ecare_location'; }
+class ECare_Lab_Checkout_Page { public static function render() { return '<div>CHECKOUT</div>'; } }
 class ECare_Lab_Front {
     public static function url($w, $a = array()) { return 'https://site/' . $w . '/' . ($a ? '?' . http_build_query($a) : ''); }
     public static function login_url($b) { return 'https://site/login?to=' . $b; }
@@ -202,7 +203,7 @@ $GLOBALS['terms'] = array();
 check('no areas set up at all: no area box', has($P::render(), 'ecl-cp-area-sel'), false);
 
 $_GET = array('step' => 'checkout');
-check('the checkout step is a placeholder until step 13', has($P::render(), 'Checkout is almost ready'), true);
+check('?step=checkout shows the checkout', $P::render(), '<div>CHECKOUT</div>');
 $_GET = array();
 
 // ===========================================================================

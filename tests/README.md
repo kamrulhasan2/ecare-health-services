@@ -28,6 +28,8 @@ From the plugin root:
     php tests/harness-lab-front.php
     php tests/harness-lab-cart.php
     php tests/harness-lab-cart-page.php
+    php tests/harness-lab-checkout.php
+    php tests/harness-lab-checkout-page.php
 
 There is also an optional layout test, which needs Node and Playwright:
 

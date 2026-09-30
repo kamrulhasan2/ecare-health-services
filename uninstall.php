@@ -143,9 +143,10 @@ foreach ($ecare_options as $ecare_option) {
     delete_option($ecare_option);
 }
 
-// Every patient's lab cart and saved collection area (user meta).
-delete_metadata('user', 0, '_ecare_lab_cart', '', true);
-delete_metadata('user', 0, '_ecare_lab_area', '', true);
+// Every patient's lab cart, collection area, address book and checkout form (user meta).
+foreach (array('_ecare_lab_cart', '_ecare_lab_area', '_ecare_lab_addresses', '_ecare_lab_checkout') as $ecare_user_key) {
+    delete_metadata('user', 0, $ecare_user_key, '', true);
+}
 
 // Upload rate-limit counters: ecare_ul_<md5 of ip>, stored as transients.
 $wpdb->query(
