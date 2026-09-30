@@ -792,7 +792,7 @@ class ECare_Admin {
                             <th><?php _e('Test ID', 'ecare-health-services'); ?></th>
                             <th><?php _e('Test Code', 'ecare-health-services'); ?></th>
                             <th><?php _e('Test Name', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Location Hierarchy', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Provider & Coverage', 'ecare-health-services'); ?></th>
                             <th><?php _e('Price', 'ecare-health-services'); ?></th>
                             <th><?php _e('Turnaround', 'ecare-health-services'); ?></th>
                             <th><?php _e('Status', 'ecare-health-services'); ?></th>
@@ -806,19 +806,28 @@ class ECare_Admin {
                                 $price    = get_post_meta($t->ID, '_price', true);
                                 $turn     = get_post_meta($t->ID, '_turnaround_days', true);
                                 $status   = get_post_meta($t->ID, '_test_status', true) ?: 'active';
-                                $division = get_post_meta($t->ID, '_division', true);
-                                $district = get_post_meta($t->ID, '_district', true);
-                                $area     = get_post_meta($t->ID, '_area', true);
-                                $provider = get_post_meta($t->ID, '_lab_provider', true);
-                                
-                                $location_hierarchy = implode(' > ', array_filter(array($division, $district, $area, $provider)));
+                                // Linked tests name their provider and summarise where they
+                                // are offered. Old tests still on typed-in lists are flagged
+                                // rather than printed in full - the full list was a wall of text.
+                                $linked   = ECare_Lab_Tests::is_linked($t->ID);
+                                $provider = $linked
+                                    ? get_the_title(ECare_Lab_Tests::provider_id($t->ID))
+                                    : (string) get_post_meta($t->ID, '_lab_provider', true);
+                                $reach    = $linked ? ECare_Lab_Tests::location_summary($t->ID) : '';
                             ?>
                                 <tr>
                                     <td><input type="checkbox" /></td>
                                     <td>#TST-<?php echo $t->ID; ?></td>
                                     <td style="font-weight:700;color:var(--brand-purple);"><?php echo esc_html($code); ?></td>
                                     <td><strong><?php echo esc_html($t->post_title); ?></strong></td>
-                                    <td><small><?php echo esc_html($location_hierarchy ?: 'N/A'); ?></small></td>
+                                    <td>
+                                        <strong><?php echo esc_html($provider !== '' ? $provider : '—'); ?></strong><br />
+                                        <?php if ($linked): ?>
+                                            <small><?php echo $reach !== '' ? esc_html($reach) : '<span style="color:#b32d2e;">' . esc_html__('No areas - hidden from patients', 'ecare-health-services') . '</span>'; ?></small>
+                                        <?php else: ?>
+                                            <small style="color:#996800;">&#9888; <?php esc_html_e('Old format - not linked to a provider yet', 'ecare-health-services'); ?></small>
+                                        <?php endif; ?>
+                                    </td>
                                     <td style="font-weight:700;color:var(--brand-teal);">৳ <?php echo esc_html(number_format($price, 2)); ?></td>
                                     <td><?php echo esc_html($turn); ?> days</td>
                                     <td><span class="ecare-status-pill <?php echo esc_attr($status); ?>"><?php echo esc_html(ucfirst($status)); ?></span></td>

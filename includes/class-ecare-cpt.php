@@ -378,10 +378,6 @@ class ECare_CPT {
             'category'        => get_post_meta($post->ID, '_test_category', true),
             'sample_type'     => get_post_meta($post->ID, '_sample_type', true),
             'turnaround_days' => get_post_meta($post->ID, '_turnaround_days', true),
-            'lab_provider'    => get_post_meta($post->ID, '_lab_provider', true),
-            'division'        => get_post_meta($post->ID, '_division', true),
-            'district'        => get_post_meta($post->ID, '_district', true),
-            'area'            => get_post_meta($post->ID, '_area', true),
             'status'          => get_post_meta($post->ID, '_test_status', true) ?: 'active',
         );
         ?>
@@ -391,34 +387,7 @@ class ECare_CPT {
             <tr><th><label>Category</label></th><td><input type="text" name="_test_category" value="<?php echo esc_attr($fields['category']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Sample Type</label></th><td><input type="text" name="_sample_type" value="<?php echo esc_attr($fields['sample_type']); ?>" class="regular-text" placeholder="Blood, Urine, etc." /></td></tr>
             <tr><th><label>Turnaround Days</label></th><td><input type="number" name="_turnaround_days" value="<?php echo esc_attr($fields['turnaround_days']); ?>" class="regular-text" /></td></tr>
-            <tr>
-                <th><label>Division</label></th>
-                <td>
-                    <input type="text" name="_division" id="ecare-admin-division" class="regular-text" value="<?php echo esc_attr($fields['division']); ?>" placeholder="e.g., Dhaka, Rangpur, Barishal" />
-                    <p class="description">Enter division names separated by commas.</p>
-                </td>
-            </tr>
-            <tr>
-                <th><label>District</label></th>
-                <td>
-                    <input type="text" name="_district" id="ecare-admin-district" class="regular-text" value="<?php echo esc_attr($fields['district']); ?>" placeholder="e.g., Dhaka, Rangpur" />
-                    <p class="description">Enter district names separated by commas.</p>
-                </td>
-            </tr>
-            <tr>
-                <th><label>Area</label></th>
-                <td>
-                    <input type="text" name="_area" id="ecare-admin-area" class="regular-text" value="<?php echo esc_attr($fields['area']); ?>" placeholder="e.g., Mirpur, Uttara, Banani" />
-                    <p class="description">Enter area names separated by commas.</p>
-                </td>
-            </tr>
-            <tr>
-                <th><label>Lab Provider</label></th>
-                <td>
-                    <input type="text" name="_lab_provider" id="ecare-admin-provider" class="regular-text" value="<?php echo esc_attr($fields['lab_provider']); ?>" placeholder="e.g., LabAid, Popular" />
-                    <p class="description">Enter lab provider names separated by commas.</p>
-                </td>
-            </tr>
+            <?php ECare_Lab_Tests::render_location_fields($post); ?>
             <tr><th><label>Status</label></th><td><select name="_test_status"><option value="active" <?php selected($fields['status'], 'active'); ?>>Active</option><option value="inactive" <?php selected($fields['status'], 'inactive'); ?>>Inactive</option></select></td></tr>
         </table>
         <?php
@@ -554,12 +523,14 @@ class ECare_CPT {
 
         if ($post_type === 'ecare_lab_test') {
             if (!isset($_POST['ecare_lab_test_meta_nonce']) || !wp_verify_nonce($_POST['ecare_lab_test_meta_nonce'], 'ecare_lab_test_meta')) return;
-            $keys = array('_test_code', '_price', '_test_category', '_sample_type', '_turnaround_days', '_lab_provider', '_division', '_district', '_area', '_test_status');
+            // Provider and areas are no longer typed in; ECare_Lab_Tests owns them.
+            $keys = array('_test_code', '_price', '_test_category', '_sample_type', '_turnaround_days', '_test_status');
             foreach ($keys as $key) {
                 if (isset($_POST[$key])) {
                     update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));
                 }
             }
+            ECare_Lab_Tests::save_location($post_id);
         }
 
         if ($post_type === 'ecare_ambulance') {

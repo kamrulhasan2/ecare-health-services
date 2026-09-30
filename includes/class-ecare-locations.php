@@ -436,4 +436,172 @@ class ECare_Locations {
         }
         return $actions;
     }
+
+    // -----------------------------------------------------------------------
+    // Shared helpers for coverage (providers and tests)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Turn a coverage selection (district and area ids) into the area ids it
+     * reaches: an area is itself, a district is every area under it.
+     *
+     * @return int[] sorted, unique
+     */
+    public static function expand_to_areas($ids) {
+        $out = array();
+        foreach ((array) $ids as $id) {
+            $id = (int) $id;
+            if ($id <= 0) {
+                continue;
+            }
+            $level = self::get_level($id);
+            if ($level === self::LEVEL_AREA) {
+                $out[$id] = true;
+            } elseif ($level === self::LEVEL_DISTRICT) {
+                $children = get_terms(array(
+                    'taxonomy'   => self::TAXONOMY,
+                    'parent'     => $id,
+                    'hide_empty' => false,
+                    'fields'     => 'ids',
+                ));
+                if (!is_wp_error($children)) {
+                    foreach ($children as $child) {
+                        $out[(int) $child] = true;
+                    }
+                }
+            }
+        }
+        $out = array_keys($out);
+        sort($out);
+        return $out;
+    }
+
+    /**
+     * The Division > District > Area checkbox tree used on the provider and
+     * lab test screens. Collapsed by default, opened where something is ticked,
+     * with a search box. Ticking "whole district" locks its areas; the server
+     * folds them into the district regardless.
+     *
+     * @param int[]  $selected   Ticked district / area ids.
+     * @param string $field_name Posted as $field_name[].
+     * @param string $dom_id     Unique id for the wrapper; the script is scoped to it.
+     */
+    public static function render_checkbox_tree($selected, $field_name, $dom_id) {
+        $terms = get_terms(array(
+            'taxonomy'   => self::TAXONOMY,
+            'hide_empty' => false,
+            'orderby'    => 'name',
+            'order'      => 'ASC',
+        ));
+        if (is_wp_error($terms) || !$terms) {
+            echo '<p>' . esc_html__('No locations yet.', 'ecare-health-services') . '</p>';
+            return;
+        }
+
+        $children = array();
+        foreach ($terms as $t) {
+            $children[(int) $t->parent][] = $t;
+        }
+        $selected = array_flip(array_map('intval', (array) $selected));
+        $name     = $field_name . '[]';
+        ?>
+        <style>
+            .ecare-cov-tools{display:flex;gap:10px;align-items:center;margin:4px 0 10px}
+            .ecare-cov details{margin:2px 0}
+            .ecare-cov summary{cursor:pointer;padding:4px 0}
+            .ecare-cov .ecare-cov-division>summary{font-weight:600}
+            .ecare-cov .ecare-cov-district{margin-left:18px}
+            .ecare-cov .ecare-cov-areas{margin:4px 0 8px 22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px 12px}
+            .ecare-cov .ecare-cov-whole{margin-left:22px;font-style:italic}
+            .ecare-cov .ecare-cov-count{color:#2271b1;font-weight:400;margin-left:6px}
+            .ecare-cov .ecare-cov-empty{margin-left:22px;color:#646970}
+            .ecare-cov label.is-covered{opacity:.55}
+        </style>
+        <div class="ecare-cov-tools">
+            <input type="search" class="regular-text ecare-cov-search" data-tree="<?php echo esc_attr($dom_id); ?>" placeholder="<?php esc_attr_e('Search district or area…', 'ecare-health-services'); ?>" />
+            <a href="<?php echo esc_url(admin_url(self::menu_slug())); ?>" target="_blank"><?php esc_html_e('Add areas', 'ecare-health-services'); ?></a>
+        </div>
+        <div class="ecare-cov" id="<?php echo esc_attr($dom_id); ?>">
+        <?php foreach ($children[0] ?? array() as $division):
+            $div_count = 0;
+            foreach ($children[(int) $division->term_id] ?? array() as $d) {
+                $div_count += isset($selected[(int) $d->term_id]) ? 1 : 0;
+                foreach ($children[(int) $d->term_id] ?? array() as $a) {
+                    $div_count += isset($selected[(int) $a->term_id]) ? 1 : 0;
+                }
+            }
+            ?>
+            <details class="ecare-cov-division" <?php echo $div_count ? 'open' : ''; ?>>
+                <summary><?php echo esc_html($division->name); ?><?php if ($div_count): ?><span class="ecare-cov-count">(<?php echo (int) $div_count; ?>)</span><?php endif; ?></summary>
+                <?php foreach ($children[(int) $division->term_id] ?? array() as $district):
+                    $areas  = $children[(int) $district->term_id] ?? array();
+                    $whole  = isset($selected[(int) $district->term_id]);
+                    $picked = 0;
+                    foreach ($areas as $a) { $picked += isset($selected[(int) $a->term_id]) ? 1 : 0; }
+                    ?>
+                    <details class="ecare-cov-district" data-id="<?php echo (int) $district->term_id; ?>" data-name="<?php echo esc_attr(strtolower($district->name)); ?>" <?php echo ($whole || $picked) ? 'open' : ''; ?>>
+                        <summary><?php echo esc_html($district->name); ?>
+                            <?php if ($whole): ?><span class="ecare-cov-count"><?php esc_html_e('whole district', 'ecare-health-services'); ?></span>
+                            <?php elseif ($picked): ?><span class="ecare-cov-count">(<?php echo (int) $picked; ?>)</span><?php endif; ?>
+                        </summary>
+                        <label class="ecare-cov-whole">
+                            <input type="checkbox" class="ecare-cov-whole-cb" name="<?php echo esc_attr($name); ?>" value="<?php echo (int) $district->term_id; ?>" <?php checked($whole); ?> />
+                            <?php esc_html_e('Whole district - every area, including ones added later', 'ecare-health-services'); ?>
+                        </label>
+                        <?php if ($areas): ?>
+                            <div class="ecare-cov-areas">
+                            <?php foreach ($areas as $area): ?>
+                                <label data-id="<?php echo (int) $area->term_id; ?>" data-name="<?php echo esc_attr(strtolower($area->name)); ?>" class="<?php echo $whole ? 'is-covered' : ''; ?>">
+                                    <input type="checkbox" class="ecare-cov-area-cb" name="<?php echo esc_attr($name); ?>" value="<?php echo (int) $area->term_id; ?>" <?php checked(isset($selected[(int) $area->term_id]) || $whole); ?> <?php disabled($whole); ?> />
+                                    <?php echo esc_html($area->name); ?>
+                                </label>
+                            <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="ecare-cov-empty"><?php esc_html_e('No areas added for this district yet.', 'ecare-health-services'); ?></p>
+                        <?php endif; ?>
+                    </details>
+                <?php endforeach; ?>
+            </details>
+        <?php endforeach; ?>
+        </div>
+        <script>
+        (function () {
+            var root = document.getElementById(<?php echo wp_json_encode($dom_id); ?>);
+            if (!root) { return; }
+            root.addEventListener('change', function (e) {
+                if (!e.target.classList.contains('ecare-cov-whole-cb')) { return; }
+                var box = e.target.closest('.ecare-cov-district');
+                box.querySelectorAll('.ecare-cov-area-cb').forEach(function (cb) {
+                    cb.disabled = e.target.checked;
+                    cb.checked = e.target.checked;
+                    cb.closest('label').classList.toggle('is-covered', e.target.checked);
+                });
+            });
+            // Hidden by something else (e.g. a provider filter) stays hidden:
+            // the search only narrows what is already allowed.
+            var search = document.querySelector('.ecare-cov-search[data-tree="' + root.id + '"]');
+            search.addEventListener('input', function () {
+                var q = search.value.trim().toLowerCase();
+                root.querySelectorAll('.ecare-cov-district').forEach(function (d) {
+                    var hit = !q || d.dataset.name.indexOf(q) !== -1, anyArea = false;
+                    d.querySelectorAll('.ecare-cov-areas label').forEach(function (l) {
+                        var m = !q || hit || l.dataset.name.indexOf(q) !== -1;
+                        l.classList.toggle('ecare-search-miss', !m);
+                        anyArea = anyArea || (q && l.dataset.name.indexOf(q) !== -1);
+                    });
+                    var show = hit || anyArea;
+                    d.classList.toggle('ecare-search-miss', !show);
+                    if (q && show) { d.open = true; d.closest('.ecare-cov-division').open = true; }
+                });
+                root.querySelectorAll('.ecare-cov-division').forEach(function (dv) {
+                    var visible = dv.querySelector('.ecare-cov-district:not(.ecare-search-miss):not(.ecare-scope-miss)');
+                    dv.classList.toggle('ecare-search-miss', !visible);
+                });
+            });
+        })();
+        </script>
+        <style>.ecare-cov .ecare-search-miss,.ecare-cov .ecare-scope-miss{display:none!important}</style>
+        <?php
+    }
 }

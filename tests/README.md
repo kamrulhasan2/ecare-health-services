@@ -16,6 +16,7 @@ From the plugin root:
     php tests/harness-uninstall.php
     php tests/harness-locations.php
     php tests/harness-lab-providers.php
+    php tests/harness-lab-tests.php
 
 There is also an optional layout test, which needs Node and Playwright:
 
