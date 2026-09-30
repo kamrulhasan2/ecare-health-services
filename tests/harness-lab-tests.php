@@ -19,6 +19,7 @@ $GLOBALS['transients'] = array();
 
 class WP_Error {}
 function add_action() {} function add_filter() {}
+function do_action($hook, ...$args) { $GLOBALS["actions"][] = $hook; }
 function is_admin() { return false; }
 function __($s, $d = null) { return $s; }
 function _n($a, $b, $n, $d = null) { return $n == 1 ? $a : $b; }

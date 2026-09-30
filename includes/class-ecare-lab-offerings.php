@@ -211,6 +211,7 @@ class ECare_Lab_Offerings {
                 $wpdb->delete($table, array('id' => $row_id), array('%d'));
             }
         }
+        do_action('ecare_lab_offerings_changed', $test_id);
     }
 
     /** Called from ECare_CPT::save_meta_boxes, after its nonce check. */
@@ -248,6 +249,9 @@ class ECare_Lab_Offerings {
             $wpdb->delete(self::table(), array('test_id' => (int) $post_id), array('%d'));
         } elseif ($type === ECare_Lab_Providers::POST_TYPE) {
             $wpdb->delete(self::table(), array('provider_id' => (int) $post_id), array('%d'));
+        }
+        if ($type === 'ecare_lab_test' || $type === ECare_Lab_Providers::POST_TYPE) {
+            do_action('ecare_lab_offerings_changed', 0);
         }
     }
 

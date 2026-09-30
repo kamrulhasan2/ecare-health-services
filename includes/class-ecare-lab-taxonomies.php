@@ -254,10 +254,13 @@ class ECare_Lab_Taxonomies {
     /**
      * Test ids in a collection, in display order, capped at its limit.
      * Only published, active tests are returned.
+     *
+     * @param int|null $limit null = the collection's own limit (home page row),
+     *                        0 = all of them (the tests page "View All").
      */
-    public static function collection_test_ids($term_id) {
+    public static function collection_test_ids($term_id, $limit = null) {
         $term_id = (int) $term_id;
-        $limit   = self::collection_limit($term_id);
+        $limit   = $limit === null ? self::collection_limit($term_id) : max(0, (int) $limit);
 
         $ticked = get_posts(array(
             'post_type'      => 'ecare_lab_test',
@@ -286,7 +289,7 @@ class ECare_Lab_Taxonomies {
             }
         }
 
-        return array_slice($ids, 0, $limit);
+        return $limit > 0 ? array_slice($ids, 0, $limit) : $ids;
     }
 
     /**

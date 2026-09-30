@@ -477,6 +477,7 @@ class ECare_Lab_Migration {
         }
 
         update_option(self::LOG_OPTION, $log, false);
+        do_action('ecare_lab_offerings_changed', 0);
         return $log;
     }
 
@@ -516,6 +517,7 @@ class ECare_Lab_Migration {
             wp_delete_term((int) $id, ECare_Locations::TAXONOMY);
         }
         delete_option(self::LOG_OPTION);
+        do_action('ecare_lab_offerings_changed', 0);
         return true;
     }
 

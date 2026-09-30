@@ -22,6 +22,7 @@ $GLOBALS['transients'] = array();
 
 class WP_Error {}
 function add_action() {} function add_filter() {}
+function do_action($hook, ...$args) { $GLOBALS["actions"][] = $hook; }
 function is_admin() { return false; }
 function __($s, $d = null) { return $s; }
 function _n($a, $b, $n, $d = null) { return $n == 1 ? $a : $b; }
@@ -155,6 +156,7 @@ check('its new price is stored', (float) $rows[0]->price, 320.0);
 $_POST = array();
 $O::save_from_post(500);
 check('a save without the table on the form leaves rows alone', count($O::for_test(500)), 2);
+check('saving announces the change (so the catalogue cache clears)', in_array('ecare_lab_offerings_changed', $GLOBALS['actions'] ?? array(), true), true);
 
 // ===========================================================================
 echo "\n=== D. what a patient can book ===\n";

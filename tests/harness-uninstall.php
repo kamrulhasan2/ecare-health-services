@@ -189,6 +189,7 @@ function reset_world($opt_in, $bulk = 0) {
         'ecare_lab_settings'                 => array('advance_percent' => 20),
         'ecare_lab_migration_log'            => array('time' => 'x'),
         'ecare_lab_migration_input'          => array('corrections' => ''),
+        'ecare_lab_cache_version'            => 4,
         'ecare_default_daily_12_price'       => 1700,
         'ecare_default_daily_24_price'       => 2200,
         'ecare_default_monthly_12_price'     => 30000,
@@ -341,7 +342,7 @@ check('ids are cast, never interpolated as strings', $GLOBALS['wpdb']->deletes[4
 echo "\n=== E. options and transients ===\n";
 // ===========================================================================
 sort($GLOBALS['deleted_options']);
-check('the fourteen plugin options plus the flag', $GLOBALS['deleted_options'], array(
+check('the fifteen plugin options plus the flag', $GLOBALS['deleted_options'], array(
     'ecare_activation_date',
     'ecare_default_daily_12_price',
     'ecare_default_daily_24_price',
@@ -350,6 +351,7 @@ check('the fourteen plugin options plus the flag', $GLOBALS['deleted_options'], 
     'ecare_default_physio_premium_price',
     'ecare_default_physio_regular_price',
     'ecare_delete_data_on_uninstall',
+    'ecare_lab_cache_version',
     'ecare_lab_db_version',
     'ecare_lab_migration_input',
     'ecare_lab_migration_log',
