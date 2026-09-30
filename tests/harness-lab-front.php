@@ -35,7 +35,7 @@ function is_singular() { return $GLOBALS['is_singular']; }
 function get_post($id = null) { return $id === null ? $GLOBALS['current'] : ($GLOBALS['posts'][(int) $id] ?? null); }
 function get_post_meta($id, $k, $s = false) { return $GLOBALS['meta'][$id][$k] ?? ''; }
 function get_post_status($id) { return isset($GLOBALS['posts'][$id]) ? $GLOBALS['posts'][$id]->post_status : false; }
-function get_permalink($id) { return 'https://site/' . $GLOBALS['posts'][$id]->post_name . '/'; }
+function get_permalink($id) { return !empty($GLOBALS['plain']) ? 'https://site/?page_id=' . $id : 'https://site/' . $GLOBALS['posts'][$id]->post_name . '/'; }
 function home_url($p = '') { return 'https://site' . $p; }
 function add_query_arg($args, $url = null) {
     if (!is_array($args)) { $args = array($args => $url); $url = func_get_arg(2); }
@@ -49,6 +49,13 @@ function wp_localize_script() {}
 function wp_create_nonce() { return 'n'; }
 function admin_url($p = '') { return 'https://site/wp-admin/' . $p; }
 function wp_get_attachment_image_url() { return ''; }
+function wp_unslash($v) { return is_string($v) ? stripslashes($v) : $v; }
+function sanitize_text_field($s) { return trim(strip_tags((string) $s)); }
+function sanitize_key($s) { return preg_replace('/[^a-z0-9_\-]/', '', strtolower((string) $s)); }
+function sanitize_title($s) { return trim(preg_replace('/[^a-z0-9]+/', '-', strtolower(strip_tags((string) $s))), '-'); }
+function wp_parse_url($u, $c = -1) { return parse_url($u, $c); }
+function selected($a, $b) { if ((string) $a === (string) $b) echo ' selected="selected"'; }
+function checked($a, $b = true) { if ((string) $a === (string) $b) echo ' checked="checked"'; }
 
 class Fake_WPDB {
     public $posts = 'wp_posts'; public $postmeta = 'wp_postmeta';
@@ -61,7 +68,12 @@ $GLOBALS['wpdb'] = new Fake_WPDB();
 
 // Stand-ins for the classes the front end reads from; each test sets what they return.
 class ECare_Lab_Settings { public static $s = array(); public static function get($k) { return self::$s[$k] ?? 0; } public static function all() { return self::$s; } }
-class ECare_Lab_Catalog { public static $filters = array(); public static $rows = array(); public static function filters() { return self::$filters; } public static function collection_cards($id) { return self::$rows[$id] ?? array(); } }
+class ECare_Lab_Catalog {
+    public static $filters = array(); public static $rows = array(); public static $result = array(); public static $last = null;
+    public static function filters() { return self::$filters; }
+    public static function collection_cards($id) { return self::$rows[$id] ?? array(); }
+    public static function search($a) { self::$last = $a; return self::$result; }
+}
 class ECare_Lab_Taxonomies {
     const GROUP_ORGAN = 'organ'; const GROUP_CONCERN = 'concern';
     public static $cols = array(); public static $cats = array();
@@ -163,6 +175,46 @@ check('lab partners link to the tests page filtered by lab', strpos($home, 'lab=
 check('how we work', strpos($home, 'We come to you') !== false, true);
 ECare_Lab_Settings::$s['messenger_link'] = 'https://m.me/meditaj';
 check('Messenger card with a link', strpos($F::render_home(), 'https://m.me/meditaj') !== false, true);
+
+// ===========================================================================
+echo "\n=== F. the tests page ===\n";
+// ===========================================================================
+$A = $F::catalog_args(array('q' => ' <b>fbs</b> ', 'category' => 'Diabetes Care!', 'collection' => 'trending', 'lab' => '7x', 'type' => 'PACKAGE', 'sort' => 'price_desc', 'pg' => '-3'));
+check('query string is cleaned', $A, array('q' => 'fbs', 'category' => 'diabetes-care', 'collection' => 'trending', 'lab' => 7, 'type' => 'package', 'sort' => 'price_desc', 'pg' => 1));
+check('unknown sort and type fall back', array_intersect_key($F::catalog_args(array('sort' => 'random', 'type' => 'x')), array('sort' => 1, 'type' => 1)), array('type' => '', 'sort' => 'name'));
+check('search is capped at 100 characters', strlen($F::catalog_args(array('q' => str_repeat('a', 500)))['q']), 100);
+ECare_Lab_Settings::$s = array('page_tests' => 20);
+check('defaults are left out of links', $F::catalog_url(array('q' => '', 'category' => 'liver', 'collection' => '', 'lab' => 0, 'type' => '', 'sort' => 'name', 'pg' => 1)), 'https://site/lab-tests/?category=liver');
+
+ECare_Lab_Catalog::$filters = array(
+    'categories'  => array(array('id' => 200, 'slug' => 'liver', 'name' => 'Liver', 'icon' => '', 'count' => 2)),
+    'collections' => array(array('id' => 300, 'slug' => 'trending', 'name' => 'Trending')),
+    'labs'        => array(array('id' => 7, 'name' => 'LabAid', 'logo' => '', 'count' => 3)),
+);
+ECare_Lab_Catalog::$result = array('items' => array($card, $card), 'total' => 26, 'page' => 2, 'pages' => 3);
+$_GET = array('q' => 'fbs', 'category' => 'liver', 'lab' => '7', 'sort' => 'price_asc', 'pg' => '2');
+$html = $F::render_catalog();
+check('the query reaches search() under its own names', ECare_Lab_Catalog::$last, array('s' => 'fbs', 'category' => 'liver', 'collection' => '', 'provider' => 7, 'type' => '', 'orderby' => 'price_asc', 'page' => 2, 'per_page' => 12));
+check('count line', strpos($html, 'Showing 13–14 of 26') !== false, true);
+check('chips name what is filtered', array(strpos($html, '&quot;fbs&quot;') !== false, strpos($html, '>Liver <span') !== false, strpos($html, '>LabAid <span') !== false), array(true, true, true));
+check('removing the lab chip keeps the other filters', strpos($html, 'href="https://site/lab-tests/?q=fbs&amp;category=liver&amp;sort=price_asc"') !== false, true);
+check('the chosen radio is checked', (bool) preg_match('/value="liver"\s+checked/', $html), true);
+check('pagination keeps the filters', strpos($html, '?q=fbs&amp;category=liver&amp;lab=7&amp;sort=price_asc&amp;pg=3') !== false, true);
+check('page 1 link drops pg', strpos($html, 'href="https://site/lab-tests/?q=fbs&amp;category=liver&amp;lab=7&amp;sort=price_asc" rel="prev"') !== false, true);
+check('the search field is "q"', strpos($html, 'name="q" value="fbs"') !== false, true);
+
+ECare_Lab_Catalog::$result = array('items' => array(), 'total' => 0, 'page' => 1, 'pages' => 1);
+$html = $F::render_catalog();
+check('nothing found: message and a way back', array(strpos($html, 'No tests match') !== false, strpos($html, 'Show all tests') !== false), array(true, true));
+
+page(50, 'plain', ''); $GLOBALS['posts'][50]->post_status = 'publish';
+function_exists('x');
+ECare_Lab_Settings::$s = array('page_tests' => 51);
+$GLOBALS['posts'][51] = (object) array('ID' => 51, 'post_name' => 'x', 'post_content' => '', 'post_status' => 'publish');
+$GLOBALS['plain'] = true;
+$html = $F::render_catalog();
+check('plain permalinks: page_id rides along as a hidden field', strpos($html, 'name="page_id" value="51"') !== false, true);
+$_GET = array();
 
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);

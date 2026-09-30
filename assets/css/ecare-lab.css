@@ -163,3 +163,80 @@
     .ecl .ecl-search .ecl-btn { padding: 8px 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .ecl .ecl-row { scroll-behavior: auto; } }
+
+/* ===== All tests page ===== */
+.ecl .ecl-crumbs { display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--ecl-muted); margin: 16px 0 4px; }
+.ecl .ecl-crumbs a { color: var(--ecl-muted); }
+.ecl .ecl-crumbs a:hover { color: var(--ecl-primary); }
+.ecl .ecl-crumbs [aria-current] { color: var(--ecl-primary); font-weight: 600; }
+.ecl .ecl-toolbar { margin: 8px 0 16px; }
+.ecl .ecl-toolbar .ecl-search { margin: 8px 0; }
+.ecl .ecl-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ecl .ecl-filter-toggle {
+    display: none; align-items: center; gap: 6px; background: var(--ecl-bg); border: 1px solid var(--ecl-line);
+    border-radius: 8px; padding: 8px 12px; font-weight: 600; cursor: pointer; color: var(--ecl-text);
+}
+.ecl .ecl-badge { background: var(--ecl-primary); color: #fff; border-radius: 999px; font-size: 11px; padding: 1px 7px; }
+.ecl .ecl-sort { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; font-size: 14px; color: var(--ecl-muted); }
+.ecl .ecl-sort select { border: 1px solid var(--ecl-line); border-radius: 8px; padding: 7px 10px; background: var(--ecl-bg); color: var(--ecl-text); font-size: 14px; }
+
+.ecl .ecl-cat-layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; align-items: start; }
+.ecl .ecl-filters {
+    position: sticky; top: 16px; background: var(--ecl-bg); border: 1px solid var(--ecl-line); border-radius: var(--ecl-radius);
+    padding: 14px; max-height: calc(100vh - 32px); overflow-y: auto;
+}
+.ecl .ecl-filters-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.ecl .ecl-drawer-close { display: none; background: none; border: 0; font-size: 24px; line-height: 1; cursor: pointer; color: var(--ecl-muted); padding: 0 4px; }
+.ecl .ecl-fgroup { border: 0; border-top: 1px solid var(--ecl-line); margin: 0; padding: 10px 0 4px; min-width: 0; }
+.ecl .ecl-fgroup legend { font-weight: 700; font-size: 14px; padding: 0; margin-bottom: 6px; float: left; width: 100%; }
+.ecl .ecl-fopts { clear: both; max-height: 240px; overflow-y: auto; }
+.ecl .ecl-fopt { display: flex; align-items: center; gap: 8px; padding: 5px 2px; font-size: 14px; cursor: pointer; border-radius: 6px; }
+.ecl .ecl-fopt:hover { background: var(--ecl-primary-soft); }
+.ecl .ecl-fopt input { accent-color: var(--ecl-primary); margin: 0; flex: none; }
+.ecl .ecl-fopt img { width: 20px; height: 20px; object-fit: contain; }
+.ecl .ecl-fname { flex: 1; min-width: 0; }
+.ecl .ecl-fcount { font-size: 12px; color: var(--ecl-muted); }
+.ecl .ecl-filters-apply { display: none; }
+/* With JS the choices apply themselves; without it the button stays. */
+.ecl .ecl-cat-form:not(.ecl-js) .ecl-filters-apply { display: block; margin-top: 12px; }
+
+.ecl .ecl-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ecl .ecl-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--ecl-primary-soft); color: var(--ecl-primary); font-size: 13px; font-weight: 600; }
+.ecl .ecl-chip:hover { background: #dbe6fa; }
+.ecl .ecl-count { font-size: 13px; color: var(--ecl-muted); margin-bottom: 10px; }
+.ecl .ecl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+
+.ecl .ecl-empty { text-align: center; padding: 48px 16px; border: 1px dashed var(--ecl-line); border-radius: var(--ecl-radius); color: var(--ecl-muted); }
+.ecl .ecl-empty .ecl-i { width: 40px; height: 40px; color: var(--ecl-primary); margin: 0 auto 8px; display: block; }
+.ecl .ecl-empty h2 { color: var(--ecl-text); font-size: 18px; margin-bottom: 4px; }
+.ecl .ecl-empty .ecl-btn { margin-top: 14px; }
+
+.ecl .ecl-pages { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 20px; flex-wrap: wrap; }
+.ecl .ecl-pages a, .ecl .ecl-pages span {
+    min-width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 8px; border: 1px solid var(--ecl-line); padding: 0 10px; font-size: 14px; background: var(--ecl-bg);
+}
+.ecl .ecl-pages a:hover { border-color: var(--ecl-primary); color: var(--ecl-primary); }
+.ecl .ecl-pages .ecl-page-cur { background: var(--ecl-primary); border-color: var(--ecl-primary); color: #fff; font-weight: 700; }
+.ecl .ecl-pages .ecl-gap { border: 0; background: none; min-width: 0; }
+.ecl .screen-reader-text { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Filters become a drawer on small screens. */
+@media (max-width: 900px) {
+    .ecl .ecl-cat-layout { grid-template-columns: 1fr; }
+    .ecl .ecl-filter-toggle { display: inline-flex; }
+    .ecl .ecl-cat-form.ecl-js .ecl-filters {
+        position: fixed; inset: 0 auto 0 0; width: min(320px, 88vw); max-height: none; height: 100%; z-index: 99999;
+        border-radius: 0; transform: translateX(-100%); box-shadow: 0 0 40px rgba(0,0,0,.2);
+    }
+    /* Animate only once someone opens or closes it - not while the page sets up,
+       which would slide the drawer across the screen on every load. */
+    .ecl .ecl-cat-form.ecl-js.ecl-drawer-anim .ecl-filters { transition: transform .2s ease; }
+    .ecl .ecl-cat-form.ecl-js.is-drawer-open .ecl-filters { transform: none; }
+    .ecl .ecl-cat-form.ecl-js .ecl-drawer-close { display: block; }
+    .ecl .ecl-cat-form.ecl-js .ecl-filters-apply { display: block; position: sticky; bottom: 0; background: var(--ecl-bg); padding-top: 10px; }
+    .ecl .ecl-cat-form.ecl-js .ecl-filters-apply .ecl-btn { width: 100%; }
+    .ecl .ecl-drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 99998; }
+    .ecl .ecl-filters { position: static; }
+}
+@media (prefers-reduced-motion: reduce) { .ecl .ecl-cat-form.ecl-js.ecl-drawer-anim .ecl-filters { transition: none; } }

@@ -15,3 +15,13 @@ class ECare_Elementor_Lab_Home extends \Elementor\Widget_Base {
         echo do_shortcode('[ecare_lab_home]');
     }
 }
+
+class ECare_Elementor_Lab_Catalog extends \Elementor\Widget_Base {
+    public function get_name() { return 'ecare_lab_catalog'; }
+    public function get_title() { return esc_html__('E-Care Lab Tests (new)', 'ecare-health-services'); }
+    public function get_icon() { return 'eicon-products'; }
+    public function get_categories() { return array('ecare-elements'); }
+    protected function render() {
+        echo do_shortcode('[ecare_lab_catalog]');
+    }
+}
