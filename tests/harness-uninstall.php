@@ -184,6 +184,7 @@ function reset_world($opt_in, $bulk = 0) {
         'ecare_activation_date'              => '2026-01-01',
         'ecare_rewrite_version'              => '1.1.2',
         'ecare_locations_seed_version'       => '1',
+        'ecare_lab_taxonomies_seed_version'  => '1',
         'ecare_default_daily_12_price'       => 1700,
         'ecare_default_daily_24_price'       => 2200,
         'ecare_default_monthly_12_price'     => 30000,
@@ -326,7 +327,7 @@ check('all four term tables are cleaned', array_values(array_unique($tables)), a
     'wp_term_relationships', 'wp_term_taxonomy', 'wp_termmeta', 'wp_terms',
 ));
 check('once per term', count($GLOBALS['wpdb']->deletes), 8);
-check('the lookup is scoped to our taxonomies', sql_matching("taxonomy IN ('ecare_caregiver_type', 'ecare_location')"), 1);
+check('the lookup is scoped to our taxonomies', sql_matching("taxonomy IN ('ecare_caregiver_type', 'ecare_location', 'ecare_lab_category', 'ecare_lab_collection')"), 1);
 check('relationships go by term_taxonomy_id', $GLOBALS['wpdb']->deletes[0][1], array('term_taxonomy_id' => 31));
 check('term meta goes by term_id', $GLOBALS['wpdb']->deletes[2][1], array('term_id' => 21));
 check('ids are cast, never interpolated as strings', $GLOBALS['wpdb']->deletes[4][1], array('term_taxonomy_id' => 32));
@@ -335,7 +336,7 @@ check('ids are cast, never interpolated as strings', $GLOBALS['wpdb']->deletes[4
 echo "\n=== E. options and transients ===\n";
 // ===========================================================================
 sort($GLOBALS['deleted_options']);
-check('the nine plugin options plus the flag', $GLOBALS['deleted_options'], array(
+check('the ten plugin options plus the flag', $GLOBALS['deleted_options'], array(
     'ecare_activation_date',
     'ecare_default_daily_12_price',
     'ecare_default_daily_24_price',
@@ -344,6 +345,7 @@ check('the nine plugin options plus the flag', $GLOBALS['deleted_options'], arra
     'ecare_default_physio_premium_price',
     'ecare_default_physio_regular_price',
     'ecare_delete_data_on_uninstall',
+    'ecare_lab_taxonomies_seed_version',
     'ecare_locations_seed_version',
     'ecare_rewrite_version',
 ));

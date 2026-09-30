@@ -29,6 +29,7 @@ function add_submenu_page($parent, $page_title, $menu_title, $cap, $slug, $cb = 
 
 require_once __DIR__ . '/../includes/class-ecare-locations.php';
 require_once __DIR__ . '/../includes/class-ecare-lab-providers.php';
+require_once __DIR__ . '/../includes/class-ecare-lab-taxonomies.php';
 require_once __DIR__ . '/../admin/class-ecare-admin.php';
 require_once ($argv[1] ?? (__DIR__ . '/../admin/class-ecare-lab-admin.php'));
 
@@ -55,6 +56,8 @@ check('its entries, in order', slugs_under('ecare-lab'), array(
     'ecare-lab',
     'ecare-lab-catalog',
     'post-new.php?post_type=ecare_lab_test',
+    'edit-tags.php?taxonomy=ecare_lab_category&post_type=ecare_lab_test',
+    'edit-tags.php?taxonomy=ecare_lab_collection&post_type=ecare_lab_test',
     'edit.php?post_type=ecare_lab_provider',
     'edit-tags.php?taxonomy=ecare_location&post_type=ecare_lab_test',
     'ecare-lab-orders',
@@ -95,6 +98,8 @@ check('provider editor -> Lab Providers', $f($sc(array('post_type' => 'ecare_lab
 check('area list -> Locations', $f($sc(array('taxonomy' => 'ecare_location', 'base' => 'edit-tags'))), 'edit-tags.php?taxonomy=ecare_location&post_type=ecare_lab_test');
 check('editing one area -> Locations', $f($sc(array('taxonomy' => 'ecare_location', 'base' => 'term'))), 'edit-tags.php?taxonomy=ecare_location&post_type=ecare_lab_test');
 check('a caregiver is not a lab screen', $f($sc(array('post_type' => 'ecare_caregiver', 'base' => 'post'))), '');
+check('categories -> Categories', $f($sc(array('taxonomy' => 'ecare_lab_category', 'base' => 'edit-tags'))), 'edit-tags.php?taxonomy=ecare_lab_category&post_type=ecare_lab_test');
+check('one collection -> Collections', $f($sc(array('taxonomy' => 'ecare_lab_collection', 'base' => 'term'))), 'edit-tags.php?taxonomy=ecare_lab_collection&post_type=ecare_lab_test');
 check('caregiver types are not a lab screen', $f($sc(array('taxonomy' => 'ecare_caregiver_type', 'base' => 'edit-tags'))), '');
 check('no screen, no answer', $f(null), '');
 

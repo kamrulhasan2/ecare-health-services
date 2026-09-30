@@ -101,9 +101,11 @@ foreach ($ecare_post_types as $ecare_post_type) {
 // ---------------------------------------------------------------------------
 $ecare_terms = $wpdb->get_results(
     $wpdb->prepare(
-        "SELECT term_id, term_taxonomy_id FROM {$wpdb->term_taxonomy} WHERE taxonomy IN (%s, %s)",
+        "SELECT term_id, term_taxonomy_id FROM {$wpdb->term_taxonomy} WHERE taxonomy IN (%s, %s, %s, %s)",
         'ecare_caregiver_type',
-        'ecare_location'
+        'ecare_location',
+        'ecare_lab_category',
+        'ecare_lab_collection'
     )
 );
 
@@ -121,6 +123,7 @@ $ecare_options = array(
     'ecare_activation_date',
     'ecare_rewrite_version',
     'ecare_locations_seed_version',
+    'ecare_lab_taxonomies_seed_version',
     'ecare_default_daily_12_price',
     'ecare_default_daily_24_price',
     'ecare_default_monthly_12_price',

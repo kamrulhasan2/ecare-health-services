@@ -10,7 +10,7 @@ defined('ABSPATH') || exit;
  * slugs are unchanged (admin.php?page=ecare-lab-catalog works under any parent),
  * so bookmarks and links elsewhere in the plugin keep working.
  *
- * Later steps add Categories, Collections and Settings to the same list.
+ * Settings is added to the same list in a later step.
  */
 class ECare_Lab_Admin {
 
@@ -32,6 +32,8 @@ class ECare_Lab_Admin {
             self::MENU                               => array(__('Dashboard', 'ecare-health-services'), array(__CLASS__, 'render_dashboard')),
             'ecare-lab-catalog'                      => array(__('All Tests', 'ecare-health-services'), array('ECare_Admin', 'render_lab_catalog')),
             'post-new.php?post_type=ecare_lab_test'  => array(__('Add New Test', 'ecare-health-services'), null),
+            ECare_Lab_Taxonomies::menu_slug(ECare_Lab_Taxonomies::CATEGORY)   => array(__('Categories', 'ecare-health-services'), null),
+            ECare_Lab_Taxonomies::menu_slug(ECare_Lab_Taxonomies::COLLECTION) => array(__('Collections', 'ecare-health-services'), null),
             ECare_Lab_Providers::menu_slug()         => array(__('Lab Providers', 'ecare-health-services'), null),
             ECare_Locations::menu_slug()             => array(__('Locations', 'ecare-health-services'), null),
             'ecare-lab-orders'                       => array(__('Lab Orders', 'ecare-health-services'), array('ECare_Admin', 'render_lab_orders')),
@@ -61,6 +63,9 @@ class ECare_Lab_Admin {
     public static function submenu_for_screen($screen) {
         if (!$screen) {
             return '';
+        }
+        if (in_array($screen->taxonomy ?? '', array(ECare_Lab_Taxonomies::CATEGORY, ECare_Lab_Taxonomies::COLLECTION), true)) {
+            return ECare_Lab_Taxonomies::menu_slug($screen->taxonomy);
         }
         if (($screen->taxonomy ?? '') === ECare_Locations::TAXONOMY) {
             return ECare_Locations::menu_slug();
