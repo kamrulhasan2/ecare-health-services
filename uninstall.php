@@ -127,6 +127,8 @@ $ecare_options = array(
     'ecare_lab_taxonomies_seed_version',
     'ecare_lab_db_version',
     'ecare_lab_settings',
+    'ecare_lab_migration_log',
+    'ecare_lab_migration_input',
     'ecare_default_daily_12_price',
     'ecare_default_daily_24_price',
     'ecare_default_monthly_12_price',

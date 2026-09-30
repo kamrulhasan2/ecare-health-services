@@ -31,6 +31,7 @@ require_once __DIR__ . '/../includes/class-ecare-locations.php';
 require_once __DIR__ . '/../includes/class-ecare-lab-providers.php';
 require_once __DIR__ . '/../includes/class-ecare-lab-taxonomies.php';
 require_once __DIR__ . '/../includes/class-ecare-lab-settings.php';
+require_once __DIR__ . '/../includes/class-ecare-lab-migration.php';
 require_once __DIR__ . '/../admin/class-ecare-admin.php';
 require_once ($argv[1] ?? (__DIR__ . '/../admin/class-ecare-lab-admin.php'));
 
@@ -62,6 +63,7 @@ check('its entries, in order', slugs_under('ecare-lab'), array(
     'edit.php?post_type=ecare_lab_provider',
     'edit-tags.php?taxonomy=ecare_location&post_type=ecare_lab_test',
     'ecare-lab-orders',
+    'ecare-lab-migration',
     'ecare-lab-settings',
 ));
 $by_slug = array();

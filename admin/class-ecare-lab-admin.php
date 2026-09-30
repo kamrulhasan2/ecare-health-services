@@ -37,6 +37,7 @@ class ECare_Lab_Admin {
             ECare_Lab_Providers::menu_slug()         => array(__('Lab Providers', 'ecare-health-services'), null),
             ECare_Locations::menu_slug()             => array(__('Locations', 'ecare-health-services'), null),
             'ecare-lab-orders'                       => array(__('Lab Orders', 'ecare-health-services'), array('ECare_Admin', 'render_lab_orders')),
+            ECare_Lab_Migration::PAGE                => array(__('Data Migration', 'ecare-health-services'), array('ECare_Lab_Migration', 'render_page')),
             ECare_Lab_Settings::PAGE                 => array(__('Settings', 'ecare-health-services'), array('ECare_Lab_Settings', 'render_page')),
         );
     }

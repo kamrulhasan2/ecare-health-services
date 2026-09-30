@@ -207,8 +207,10 @@ class ECare_Lab_Packages {
             var list = document.getElementById('ecare-pkg-list'), search = document.getElementById('ecare-pkg-search');
             var box = document.getElementById('ecare_lab_package'), extra = document.getElementById('ecare-pkg-extra');
             function count() {
-                var lines = extra.value.split(/\n/).map(function (s) { return s.trim(); }).filter(Boolean);
-                document.getElementById('ecare-pkg-count').textContent = list.children.length + lines.length;
+                // Same rule as the server: blanks and case-insensitive repeats do not count.
+                var seen = {};
+                extra.value.split(/\n/).forEach(function (s) { s = s.trim().toLowerCase(); if (s) { seen[s] = true; } });
+                document.getElementById('ecare-pkg-count').textContent = list.children.length + Object.keys(seen).length;
             }
             function add() {
                 var opt = Array.prototype.find.call(document.querySelectorAll('#ecare-pkg-options option'), function (o) { return o.value === search.value; });
