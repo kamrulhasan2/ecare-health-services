@@ -37,6 +37,7 @@ global $wpdb;
 // ---------------------------------------------------------------------------
 $ecare_tables = array(
     $wpdb->prefix . 'ecare_bookings',
+    $wpdb->prefix . 'ecare_lab_offerings',
     // Never created since 1.1.0, but sites upgraded from 1.0.0 still carry it.
     $wpdb->prefix . 'ecare_locations',
 );
@@ -124,6 +125,7 @@ $ecare_options = array(
     'ecare_rewrite_version',
     'ecare_locations_seed_version',
     'ecare_lab_taxonomies_seed_version',
+    'ecare_lab_db_version',
     'ecare_default_daily_12_price',
     'ecare_default_daily_24_price',
     'ecare_default_monthly_12_price',

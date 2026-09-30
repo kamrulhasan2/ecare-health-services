@@ -114,12 +114,13 @@ class ECare_Lab_Admin {
             }
         }
 
-        // Old-format tests: published, still on typed-in lists, no provider link.
+        // Old-format tests: published but without a single lab row.
+        $offers   = ECare_Lab_Offerings::table();
         $unlinked = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->posts} p
-             LEFT JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s
-             WHERE p.post_type = %s AND p.post_status = %s AND (m.meta_value IS NULL OR m.meta_value = '' OR m.meta_value = '0')",
-            '_ecare_provider_id', 'ecare_lab_test', 'publish'
+             WHERE p.post_type = %s AND p.post_status = %s
+             AND NOT EXISTS (SELECT 1 FROM {$offers} o WHERE o.test_id = p.ID)",
+            'ecare_lab_test', 'publish'
         ));
 
         return array(
@@ -156,7 +157,7 @@ class ECare_Lab_Admin {
                 <div class="notice notice-warning inline" style="margin:0 0 16px;">
                     <p><?php echo esc_html(sprintf(
                         /* translators: %d: number of tests */
-                        _n('%d published test is still in the old format (typed-in locations, no provider link).', '%d published tests are still in the old format (typed-in locations, no provider link).', $s['unlinked'], 'ecare-health-services'),
+                        _n('%d published test has no lab prices yet (old format).', '%d published tests have no lab prices yet (old format).', $s['unlinked'], 'ecare-health-services'),
                         $s['unlinked']
                     )); ?></p>
                 </div>

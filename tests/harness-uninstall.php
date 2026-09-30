@@ -185,6 +185,7 @@ function reset_world($opt_in, $bulk = 0) {
         'ecare_rewrite_version'              => '1.1.2',
         'ecare_locations_seed_version'       => '1',
         'ecare_lab_taxonomies_seed_version'  => '1',
+        'ecare_lab_db_version'               => '1',
         'ecare_default_daily_12_price'       => 1700,
         'ecare_default_daily_24_price'       => 2200,
         'ecare_default_monthly_12_price'     => 30000,
@@ -313,6 +314,7 @@ require $UNINSTALL;
 
 check('bookings table dropped',  sql_matching('DROP TABLE IF EXISTS wp_ecare_bookings'), 1);
 check('locations table dropped', sql_matching('DROP TABLE IF EXISTS wp_ecare_locations'), 1);
+check('lab offerings table dropped', sql_matching('DROP TABLE IF EXISTS wp_ecare_lab_offerings'), 1);
 
 check('only other people\'s posts remain', post_types_left(), array('attachment', 'page', 'product', 'shop_order'));
 check('a trashed provider does not outlive the plugin', isset($GLOBALS['posts'][3]), false);
@@ -336,7 +338,7 @@ check('ids are cast, never interpolated as strings', $GLOBALS['wpdb']->deletes[4
 echo "\n=== E. options and transients ===\n";
 // ===========================================================================
 sort($GLOBALS['deleted_options']);
-check('the ten plugin options plus the flag', $GLOBALS['deleted_options'], array(
+check('the eleven plugin options plus the flag', $GLOBALS['deleted_options'], array(
     'ecare_activation_date',
     'ecare_default_daily_12_price',
     'ecare_default_daily_24_price',
@@ -345,6 +347,7 @@ check('the ten plugin options plus the flag', $GLOBALS['deleted_options'], array
     'ecare_default_physio_premium_price',
     'ecare_default_physio_regular_price',
     'ecare_delete_data_on_uninstall',
+    'ecare_lab_db_version',
     'ecare_lab_taxonomies_seed_version',
     'ecare_locations_seed_version',
     'ecare_rewrite_version',

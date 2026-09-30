@@ -127,6 +127,7 @@ final class ECare_Health_Services {
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-cpt.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-locations.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-providers.php';
+        require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-offerings.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-tests.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-test-info.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-taxonomies.php';
@@ -140,6 +141,7 @@ final class ECare_Health_Services {
         ECare_CPT::init();
         ECare_Locations::init();
         ECare_Lab_Providers::init();
+        ECare_Lab_Offerings::init();
         ECare_Lab_Tests::init();
         ECare_Lab_Test_Info::init();
         ECare_Lab_Taxonomies::init();

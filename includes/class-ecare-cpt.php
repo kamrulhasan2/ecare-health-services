@@ -238,7 +238,7 @@ class ECare_CPT {
 
     public static function add_meta_boxes() {
         add_meta_box('ecare_caregiver_details', __('Care Provider Details', 'ecare-health-services'), array(__CLASS__, 'render_caregiver_meta'), 'ecare_caregiver', 'normal', 'high');
-        add_meta_box('ecare_lab_test_details', __('Price & Provider', 'ecare-health-services'), array(__CLASS__, 'render_lab_test_meta'), 'ecare_lab_test', 'normal', 'default');
+        add_meta_box('ecare_lab_test_details', __('Lab Prices', 'ecare-health-services'), array(__CLASS__, 'render_lab_test_meta'), 'ecare_lab_test', 'normal', 'default');
         add_meta_box('ecare_ambulance_details', __('Ambulance Provider Details', 'ecare-health-services'), array(__CLASS__, 'render_ambulance_meta'), 'ecare_ambulance', 'normal', 'high');
     }
 
@@ -372,16 +372,10 @@ class ECare_CPT {
     }
 
     public static function render_lab_test_meta($post) {
+        // This nonce also guards test code, sample and status (saved below).
         wp_nonce_field('ecare_lab_test_meta', 'ecare_lab_test_meta_nonce');
-        $fields = array(
-            'price'           => get_post_meta($post->ID, '_price', true),
-        );
-        ?>
-        <table class="form-table">
-            <tr><th><label>Price (৳)</label></th><td><input type="number" step="0.01" name="_price" value="<?php echo esc_attr($fields['price']); ?>" class="regular-text" /></td></tr>
-            <?php ECare_Lab_Tests::render_location_fields($post); ?>
-        </table>
-        <?php
+        ECare_Lab_Offerings::render_box($post);
+        ECare_Lab_Tests::render_legacy_note($post);
     }
 
     public static function render_ambulance_meta($post) {
@@ -518,14 +512,16 @@ class ECare_CPT {
             // Code, sample and status are shown in the Test Information box
             // (ECare_Lab_Test_Info) but keep their keys and are saved here.
             // _turnaround_days is derived from the report time there.
-            // _test_category is written from the ticked categories (ECare_Lab_Taxonomies).
-            $keys = array('_test_code', '_price', '_sample_type', '_test_status');
+            // _test_category is written from the ticked categories (ECare_Lab_Taxonomies);
+            // _price from the cheapest lab (ECare_Lab_Tests::sync_legacy).
+            $keys = array('_test_code', '_sample_type', '_test_status');
             foreach ($keys as $key) {
                 if (isset($_POST[$key])) {
                     update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));
                 }
             }
-            ECare_Lab_Tests::save_location($post_id);
+            ECare_Lab_Offerings::save_from_post($post_id);
+            ECare_Lab_Tests::sync_legacy($post_id);
         }
 
         if ($post_type === 'ecare_ambulance') {

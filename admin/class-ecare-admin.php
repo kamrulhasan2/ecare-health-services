@@ -775,7 +775,7 @@ class ECare_Admin {
                             <th><?php _e('Test ID', 'ecare-health-services'); ?></th>
                             <th><?php _e('Test Code', 'ecare-health-services'); ?></th>
                             <th><?php _e('Test Name', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Provider & Coverage', 'ecare-health-services'); ?></th>
+                            <th><?php _e('Labs & Prices', 'ecare-health-services'); ?></th>
                             <th><?php _e('Price', 'ecare-health-services'); ?></th>
                             <th><?php _e('Turnaround', 'ecare-health-services'); ?></th>
                             <th><?php _e('Status', 'ecare-health-services'); ?></th>
@@ -786,17 +786,16 @@ class ECare_Admin {
                         <?php if ($tests): ?>
                             <?php foreach ($tests as $t):
                                 $code     = get_post_meta($t->ID, '_test_code', true);
-                                $price    = get_post_meta($t->ID, '_price', true);
+                                $price    = (float) get_post_meta($t->ID, '_price', true);
                                 $turn     = ECare_Lab_Test_Info::report_label($t->ID);
                                 $status   = get_post_meta($t->ID, '_test_status', true) ?: 'active';
-                                // Linked tests name their provider and summarise where they
-                                // are offered. Old tests still on typed-in lists are flagged
-                                // rather than printed in full - the full list was a wall of text.
+                                // Tests with lab rows list each lab and its price. Old tests
+                                // still on typed-in lists are flagged rather than printed in
+                                // full - the full area list was a wall of text.
                                 $linked   = ECare_Lab_Tests::is_linked($t->ID);
-                                $provider = $linked
-                                    ? get_the_title(ECare_Lab_Tests::provider_id($t->ID))
-                                    : (string) get_post_meta($t->ID, '_lab_provider', true);
-                                $reach    = $linked ? ECare_Lab_Tests::location_summary($t->ID) : '';
+                                $provider = $linked ? '' : (string) get_post_meta($t->ID, '_lab_provider', true);
+                                $labs     = $linked ? ECare_Lab_Tests::labs_summary($t->ID) : '';
+                                $cheapest = $linked ? ECare_Lab_Offerings::cheapest($t->ID) : null;
                             ?>
                                 <tr>
                                     <td><input type="checkbox" /></td>
@@ -807,14 +806,21 @@ class ECare_Admin {
                                         <small style="font-weight:700;letter-spacing:.04em;color:<?php echo ECare_Lab_Test_Info::is_package($t->ID) ? '#b45309' : '#64748b'; ?>;"><?php echo ECare_Lab_Test_Info::is_package($t->ID) ? esc_html__('PACKAGE', 'ecare-health-services') : esc_html__('SINGLE', 'ecare-health-services'); ?></small>
                                     </td>
                                     <td>
-                                        <strong><?php echo esc_html($provider !== '' ? $provider : '—'); ?></strong><br />
                                         <?php if ($linked): ?>
-                                            <small><?php echo $reach !== '' ? esc_html($reach) : '<span style="color:#b32d2e;">' . esc_html__('No areas - hidden from patients', 'ecare-health-services') . '</span>'; ?></small>
+                                            <small><?php echo esc_html($labs); ?></small>
+                                            <?php if (!$cheapest): ?><br /><small style="color:#b32d2e;"><?php esc_html_e('No bookable lab - hidden from patients', 'ecare-health-services'); ?></small><?php endif; ?>
                                         <?php else: ?>
-                                            <small style="color:#996800;">&#9888; <?php esc_html_e('Old format - not linked to a provider yet', 'ecare-health-services'); ?></small>
+                                            <strong><?php echo esc_html($provider !== '' ? $provider : '—'); ?></strong><br />
+                                            <small style="color:#996800;">&#9888; <?php esc_html_e('Old format - no lab prices yet', 'ecare-health-services'); ?></small>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="font-weight:700;color:var(--brand-teal);">৳ <?php echo esc_html(number_format($price, 2)); ?></td>
+                                    <td style="font-weight:700;color:var(--brand-teal);"><?php
+                                        if ($cheapest) {
+                                            echo esc_html(sprintf(__('from ৳ %s', 'ecare-health-services'), number_format(ECare_Lab_Offerings::effective_price($cheapest), 2)));
+                                        } else {
+                                            echo '৳ ' . esc_html(number_format($price, 2));
+                                        }
+                                    ?></td>
                                     <td><?php echo $turn !== '' ? esc_html($turn) : '&mdash;'; ?></td>
                                     <td><span class="ecare-status-pill <?php echo esc_attr($status); ?>"><?php echo esc_html(ucfirst($status)); ?></span></td>
                                     <td>
