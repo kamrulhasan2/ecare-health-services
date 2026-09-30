@@ -22,6 +22,8 @@ defined('ABSPATH') || exit;
 class ECare_Lab_Migration {
 
     const LOG_OPTION = 'ecare_lab_migration_log';
+    /** One-time token: an Apply or Undo form works once, so a replayed POST cannot re-run it. */
+    const TOKEN_OPTION = 'ecare_lab_migration_token';
     const PAGE       = 'ecare-lab-migration';
 
     /** Old and alternative spellings of built-in divisions and districts. */
@@ -525,6 +527,16 @@ class ECare_Lab_Migration {
     // Admin page
     // =======================================================================
 
+    /**
+     * True once for the token on the current page, then never again: the
+     * stored token is spent whether or not it matched.
+     */
+    public static function consume_token($given) {
+        $token = (string) get_option(self::TOKEN_OPTION, '');
+        delete_option(self::TOKEN_OPTION);
+        return $token !== '' && hash_equals($token, (string) $given);
+    }
+
     public static function handle_post() {
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('Not allowed.', 'ecare-health-services'), 403);
@@ -538,6 +550,15 @@ class ECare_Lab_Migration {
         ), false);
 
         $action = sanitize_key($in['do'] ?? 'scan');
+        if (in_array($action, array('apply', 'undo'), true)) {
+            // A form that was already used (back button, reload, a resubmitted
+            // request) carries a spent token and is turned away. Without this,
+            // replaying an Apply after an Undo would quietly apply it again.
+            if (!self::consume_token((string) ($in['run_token'] ?? ''))) {
+                wp_safe_redirect(add_query_arg('ecare_msg', 'stale', $back));
+                exit;
+            }
+        }
         if ($action === 'apply') {
             if (empty($in['have_backup'])) {
                 wp_safe_redirect(add_query_arg('ecare_msg', 'need_backup', $back));
@@ -583,8 +604,12 @@ class ECare_Lab_Migration {
             'undone'      => array('success', __('The last migration was undone.', 'ecare-health-services')),
             'need_backup' => array('error', __('Tick "I have a backup" before applying.', 'ecare-health-services')),
             'already'     => array('error', __('A migration was already applied. Undo it first, or review its result.', 'ecare-health-services')),
+            'stale'       => array('error', __('That form was already used or is out of date, so nothing was done. Review the page below and try again if you still want to.', 'ecare-health-services')),
         );
         $sum = $plan['summary'];
+        // A fresh token for this view of the page; any older form stops working.
+        $token = wp_generate_password(24, false, false);
+        update_option(self::TOKEN_OPTION, $token, false);
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('Lab Data Migration', 'ecare-health-services'); ?></h1>
@@ -656,6 +681,7 @@ class ECare_Lab_Migration {
 
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:24px;max-width:900px">
                 <input type="hidden" name="action" value="ecare_lab_migrate" />
+                <input type="hidden" name="run_token" value="<?php echo esc_attr($token); ?>" />
                 <?php wp_nonce_field('ecare_lab_migrate'); ?>
                 <h3><?php esc_html_e('Corrections', 'ecare-health-services'); ?></h3>
                 <p class="description"><?php esc_html_e('One per line: Old name => Right name. Applies to labs, divisions, districts, areas and categories. Suggestions are pre-filled; remove any that are wrong.', 'ecare-health-services'); ?></p>

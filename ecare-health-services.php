@@ -135,6 +135,7 @@ final class ECare_Health_Services {
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-settings.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-migration.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-catalog.php';
+        require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-front.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-ajax.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-woocommerce.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-shortcodes.php';
@@ -153,6 +154,7 @@ final class ECare_Health_Services {
         ECare_Lab_Settings::init();
         ECare_Lab_Migration::init();
         ECare_Lab_Catalog::init();
+        ECare_Lab_Front::init();
         ECare_Ajax::init();
         ECare_WooCommerce::init();
         ECare_Shortcodes::init();

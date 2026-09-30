@@ -25,6 +25,7 @@ From the plugin root:
     php tests/harness-lab-settings.php
     php tests/harness-lab-migration.php
     php tests/harness-lab-catalog.php
+    php tests/harness-lab-front.php
 
 There is also an optional layout test, which needs Node and Playwright:
 

@@ -17,6 +17,9 @@
 
 define('ABSPATH', __DIR__ . '/');
 function add_action() {} function add_filter() {}
+$GLOBALS['options'] = array();
+function get_option($k, $d = false) { return $GLOBALS['options'][$k] ?? $d; }
+function delete_option($k) { unset($GLOBALS['options'][$k]); return true; }
 function is_admin() { return false; }
 function __($s, $d = null) { return $s; }
 
@@ -126,6 +129,17 @@ echo "\n=== D. nothing to do ===\n";
 // ===========================================================================
 $empty = $M::plan(array('tests' => array()) + $snap);
 check('no old tests, empty plan', $empty['summary'], array('tests' => 0, 'merged_tests' => 0, 'drafted' => 0, 'new_providers' => 0, 'new_areas' => 0, 'offerings' => 0, 'issues' => 0));
+
+// ===========================================================================
+echo "\n=== E. an Apply or Undo form works once ===\n";
+// ===========================================================================
+$GLOBALS['options']['ecare_lab_migration_token'] = 'tok123';
+check('the page\'s token is accepted', $M::consume_token('tok123'), true);
+check('the same form sent again is refused (the replay that re-applied after Undo)', $M::consume_token('tok123'), false);
+$GLOBALS['options']['ecare_lab_migration_token'] = 'fresh';
+check('an old token against a newer page is refused', $M::consume_token('tok123'), false);
+check('... and it spends the newer one too, so a guess cannot be retried', $M::consume_token('fresh'), false);
+check('no token at all is refused', $M::consume_token(''), false);
 
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);

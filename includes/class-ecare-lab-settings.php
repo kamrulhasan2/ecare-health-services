@@ -21,14 +21,25 @@ class ECare_Lab_Settings {
             add_action('admin_init', array(__CLASS__, 'register'));
             add_action('admin_enqueue_scripts', array(__CLASS__, 'enqueue'));
         }
+        // Page choices changed: forget the auto-detected lab pages.
+        add_action('update_option_' . self::OPTION, array(__CLASS__, 'forget_pages'));
     }
 
     // -----------------------------------------------------------------------
     // Defaults and reading
     // -----------------------------------------------------------------------
 
+    public static function forget_pages() {
+        foreach (array('home', 'tests', 'cart') as $which) {
+            delete_transient('ecare_lab_page_' . $which);
+        }
+    }
+
     public static function defaults() {
         return array(
+            'page_home'       => 0,
+            'page_tests'      => 0,
+            'page_cart'       => 0,
             'advance_percent' => 20,
             'service_charge'  => 0,
             'hard_copy_fee'   => 200,
@@ -236,6 +247,9 @@ class ECare_Lab_Settings {
         }
 
         return array(
+            'page_home'       => max(0, (int) ($in['page_home'] ?? 0)),
+            'page_tests'      => max(0, (int) ($in['page_tests'] ?? 0)),
+            'page_cart'       => max(0, (int) ($in['page_cart'] ?? 0)),
             'advance_percent' => $num($in['advance_percent'] ?? $d['advance_percent'], 0, 100),
             'service_charge'  => $num($in['service_charge'] ?? 0, 0, 100000),
             'hard_copy_fee'   => $num($in['hard_copy_fee'] ?? $d['hard_copy_fee'], 0, 100000),
@@ -283,6 +297,33 @@ class ECare_Lab_Settings {
             <?php settings_errors(); ?>
             <form method="post" action="options.php">
                 <?php settings_fields(self::PAGE); ?>
+
+                <h2 class="title"><?php esc_html_e('Pages', 'ecare-health-services'); ?></h2>
+                <p class="description"><?php esc_html_e('Which pages hold the lab screens. Left on "Find automatically", the first published page with the matching shortcode or Elementor widget is used.', 'ecare-health-services'); ?></p>
+                <table class="form-table" role="presentation">
+                    <?php foreach (array(
+                        'home'  => array(__('Lab home', 'ecare-health-services'), '[ecare_lab_home]'),
+                        'tests' => array(__('All tests & test details', 'ecare-health-services'), '[ecare_lab_catalog]'),
+                        'cart'  => array(__('Lab cart & checkout', 'ecare-health-services'), '[ecare_lab_cart]'),
+                    ) as $which => $info): ?>
+                        <tr>
+                            <th><label for="ecare-page-<?php echo esc_attr($which); ?>"><?php echo esc_html($info[0]); ?></label></th>
+                            <td>
+                                <?php wp_dropdown_pages(array(
+                                    'name'              => esc_attr($name('page_' . $which)),
+                                    'id'                => 'ecare-page-' . $which,
+                                    'selected'          => (int) $s['page_' . $which],
+                                    'show_option_none'  => esc_html__('— Find automatically —', 'ecare-health-services'),
+                                    'option_none_value' => '0',
+                                )); ?>
+                                <p class="description"><?php echo esc_html(sprintf(__('Shortcode: %s', 'ecare-health-services'), $info[1])); ?>
+                                <?php if (class_exists('ECare_Lab_Front') && ($found = ECare_Lab_Front::page_id($which))): ?>
+                                    &middot; <?php esc_html_e('In use:', 'ecare-health-services'); ?> <a href="<?php echo esc_url(get_permalink($found)); ?>" target="_blank"><?php echo esc_html(get_the_title($found)); ?></a>
+                                <?php endif; ?></p>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </table>
 
                 <h2 class="title"><?php esc_html_e('Payment', 'ecare-health-services'); ?></h2>
                 <table class="form-table" role="presentation">
