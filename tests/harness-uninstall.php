@@ -209,6 +209,7 @@ function reset_world($opt_in, $bulk = 0) {
         4  => array('post_type' => 'ecare_lab_test',  'post_status' => 'auto-draft'),
         5  => array('post_type' => 'ecare_lab_test',  'post_status' => 'publish'),
         6  => array('post_type' => 'ecare_ambulance', 'post_status' => 'publish'),
+        11 => array('post_type' => 'ecare_lab_provider', 'post_status' => 'draft'),
         // Not ours.
         7  => array('post_type' => 'page',            'post_status' => 'publish'),
         8  => array('post_type' => 'product',         'post_status' => 'publish'),
@@ -279,7 +280,7 @@ reset_world(false);
 $base = $GLOBALS['uploads_basedir'];
 require $UNINSTALL;
 
-check('every post survives', count($GLOBALS['posts']), 10);
+check('every post survives', count($GLOBALS['posts']), 11);
 check('no table is dropped', sql_matching('DROP TABLE'), 0);
 check('no SQL is run at all', count($GLOBALS['wpdb']->queries), 0);
 check('no term row is deleted', count($GLOBALS['wpdb']->deletes), 0);
@@ -298,7 +299,7 @@ reset_world(false);
 $GLOBALS['options']['ecare_delete_data_on_uninstall'] = '1';   // truthy, but not 'yes'
 $base = $GLOBALS['uploads_basedir'];
 require $UNINSTALL;
-check("only the exact string 'yes' opts in", count($GLOBALS['posts']), 10);
+check("only the exact string 'yes' opts in", count($GLOBALS['posts']), 11);
 check('still no SQL', count($GLOBALS['wpdb']->queries), 0);
 rm_tree($base);
 

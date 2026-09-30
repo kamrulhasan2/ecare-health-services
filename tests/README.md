@@ -14,6 +14,8 @@ From the plugin root:
     php tests/harness-booking-order.php
     php tests/harness-admin-lists.php
     php tests/harness-uninstall.php
+    php tests/harness-locations.php
+    php tests/harness-lab-providers.php
 
 There is also an optional layout test, which needs Node and Playwright:
 

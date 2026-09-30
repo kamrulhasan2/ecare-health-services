@@ -57,7 +57,7 @@ class ECare_Locations {
     // -----------------------------------------------------------------------
 
     public static function register_taxonomy() {
-        register_taxonomy(self::TAXONOMY, 'ecare_lab_test', array(
+        register_taxonomy(self::TAXONOMY, array('ecare_lab_test', 'ecare_lab_provider'), array(
             'labels' => array(
                 'name'              => __('Lab Locations', 'ecare-health-services'),
                 'singular_name'     => __('Location', 'ecare-health-services'),

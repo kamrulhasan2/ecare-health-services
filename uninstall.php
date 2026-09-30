@@ -57,6 +57,7 @@ $ecare_statuses = array_keys(get_post_stati());
 $ecare_post_types = array(
     'ecare_caregiver',
     'ecare_lab_test',
+    'ecare_lab_provider',
     'ecare_ambulance',
 );
 
