@@ -43,6 +43,10 @@ class ECare_Lab_Checkout_Page {
         if ($r['errors']) {
             set_transient(self::err_key($uid), $r['errors'], 10 * MINUTE_IN_SECONDS);
         }
+        if (!empty($r['redirect'])) {
+            wp_safe_redirect($r['redirect']);   // WooCommerce's order-pay page, or My Lab Orders
+            exit;
+        }
         $url = self::url($r['msg'] !== '' ? array('co_msg' => $r['msg']) : array());
         wp_safe_redirect($url . ($r['anchor'] !== '' ? '#' . $r['anchor'] : ''));
         exit;
@@ -51,7 +55,7 @@ class ECare_Lab_Checkout_Page {
     /**
      * Carry out one checkout post.
      *
-     * @return array{msg:string, errors:array<string,string>, anchor:string, state?:array}
+     * @return array{msg:string, errors:array<string,string>, anchor:string, state?:array, redirect?:string}
      */
     public static function apply($user_id, $in, DateTimeImmutable $now) {
         if (!wp_verify_nonce((string) ($in['_ecl'] ?? ''), self::ACTION)) {
@@ -59,9 +63,10 @@ class ECare_Lab_Checkout_Page {
         }
         $state  = ECare_Lab_Checkout::clean_state($in);
         $errors = array();
-        $msg    = '';
-        $anchor = '';
-        $do     = isset($in['del_address']) ? 'del_address' : sanitize_key((string) ($in['do'] ?? ''));
+        $msg      = '';
+        $anchor   = '';
+        $redirect = '';
+        $do       = isset($in['del_address']) ? 'del_address' : sanitize_key((string) ($in['do'] ?? ''));
 
         switch ($do) {
             case 'add_address':
@@ -127,13 +132,15 @@ class ECare_Lab_Checkout_Page {
                 } else {
                     $state['phone'] = ECare_Lab_Checkout::normalize_phone($state['phone']);
                     ECare_Lab_Checkout::save_state($user_id, $state);
-                    /**
-                     * A checkout passed every check. Step 14 creates the
-                     * WooCommerce order and sends the patient to pay.
-                     */
+                    /** A checkout passed every check, just before its order is made. */
                     do_action('ecare_lab_checkout_ready', $user_id, $state, $v);
-                    $msg    = 'ready';
-                    $anchor = 'ecl-co-top';
+                    $o = ECare_Lab_Orders::create_from_checkout($user_id, $state, $v);
+                    if ($o['ok']) {
+                        $redirect = $o['pay_url'];
+                    } else {
+                        $msg    = 'order_failed';
+                        $anchor = 'ecl-co-top';
+                    }
                 }
                 break;
         }
@@ -144,7 +151,7 @@ class ECare_Lab_Checkout_Page {
             ECare_Lab_Cart::set_area($user_id, $book[$state['address_id']]['area_id']);
         }
         ECare_Lab_Checkout::save_state($user_id, $state);
-        return array('msg' => $msg, 'errors' => $errors, 'anchor' => $anchor, 'state' => $state);
+        return array('msg' => $msg, 'errors' => $errors, 'anchor' => $anchor, 'state' => $state, 'redirect' => $redirect);
     }
 
     // =======================================================================
@@ -158,7 +165,7 @@ class ECare_Lab_Checkout_Page {
             'address_deleted' => array('ok', __('Address removed.', $d)),
             'coupon_applied'  => array('ok', __('Coupon applied.', $d)),
             'fix'             => array('error', __('Please check the highlighted details.', $d)),
-            'ready'           => array('ok', __('Everything is in order. Online payment is connected in the next update.', $d)),
+            'order_failed'    => array('error', __('We could not create your order just now. Nothing was charged. Please try again.', $d)),
             'expired'         => array('error', __('That took too long and was not saved. Please try again.', $d)),
         );
     }
@@ -282,8 +289,10 @@ class ECare_Lab_Checkout_Page {
 
         $code   = isset($_GET['co_msg']) ? sanitize_key(wp_unslash((string) $_GET['co_msg'])) : '';
         $notice = self::messages()[$code] ?? null;
-        if ($code === 'ready' && $v['errors']) {
-            $notice = null;   // something changed since; do not claim it is ready
+        $pending = (int) get_user_meta($uid, ECare_Lab_Orders::PENDING_META, true);
+        $pending = ($pending && function_exists('wc_get_order')) ? wc_get_order($pending) : null;
+        if ($pending && !$pending->has_status(array('pending', 'failed'))) {
+            $pending = null;
         }
         $fees = array(
             'soft' => 0.0,
@@ -306,6 +315,13 @@ class ECare_Lab_Checkout_Page {
                 <div class="ecl-notice ecl-notice-<?php echo esc_attr($notice[0]); ?>" role="<?php echo $notice[0] === 'error' ? 'alert' : 'status'; ?>"><?php echo esc_html($notice[1]); ?></div>
             <?php endif; ?>
             <?php echo self::field_error($errors + $v['errors'], 'cart'); // phpcs:ignore ?>
+            <?php if ($pending): ?>
+                <div class="ecl-notice ecl-notice-warn" role="status">
+                    <?php echo esc_html(sprintf(__('Order #%d is waiting for its advance payment.', $d), (int) $pending->get_meta(ECare_Lab_Orders::ORDER_META))); ?>
+                    <a class="ecl-link" href="<?php echo esc_url($pending->get_checkout_payment_url()); ?>"><?php esc_html_e('Pay now', $d); ?></a>
+                    <small><?php esc_html_e('Placing the order again replaces it with a new one.', $d); ?></small>
+                </div>
+            <?php endif; ?>
 
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="ecl-co-form" id="ecl-co-form">
                 <input type="hidden" name="action" value="<?php echo esc_attr(self::ACTION); ?>" />

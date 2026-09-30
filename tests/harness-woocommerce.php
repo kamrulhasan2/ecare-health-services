@@ -139,12 +139,14 @@ class Fake_WPDB {
         $byId    = preg_match('/\bid = (\d+)/', $where, $a) ? (int) $a[1] : null;
         $byOrder = preg_match('/order_id = (\d+)/', $where, $b) ? (int) $b[1] : null;
         $labOnly = strpos($where, "booking_type = 'lab'") !== false;
+        $legacy  = strpos($where, 'lab_provider_id IS NULL') !== false;
 
         $n = 0;
         foreach ($this->bookings as $id => &$row) {
             if ($byId !== null && $id !== $byId) { continue; }
             if ($byOrder !== null && (int) $row['order_id'] !== $byOrder) { continue; }
             if ($labOnly && $row['booking_type'] !== 'lab') { continue; }
+            if ($legacy && !empty($row['lab_provider_id'])) { continue; }
             if (!in_array($row['status'], $allowed, true)) { continue; }
             $row['status'] = $new;
             $n++;
@@ -406,7 +408,28 @@ check('order-pay page reads the order, not the cart',
 $GLOBALS['orders'] = array(4001 => new Fake_Order(4001, array(), array(new Fake_Item('ecare-booking-cg922-daily-12-hours')), 'pending'));
 check('a caregiver order on that page keeps COD',
       array_keys(call_user_func($restrict, $BOTH)), array('cod', 'sslcommerz'));
+
+// An advance for a new lab order has no product at all, only a fee; the
+// order's own marker says what it is.
+$GLOBALS['orders'] = array(4001 => new Fake_Order(4001, array('_ecare_lab_booking_id' => '31'), array(), 'pending'));
+check('a lab advance order on that page: online payment only',
+      array_keys(call_user_func($restrict, $BOTH)), array('sslcommerz'));
 $GLOBALS['endpoint'] = '';
+
+echo "\n=== J2. orders from the new lab cart are left to ECare_Lab_Orders ===\n";
+// The new lab pays an advance: its WooCommerce order is paid and completed
+// long before the lab work is done. The old sweep must not touch those rows.
+class ECare_Lab_Orders { public static function legacy_only_sql() { return ' AND lab_provider_id IS NULL'; } }
+scenario(1200, array(), array(
+    30 => row(1200, 'pending', 'lab'),                                     // old one-row-per-test booking
+    31 => row(1200, 'approved', 'lab') + array('lab_provider_id' => 99),   // new lab order
+));
+ECare_WooCommerce::handle_order_completed(1200);
+check('old lab booking still completes with its order', statuses()[30], 'completed');
+check('a new lab order is not marked completed by the advance order', statuses()[31], 'approved');
+scenario(1201, array(), array(32 => row(1201, 'pending', 'lab') + array('lab_provider_id' => 99)));
+ECare_WooCommerce::handle_payment_complete(1201);
+check('...nor moved by the payment sweep (ECare_Lab_Orders does that)', statuses()[32], 'pending');
 
 echo "\n=== K. the empty cart points somewhere that exists ===\n";
 // "Return to shop" sends people to a product archive this site does not use;

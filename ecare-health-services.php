@@ -140,11 +140,14 @@ final class ECare_Health_Services {
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-cart-page.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-checkout.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-checkout-page.php';
+        require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-orders.php';
+        require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-orders-page.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-ajax.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-woocommerce.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-shortcodes.php';
         require_once ECARE_PLUGIN_DIR . 'admin/class-ecare-admin.php';
         require_once ECARE_PLUGIN_DIR . 'admin/class-ecare-lab-admin.php';
+        require_once ECARE_PLUGIN_DIR . 'admin/class-ecare-lab-orders-admin.php';
 
         ECare_Secure_Files::init();
         ECare_CPT::init();
@@ -161,11 +164,13 @@ final class ECare_Health_Services {
         ECare_Lab_Front::init();
         ECare_Lab_Cart_Page::init();
         ECare_Lab_Checkout_Page::init();
+        ECare_Lab_Orders::init();
         ECare_Ajax::init();
         ECare_WooCommerce::init();
         ECare_Shortcodes::init();
         ECare_Admin::init();
         ECare_Lab_Admin::init();
+        ECare_Lab_Orders_Admin::init();
     }
 
     /** The shortcodes this plugin provides. Elementor widget names match them. */

@@ -163,6 +163,10 @@ class ECare_WooCommerce {
             $order    = $order_id ? wc_get_order($order_id) : null;
 
             if ($order) {
+                // An advance for a new lab order: a fee, no product.
+                if ($order->get_meta('_ecare_lab_booking_id')) {
+                    return true;
+                }
                 foreach ($order->get_items() as $item) {
                     if (self::is_lab_test_product($item->get_product())) {
                         return true;
@@ -342,8 +346,13 @@ class ECare_WooCommerce {
         }
 
         // Lab bookings are matched by the order they were created from.
+        //
+        // Only the old lab's one-row-per-test bookings. Orders from the new lab
+        // cart pay an advance, so their WooCommerce order is complete long
+        // before the lab work is; ECare_Lab_Orders moves those itself.
+        $legacy_only = class_exists('ECare_Lab_Orders') ? ECare_Lab_Orders::legacy_only_sql() : '';
         $wpdb->query($wpdb->prepare(
-            "UPDATE {$table} SET status = %s WHERE order_id = %d AND booking_type = 'lab' AND status IN ({$slots})",
+            "UPDATE {$table} SET status = %s WHERE order_id = %d AND booking_type = 'lab'{$legacy_only} AND status IN ({$slots})",
             array_merge(array($new_status, $id), $from)
         ));
     }

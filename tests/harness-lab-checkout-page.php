@@ -58,6 +58,7 @@ function delete_transient($k) { unset($GLOBALS['transients'][$k]); return true; 
 function get_the_title($id) { return array(99 => 'Popular <Lab>')[$id] ?? ''; }
 function is_wp_error($x) { return false; }
 function get_post_status($id) { return $GLOBALS['status'][$id] ?? false; }
+function wc_get_order($id) { return $GLOBALS['wc_orders'][$id] ?? null; }
 function wc_get_coupon_id_by_code($c) { return isset($GLOBALS['coupons'][$c]) ? 7 : 0; }
 
 $GLOBALS['terms'] = array(
@@ -73,6 +74,11 @@ class ECare_Lab_Front {
     public static function login_url($b) { return 'https://site/login'; }
     public static function money($n) { $n = (float) $n; return '৳' . number_format($n, floor($n) == $n ? 0 : 2); }
     public static function icon($n) { return '<svg></svg>'; }
+}
+class ECare_Lab_Orders {
+    const PENDING_META = '_ecare_lab_pending_order'; const ORDER_META = '_ecare_lab_booking_id';
+    public static $calls = array(); public static $result = array('ok' => true, 'pay_url' => 'https://site/checkout/order-pay/77/?pay_for_order=true&key=wc_k');
+    public static function create_from_checkout($u, $state, $v) { self::$calls[] = array($u, $state, $v); return self::$result; }
 }
 class ECare_Lab_Cart_Page {
     public static function area_options() { return array('Dhaka' => array(501 => 'Dhanmondi', 502 => 'Mirpur')); }
@@ -165,10 +171,17 @@ $r = $P::apply(5, array_merge($f, array('slot' => '', 'do' => 'place')), $now);
 check('only the time missing: jumps to the time', array($r['errors'], $r['anchor']), array(array('slot' => 'missing'), 'ecl-co-time'));
 
 $r = $P::apply(5, $f + array('coupon' => 'save10', 'do' => 'place'), $now);
-check('place: ready', array($r['msg'], $r['errors']), array('ready', array()));
+check('place: straight to WooCommerce\'s payment page', array($r['msg'], $r['errors'], $r['redirect']), array('', array(), 'https://site/checkout/order-pay/77/?pay_for_order=true&key=wc_k'));
+check('the order is made once, from the checked state and its quote', array(count(ECare_Lab_Orders::$calls), ECare_Lab_Orders::$calls[0][1]['phone'], ECare_Lab_Orders::$calls[0][2]['address']['id'], ECare_Lab_Orders::$calls[0][2]['quote']['advance']), array(1, '01712345678', 1, 261.0));
 check('the ready hook fires once, with the cleaned phone and the quote', array(count($GLOBALS['fired']), $GLOBALS['fired'][0][0], $GLOBALS['fired'][0][1][1]['phone'], $GLOBALS['fired'][0][1][2]['quote']['total'], $GLOBALS['fired'][0][1][2]['quote']['coupon']),
       array(1, 'ecare_lab_checkout_ready', '01712345678', 1304.0, 116.0));
 $GLOBALS['fired'] = array();
+ECare_Lab_Orders::$result = array('ok' => false, 'code' => 'order');
+$r = $P::apply(5, $f + array('do' => 'place'), $now);
+check('the order could not be made: said so, no redirect', array($r['msg'], $r['redirect']), array('order_failed', ''));
+ECare_Lab_Orders::$result = array('ok' => true, 'pay_url' => 'x'); ECare_Lab_Orders::$calls = array(); $GLOBALS['fired'] = array();
+$r = $P::apply(5, array_merge($f, array('phone' => '', 'do' => 'place')), $now);
+check('with a problem, no order is made', ECare_Lab_Orders::$calls, array());
 
 $r = $P::apply(5, $f + array('del_address' => '1', 'do' => 'place'), $now);
 check('× on an address deletes it (and does not place the order)', array($r['msg'], array_keys($K::addresses(5)), $r['state']['address_id'], $GLOBALS['fired']), array('address_deleted', array(2), 0, array()));
@@ -203,11 +216,19 @@ $st = $K::get_state(5); $st['coupon'] = 'save10'; $K::save_state(5, $st);
 $html = $P::render($now);
 check('an applied coupon: shown, carried in the form, taken off', array(has($html, '<strong>SAVE10</strong>'), has($html, 'name="coupon" value="save10"'), has($html, 'Coupon Discount</dt><dd>−৳116')), array(true, true, true));
 
-$_GET = array('co_msg' => 'ready');
-check('"ready" is shown while it is still true', has($P::render($now), 'Everything is in order'), true);
-$st['slot'] = '07:00-09:00'; $K::save_state(5, $st);
-check('...and not once something has changed', has($P::render($now), 'Everything is in order'), false);
+$_GET = array('co_msg' => 'order_failed');
+check('a failed order says nothing was charged', has($P::render($now), 'Nothing was charged'), true);
 $_GET = array();
+$GLOBALS['umeta'][5]['_ecare_lab_pending_order'] = 77;
+$GLOBALS['wc_orders'][77] = new class { public $status = 'pending';
+    public function has_status($s) { return in_array($this->status, (array) $s, true); }
+    public function get_meta($k) { return $k === '_ecare_lab_booking_id' ? 31 : ''; }
+    public function get_checkout_payment_url() { return 'https://site/pay/77'; } };
+$html = $P::render($now);
+check('an unpaid earlier order: named, with Pay now', array(has($html, 'Order #31 is waiting for its advance payment.'), has($html, 'href="https://site/pay/77"')), array(true, true));
+$GLOBALS['wc_orders'][77]->status = 'completed';
+check('...and gone once it is paid', has($P::render($now), 'waiting for its advance'), false);
+unset($GLOBALS['umeta'][5]['_ecare_lab_pending_order']);
 
 ECare_Lab_Settings::$slots = array();
 $html = $P::render($now);

@@ -191,6 +191,9 @@ class ECare_Lab_Cart_Page {
         if (isset($_GET['step']) && $_GET['step'] === 'checkout') {
             return ECare_Lab_Checkout_Page::render();
         }
+        if (isset($_GET['step']) && $_GET['step'] === 'orders') {
+            return ECare_Lab_Orders_Page::render();
+        }
 
         $uid    = get_current_user_id();
         $code   = isset($_GET['cart_msg']) ? sanitize_key(wp_unslash((string) $_GET['cart_msg'])) : '';
@@ -209,7 +212,8 @@ class ECare_Lab_Cart_Page {
             echo '<div class="ecl-empty">' . ECare_Lab_Front::icon('flask') // phpcs:ignore
                 . '<h2>' . esc_html__('Your lab cart is empty', $d) . '</h2>'
                 . '<p>' . esc_html__('Find a test, choose a lab, and it will wait for you here.', $d) . '</p>'
-                . '<a class="ecl-btn" href="' . esc_url($tests) . '">' . esc_html__('Browse tests', $d) . '</a></div></div>';
+                . '<a class="ecl-btn" href="' . esc_url($tests) . '">' . esc_html__('Browse tests', $d) . '</a>'
+                . '<p class="ecl-cp-orders-link"><a class="ecl-link" href="' . esc_url(ECare_Lab_Front::url('cart', array('step' => 'orders'))) . '">' . esc_html__('My Lab Orders', $d) . '</a></p></div></div>';
             return ob_get_clean();
         }
 
@@ -229,7 +233,10 @@ class ECare_Lab_Cart_Page {
         $show_all = !empty($_GET['change']);
         $total    = round($p['subtotal'] + $p['material'], 2);
         ?>
-        <h1 class="ecl-cp-title"><?php esc_html_e('Lab Cart', $d); ?> <span><?php echo esc_html(sprintf(_n('(%d test)', '(%d tests)', $n_lines, $d), $n_lines)); ?></span></h1>
+        <div class="ecl-cp-titlebar">
+            <h1 class="ecl-cp-title"><?php esc_html_e('Lab Cart', $d); ?> <span><?php echo esc_html(sprintf(_n('(%d test)', '(%d tests)', $n_lines, $d), $n_lines)); ?></span></h1>
+            <a class="ecl-link" href="<?php echo esc_url(ECare_Lab_Front::url('cart', array('step' => 'orders'))); ?>"><?php esc_html_e('My Lab Orders', $d); ?></a>
+        </div>
 
         <div class="ecl-cp-layout">
             <div class="ecl-cp-main">

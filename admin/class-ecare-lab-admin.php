@@ -36,7 +36,7 @@ class ECare_Lab_Admin {
             ECare_Lab_Taxonomies::menu_slug(ECare_Lab_Taxonomies::COLLECTION) => array(__('Collections', 'ecare-health-services'), null),
             ECare_Lab_Providers::menu_slug()         => array(__('Lab Providers', 'ecare-health-services'), null),
             ECare_Locations::menu_slug()             => array(__('Locations', 'ecare-health-services'), null),
-            'ecare-lab-orders'                       => array(__('Lab Orders', 'ecare-health-services'), array('ECare_Admin', 'render_lab_orders')),
+            ECare_Lab_Orders_Admin::PAGE             => array(__('Lab Orders', 'ecare-health-services'), array('ECare_Lab_Orders_Admin', 'render')),
             ECare_Lab_Migration::PAGE                => array(__('Data Migration', 'ecare-health-services'), array('ECare_Lab_Migration', 'render_page')),
             ECare_Lab_Settings::PAGE                 => array(__('Settings', 'ecare-health-services'), array('ECare_Lab_Settings', 'render_page')),
         );
@@ -131,7 +131,8 @@ class ECare_Lab_Admin {
             'areas'     => $areas,
             'unlinked'  => $unlinked,
             'orders'    => (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s", 'lab')),
-            'pending'   => (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status IN ('pending','approved')", 'lab')),
+            // Paid and still being worked on (an unpaid order is not work yet).
+            'pending'   => (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status IN ('approved','sample_collected','processing','report_ready')", 'lab')),
             'completed' => (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'lab', 'completed')),
         );
     }
