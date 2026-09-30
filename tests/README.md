@@ -18,6 +18,7 @@ From the plugin root:
     php tests/harness-lab-providers.php
     php tests/harness-lab-tests.php
     php tests/harness-lab-admin.php
+    php tests/harness-lab-test-info.php
 
 There is also an optional layout test, which needs Node and Playwright:
 

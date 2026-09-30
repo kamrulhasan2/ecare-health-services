@@ -109,7 +109,8 @@ class ECare_CPT {
             'exclude_from_search' => true,
             'has_archive'         => false,
             'rewrite'             => false,
-            'supports'            => array('title', 'editor'),
+            // thumbnail: the test's picture on the catalogue and detail page.
+            'supports'            => array('title', 'editor', 'thumbnail'),
             'menu_icon'           => 'dashicons-microscope',
             'show_in_menu'        => false,
         ));
@@ -237,7 +238,7 @@ class ECare_CPT {
 
     public static function add_meta_boxes() {
         add_meta_box('ecare_caregiver_details', __('Care Provider Details', 'ecare-health-services'), array(__CLASS__, 'render_caregiver_meta'), 'ecare_caregiver', 'normal', 'high');
-        add_meta_box('ecare_lab_test_details', __('Lab Test Details', 'ecare-health-services'), array(__CLASS__, 'render_lab_test_meta'), 'ecare_lab_test', 'normal', 'high');
+        add_meta_box('ecare_lab_test_details', __('Price, Category & Provider', 'ecare-health-services'), array(__CLASS__, 'render_lab_test_meta'), 'ecare_lab_test', 'normal', 'default');
         add_meta_box('ecare_ambulance_details', __('Ambulance Provider Details', 'ecare-health-services'), array(__CLASS__, 'render_ambulance_meta'), 'ecare_ambulance', 'normal', 'high');
     }
 
@@ -373,22 +374,14 @@ class ECare_CPT {
     public static function render_lab_test_meta($post) {
         wp_nonce_field('ecare_lab_test_meta', 'ecare_lab_test_meta_nonce');
         $fields = array(
-            'test_code'       => get_post_meta($post->ID, '_test_code', true),
             'price'           => get_post_meta($post->ID, '_price', true),
             'category'        => get_post_meta($post->ID, '_test_category', true),
-            'sample_type'     => get_post_meta($post->ID, '_sample_type', true),
-            'turnaround_days' => get_post_meta($post->ID, '_turnaround_days', true),
-            'status'          => get_post_meta($post->ID, '_test_status', true) ?: 'active',
         );
         ?>
         <table class="form-table">
-            <tr><th><label>Test Code</label></th><td><input type="text" name="_test_code" value="<?php echo esc_attr($fields['test_code']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Price (৳)</label></th><td><input type="number" step="0.01" name="_price" value="<?php echo esc_attr($fields['price']); ?>" class="regular-text" /></td></tr>
             <tr><th><label>Category</label></th><td><input type="text" name="_test_category" value="<?php echo esc_attr($fields['category']); ?>" class="regular-text" /></td></tr>
-            <tr><th><label>Sample Type</label></th><td><input type="text" name="_sample_type" value="<?php echo esc_attr($fields['sample_type']); ?>" class="regular-text" placeholder="Blood, Urine, etc." /></td></tr>
-            <tr><th><label>Turnaround Days</label></th><td><input type="number" name="_turnaround_days" value="<?php echo esc_attr($fields['turnaround_days']); ?>" class="regular-text" /></td></tr>
             <?php ECare_Lab_Tests::render_location_fields($post); ?>
-            <tr><th><label>Status</label></th><td><select name="_test_status"><option value="active" <?php selected($fields['status'], 'active'); ?>>Active</option><option value="inactive" <?php selected($fields['status'], 'inactive'); ?>>Inactive</option></select></td></tr>
         </table>
         <?php
     }
@@ -524,7 +517,10 @@ class ECare_CPT {
         if ($post_type === 'ecare_lab_test') {
             if (!isset($_POST['ecare_lab_test_meta_nonce']) || !wp_verify_nonce($_POST['ecare_lab_test_meta_nonce'], 'ecare_lab_test_meta')) return;
             // Provider and areas are no longer typed in; ECare_Lab_Tests owns them.
-            $keys = array('_test_code', '_price', '_test_category', '_sample_type', '_turnaround_days', '_test_status');
+            // Code, sample and status are shown in the Test Information box
+            // (ECare_Lab_Test_Info) but keep their keys and are saved here.
+            // _turnaround_days is derived from the report time there.
+            $keys = array('_test_code', '_price', '_test_category', '_sample_type', '_test_status');
             foreach ($keys as $key) {
                 if (isset($_POST[$key])) {
                     update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));

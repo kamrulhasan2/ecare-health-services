@@ -787,7 +787,7 @@ class ECare_Admin {
                             <?php foreach ($tests as $t):
                                 $code     = get_post_meta($t->ID, '_test_code', true);
                                 $price    = get_post_meta($t->ID, '_price', true);
-                                $turn     = get_post_meta($t->ID, '_turnaround_days', true);
+                                $turn     = ECare_Lab_Test_Info::report_label($t->ID);
                                 $status   = get_post_meta($t->ID, '_test_status', true) ?: 'active';
                                 // Linked tests name their provider and summarise where they
                                 // are offered. Old tests still on typed-in lists are flagged
@@ -802,7 +802,10 @@ class ECare_Admin {
                                     <td><input type="checkbox" /></td>
                                     <td>#TST-<?php echo $t->ID; ?></td>
                                     <td style="font-weight:700;color:var(--brand-purple);"><?php echo esc_html($code); ?></td>
-                                    <td><strong><?php echo esc_html($t->post_title); ?></strong></td>
+                                    <td>
+                                        <strong><?php echo esc_html($t->post_title); ?></strong><br />
+                                        <small style="font-weight:700;letter-spacing:.04em;color:<?php echo ECare_Lab_Test_Info::is_package($t->ID) ? '#b45309' : '#64748b'; ?>;"><?php echo ECare_Lab_Test_Info::is_package($t->ID) ? esc_html__('PACKAGE', 'ecare-health-services') : esc_html__('SINGLE', 'ecare-health-services'); ?></small>
+                                    </td>
                                     <td>
                                         <strong><?php echo esc_html($provider !== '' ? $provider : '—'); ?></strong><br />
                                         <?php if ($linked): ?>
@@ -812,7 +815,7 @@ class ECare_Admin {
                                         <?php endif; ?>
                                     </td>
                                     <td style="font-weight:700;color:var(--brand-teal);">৳ <?php echo esc_html(number_format($price, 2)); ?></td>
-                                    <td><?php echo esc_html($turn); ?> days</td>
+                                    <td><?php echo $turn !== '' ? esc_html($turn) : '&mdash;'; ?></td>
                                     <td><span class="ecare-status-pill <?php echo esc_attr($status); ?>"><?php echo esc_html(ucfirst($status)); ?></span></td>
                                     <td>
                                         <a href="<?php echo esc_url(get_edit_post_link($t->ID)); ?>" class="ecare-admin-btn-outline" style="padding:4px 8px;font-size:12px;"><?php _e('Edit', 'ecare-health-services'); ?></a>
