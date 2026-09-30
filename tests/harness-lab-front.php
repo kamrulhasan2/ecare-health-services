@@ -81,7 +81,8 @@ class ECare_Lab_Catalog {
     public static function bookable_map() { return self::$map; }
     public static function card($id) { return self::$cards[$id]; }
     public static function related($id, $n) { return self::$related; }
-    public static function labs_for_test($id) { return self::$labs[$id] ?? array(); }
+    public static $labs_area = null;
+    public static function labs_for_test($id, $area = 0) { self::$labs_area = $area; return self::$labs[$id] ?? array(); }
 }
 class ECare_Lab_Taxonomies {
     const GROUP_ORGAN = 'organ'; const GROUP_CONCERN = 'concern'; const CATEGORY = 'ecare_lab_category';
@@ -125,6 +126,8 @@ class ECare_Lab_Test_Info {
     }
     public static function type($id) { return self::details($id)['type']; }
 }
+class ECare_Locations { const TAXONOMY = 'ecare_location'; }
+function get_term($id, $tax) { return $id === 501 ? (object) array('term_id' => 501, 'name' => 'Dhanmondi') : null; }
 class ECare_Lab_Packages {
     public static $incl = array(); public static $extra = array();
     public static function included_test_ids($id) { return self::$incl[$id] ?? array(); }
@@ -133,8 +136,10 @@ class ECare_Lab_Packages {
 class ECare_Lab_Cart {
     const MAX_PATIENTS = 10;
     public static $carts = array(); public static $add = null; public static $last_add = null;
+    public static $areas = array();
     public static function get($u) { return self::$carts[$u] ?? array('provider_id' => 0, 'items' => array()); }
-    public static function add($u, $t, $l, $n, $mode = '') { self::$last_add = array($u, $t, $l, $n, $mode); return self::$add; }
+    public static function get_area($u) { return self::$areas[$u] ?? 0; }
+    public static function add($u, $t, $l, $n, $mode = '', $area = 0) { self::$last_add = array($u, $t, $l, $n, $mode, $area); return self::$add; }
     public static function priced($u) { return array('count' => 2, 'subtotal' => 830.0); }
 }
 
@@ -362,11 +367,15 @@ $_POST = array('nonce' => 'n', 'test_id' => '101');
 list($ok, $st, $d) = ajax('ajax_book_options');
 check('options for anyone', array($ok, $d['id'], $d['logged_in'], $d['cart_lab'], $d['in_cart'], $d['max']), array(true, 101, false, 0, 0, 10));
 check('labs cheapest first, no struck price without a discount', array_map(function ($l) { return array($l['id'], $l['mrp']); }, $d['labs']), array(array(103, 450.0), array(99, 0)));
-check('material cost and internal ids stay on the server', array_keys($d['labs'][0]), array('id', 'name', 'logo', 'price', 'mrp', 'savings', 'discount'));
+check('material cost and internal ids stay on the server', array_keys($d['labs'][0]), array('id', 'name', 'logo', 'price', 'mrp', 'savings', 'discount', 'serves_area'));
+check('logged out: no area is used', array(ECare_Lab_Catalog::$labs_area, $d['area_name']), array(0, ''));
 check('login link comes back to the page', $d['login_url'], 'https://site/wp-login.php?redirect_to=' . rawurlencode('https://site/lab-tests/?lab_test=fbs'));
 $GLOBALS['uid'] = 5; ECare_Lab_Cart::$carts[5] = array('provider_id' => 103, 'items' => array(101 => 3));
 list($ok, $st, $d) = ajax('ajax_book_options');
 check('logged in: the cart lab and the count already in it', array($d['logged_in'], $d['cart_lab'], $d['in_cart']), array(true, 103, 3));
+ECare_Lab_Cart::$areas[5] = 501;
+list($ok, $st, $d) = ajax('ajax_book_options');
+check('with a saved area: labs are checked against it, and it is named', array(ECare_Lab_Catalog::$labs_area, $d['area_name']), array(501, 'Dhanmondi'));
 
 $GLOBALS['uid'] = 0; ECare_Lab_Cart::$last_add = null;
 $_POST = array('nonce' => 'n', 'test_id' => '101', 'lab_id' => '103', 'patients' => '2');
@@ -376,13 +385,16 @@ $GLOBALS['uid'] = 5;
 ECare_Lab_Cart::$add = array('ok' => false, 'code' => 'other_lab', 'current_lab' => 101, 'can_switch' => true);
 $_POST = array('nonce' => 'n', 'test_id' => '105', 'lab_id' => '99', 'patients' => '2', 'on_conflict' => 'DROP TABLE');
 list($ok, $st, $d) = ajax('ajax_cart_add');
-check('an unknown on_conflict is passed on as none', ECare_Lab_Cart::$last_add, array(5, 105, 99, 2, ''));
+check('an unknown on_conflict is passed on as none; the saved area goes with it', ECare_Lab_Cart::$last_add, array(5, 105, 99, 2, '', 501));
 check('a lab clash: 409, the cart\'s lab named, whether it can move', array($ok, $st, $d['code'], $d['current_lab'], $d['can_switch']), array(false, 409, 'other_lab', 'FBS <i>', true));
 $_POST['on_conflict'] = 'switch'; ajax('ajax_cart_add');
 check('"switch" reaches the cart', ECare_Lab_Cart::$last_add[4], 'switch');
 ECare_Lab_Cart::$add = array('ok' => false, 'code' => 'not_available');
 list($ok, $st, $d) = ajax('ajax_cart_add');
 check('a lab that stopped offering it: a message, no lab name', array($st, $d['code'], isset($d['current_lab']), $d['message'] !== ''), array(409, 'not_available', false, true));
+ECare_Lab_Cart::$add = array('ok' => false, 'code' => 'area');
+list($ok, $st, $d) = ajax('ajax_cart_add');
+check('a lab that does not collect in the area: its own message', array($st, $d['code'], strpos($d['message'], 'your area') !== false), array(409, 'area', true));
 ECare_Lab_Cart::$add = array('ok' => true, 'cart' => array());
 list($ok, $st, $d) = ajax('ajax_cart_add');
 check('added: count, total and the cart link', array($ok, $d['count'], $d['total'], isset($d['cart_url'])), array(true, 2, 830.0, true));

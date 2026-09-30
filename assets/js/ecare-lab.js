@@ -79,6 +79,54 @@
     syncArrows();
 
     // =====================================================================
+    // Lab cart page. Everything there is a plain form; this only smooths it.
+    // =====================================================================
+    document.querySelectorAll('.ecl-cartp').forEach(function (root) {
+        root.classList.add('ecl-has-js');
+        // Choosing an area saves it straight away.
+        root.querySelectorAll('select[data-ecl-submit-on-change]').forEach(function (sel) {
+            sel.addEventListener('change', function () { if (sel.value) { sel.form.submit(); } });
+        });
+        // "Change" opens the lab list in place instead of reloading.
+        root.querySelectorAll('[data-ecl-toggle]').forEach(function (b) {
+            b.addEventListener('click', function (e) {
+                var box = document.getElementById(b.getAttribute('data-ecl-toggle'));
+                if (!box) { return; }
+                e.preventDefault();
+                box.hidden = !box.hidden;
+                b.setAttribute('aria-expanded', box.hidden ? 'false' : 'true');
+                if (!box.hidden) { var f = box.querySelector('button'); if (f) { f.focus(); } }
+            });
+        });
+        // Clear Cart asks twice - without a browser dialog.
+        root.querySelectorAll('[data-ecl-confirm]').forEach(function (b) {
+            var label = b.textContent, timer = null;
+            b.form.addEventListener('submit', function (e) {
+                if (b.getAttribute('data-armed')) { clearTimeout(timer); return; }
+                e.preventDefault();
+                b.setAttribute('data-armed', '1');
+                b.textContent = b.getAttribute('data-ecl-confirm');
+                b.classList.add('is-armed');
+                clearTimeout(timer);
+                timer = setTimeout(function () { b.removeAttribute('data-armed'); b.textContent = label; b.classList.remove('is-armed'); }, 5000);
+            });
+        });
+        // One click, one post: a double click must not add or remove twice.
+        root.querySelectorAll('form.ecl-cp-form').forEach(function (f) {
+            f.addEventListener('submit', function (e) {
+                if (e.defaultPrevented) { return; }
+                if (f.getAttribute('data-busy')) { e.preventDefault(); return; }
+                f.setAttribute('data-busy', '1');
+                f.classList.add('is-busy');
+            });
+        });
+    });
+    window.addEventListener('pageshow', function (e) {
+        if (!e.persisted) { return; }
+        document.querySelectorAll('.ecl-cartp form[data-busy]').forEach(function (f) { f.removeAttribute('data-busy'); f.classList.remove('is-busy'); });
+    });
+
+    // =====================================================================
     // Book Test modal: choose a lab and how many patients, then add to the
     // lab cart. Every price shown here is only a preview - the server reads
     // the offering again when the test is added.
@@ -98,7 +146,9 @@
         switchTo: 'Move my cart to %s', startNew: 'Clear cart and add this test', cancel: 'Cancel',
         noSwitch: '%s does not offer every test in your cart.',
         sample: 'Sample', report: 'Report in', fasting: 'Fasting', yes: 'Yes', no: 'No',
-        fewer: 'One patient fewer', more: 'One patient more'
+        fewer: 'One patient fewer', more: 'One patient more',
+        off: 'UNAVAILABLE', notArea: 'Does not collect in %s',
+        noneArea: 'No lab collects this test in %s yet. You can change your area on the cart page.'
     };
     if (L.i18n) { for (var k in L.i18n) { if (Object.prototype.hasOwnProperty.call(L.i18n, k)) { T[k] = L.i18n[k]; } } }
     function fmt(s, v) { return s.replace('%s', v); }
@@ -193,9 +243,11 @@
         M.title.textContent = t.title;
         M.body.textContent = '';
 
-        // Keep the lab already in the cart when it offers this test; else the cheapest.
-        var ids = t.labs.map(function (l) { return l.id; });
-        M.lab = ids.indexOf(t.cart_lab) >= 0 ? t.cart_lab : t.labs[0].id;
+        // Keep the lab already in the cart when it offers this test; else the
+        // cheapest. A lab that does not collect in the patient's area cannot be picked.
+        var usable = t.labs.filter(function (l) { return l.serves_area !== false; });
+        var ids = usable.map(function (l) { return l.id; });
+        M.lab = ids.indexOf(t.cart_lab) >= 0 ? t.cart_lab : (usable[0] ? usable[0].id : 0);
         M.n   = t.in_cart > 0 ? t.in_cart : 1;
 
         var facts = el('ul', { class: 'ecl-m-facts' });
@@ -208,15 +260,19 @@
         // Labs
         var list = el('div', { class: 'ecl-m-labs', role: 'radiogroup', 'aria-labelledby': 'ecl-m-labs-h' });
         t.labs.forEach(function (l) {
+            var off = l.serves_area === false;
             var input = el('input', { type: 'radio', name: 'ecl-m-lab', value: String(l.id) });
             input.checked = l.id === M.lab;
+            input.disabled = off;
             input.addEventListener('change', function () { M.lab = l.id; sync(); });
             var logo = l.logo ? el('img', { src: l.logo, alt: '' }) : el('span', { class: 'ecl-lab-initial', text: (l.name || '?').charAt(0).toUpperCase() });
-            var price = el('span', { class: 'ecl-m-lab-price' }, [el('strong', { text: money(l.price) })]);
-            if (l.mrp > 0) { price.appendChild(el('del', { text: money(l.mrp) })); }
+            var price = off ? el('span', { class: 'ecl-m-lab-price' }, [el('span', { class: 'ecl-tag ecl-tag-off', text: T.off })])
+                : el('span', { class: 'ecl-m-lab-price' }, [el('strong', { text: money(l.price) })]);
+            if (!off && l.mrp > 0) { price.appendChild(el('del', { text: money(l.mrp) })); }
             var name = el('span', { class: 'ecl-m-lab-name' }, [el('span', { text: l.name })]);
-            if (l.savings > 0) { name.appendChild(el('small', { text: T.save + ' ' + money(l.savings) + (l.discount ? ' (' + l.discount + '%)' : '') })); }
-            list.appendChild(el('label', { class: 'ecl-m-lab' }, [input, logo, name, price]));
+            if (off) { name.appendChild(el('small', { class: 'ecl-m-lab-why', text: fmt(T.notArea, t.area_name) })); }
+            else if (l.savings > 0) { name.appendChild(el('small', { text: T.save + ' ' + money(l.savings) + (l.discount ? ' (' + l.discount + '%)' : '') })); }
+            list.appendChild(el('label', { class: 'ecl-m-lab' + (off ? ' is-off' : '') }, [input, logo, name, price]));
         });
         M.body.appendChild(el('h3', { class: 'ecl-m-h', id: 'ecl-m-labs-h', text: T.chooseLab }));
         M.body.appendChild(list);
@@ -249,6 +305,10 @@
         } else {
             var btn = el('button', { type: 'button', class: 'ecl-btn ecl-btn-lg', text: t.in_cart ? T.update : T.add });
             btn.addEventListener('click', function () { add(''); });
+            if (!M.lab) {
+                btn.disabled = true;
+                foot.appendChild(el('p', { class: 'ecl-m-note', text: fmt(T.noneArea, t.area_name) }));
+            }
             foot.appendChild(btn);
             M.ui.add = btn;
         }
@@ -281,7 +341,7 @@
         if (u.add) { u.add.disabled = true; u.add.textContent = T.adding; }
         post('ecare_lab_cart_add', { test_id: M.test.id, lab_id: M.lab, patients: M.n, on_conflict: mode }).then(function (r) {
             if (M !== mine) { return; }
-            if (u.add) { u.add.disabled = false; u.add.textContent = M.test.in_cart ? T.update : T.add; }
+            if (u.add) { u.add.disabled = !M.lab; u.add.textContent = M.test.in_cart ? T.update : T.add; }
             if (r.ok) { return done(r.data); }
             if (r.data.code === 'login' && r.data.login_url) { window.location.href = r.data.login_url; return; }
             if (r.data.code === 'other_lab') { return conflict(r.data); }

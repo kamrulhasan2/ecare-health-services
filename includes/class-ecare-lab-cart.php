@@ -20,6 +20,7 @@ defined('ABSPATH') || exit;
 class ECare_Lab_Cart {
 
     const META         = '_ecare_lab_cart';
+    const AREA_META    = '_ecare_lab_area';   // where samples are collected; outlives the cart
     const MAX_PATIENTS = 10;
     const MAX_ITEMS    = 30;
 
@@ -88,13 +89,17 @@ class ECare_Lab_Cart {
      * @param string $on_conflict ''      refuse when the cart holds another lab
      *                            'switch' move the whole cart to the new lab (only if it can do all)
      *                            'replace' empty the cart and start again with this test
+     * @param int    $area_id     the patient's area; a lab that does not collect there is refused
      * @return array{ok: bool, code?: string, cart?: array, current_lab?: int, can_switch?: bool}
      */
-    public static function add($user_id, $test_id, $provider_id, $patients, $on_conflict = '') {
+    public static function add($user_id, $test_id, $provider_id, $patients, $on_conflict = '', $area_id = 0) {
         $test_id     = (int) $test_id;
         $provider_id = (int) $provider_id;
         if (!self::offering($test_id, $provider_id)) {
             return array('ok' => false, 'code' => 'not_available');
+        }
+        if ($area_id && !ECare_Lab_Providers::covers_area($provider_id, $area_id)) {
+            return array('ok' => false, 'code' => 'area');
         }
 
         $cart = self::get($user_id);
@@ -133,6 +138,131 @@ class ECare_Lab_Cart {
             self::save($user_id, $cart);
         }
         return self::get($user_id);
+    }
+
+    // -----------------------------------------------------------------------
+    // The patient's area
+    // -----------------------------------------------------------------------
+
+    public static function is_area($term_id) {
+        $t = get_term((int) $term_id, ECare_Locations::TAXONOMY);
+        return $t && !is_wp_error($t) && ECare_Locations::get_level($t->term_id) === ECare_Locations::LEVEL_AREA;
+    }
+
+    /** The saved collection area, or 0 (also when that area has since been deleted). */
+    public static function get_area($user_id) {
+        $id = (int) get_user_meta((int) $user_id, self::AREA_META, true);
+        return ($id && self::is_area($id)) ? $id : 0;
+    }
+
+    public static function set_area($user_id, $area_id) {
+        if (!self::is_area($area_id)) {
+            return false;
+        }
+        update_user_meta((int) $user_id, self::AREA_META, (int) $area_id);
+        return true;
+    }
+
+    // -----------------------------------------------------------------------
+    // Changing the lab
+    // -----------------------------------------------------------------------
+
+    /**
+     * Every lab that offers at least one test in the cart, priced for this
+     * cart (patients included). A lab is unavailable when it lacks a test
+     * ('missing', with which) or does not collect in the area ('area').
+     * Available labs first, then cheapest by what the patient pays in all
+     * (tests plus the lab's material cost).
+     *
+     * @return array<int, array{id:int, total:float, mrp:float, savings:float, material:float, missing:int[], serves_area:?bool, available:bool, reason:string, current:bool}>
+     */
+    public static function vendors($user_id, $area_id = 0) {
+        $cart = self::get($user_id);
+        if (!$cart['items']) {
+            return array();
+        }
+        $labs = array();
+        foreach ($cart['items'] as $tid => $n) {
+            foreach (ECare_Lab_Offerings::available_for_test($tid) as $row) {
+                $labs[(int) $row->provider_id][$tid] = $row;
+            }
+        }
+        $out = array();
+        foreach ($labs as $pid => $rows) {
+            $total = $mrp = $mat = 0.0;
+            foreach ($rows as $tid => $row) {
+                $total += ECare_Lab_Offerings::effective_price($row) * $cart['items'][$tid];
+                $mrp   += (float) $row->mrp * $cart['items'][$tid];
+                $mat   += (float) $row->material_cost * $cart['items'][$tid];
+            }
+            $missing = array_values(array_diff(array_keys($cart['items']), array_keys($rows)));
+            $serves  = $area_id ? (bool) ECare_Lab_Providers::covers_area($pid, $area_id) : null;
+            $reason  = $missing ? 'missing' : ($serves === false ? 'area' : '');
+            $out[]   = array(
+                'id'          => $pid,
+                'total'       => round($total, 2),
+                'mrp'         => round($mrp, 2),
+                'savings'     => round($mrp - $total, 2),
+                'material'    => round($mat, 2),
+                'missing'     => $missing,
+                'serves_area' => $serves,
+                'available'   => $reason === '',
+                'reason'      => $reason,
+                'current'     => $pid === $cart['provider_id'],
+            );
+        }
+        usort($out, function ($a, $b) {
+            if ($a['available'] !== $b['available']) {
+                return $a['available'] ? -1 : 1;
+            }
+            return (($a['total'] + $a['material']) <=> ($b['total'] + $b['material'])) ?: ($a['id'] <=> $b['id']);
+        });
+        return $out;
+    }
+
+    /** Move the whole cart to another lab. Codes: empty, missing, area. */
+    public static function switch_lab($user_id, $provider_id, $area_id = 0) {
+        $cart        = self::get($user_id);
+        $provider_id = (int) $provider_id;
+        if (!$cart['items']) {
+            return array('ok' => false, 'code' => 'empty');
+        }
+        if (!self::lab_can_do_all($provider_id, array_keys($cart['items']))) {
+            return array('ok' => false, 'code' => 'missing');
+        }
+        if ($area_id && !ECare_Lab_Providers::covers_area($provider_id, $area_id)) {
+            return array('ok' => false, 'code' => 'area');
+        }
+        $cart['provider_id'] = $provider_id;
+        self::save($user_id, $cart);
+        return array('ok' => true);
+    }
+
+    /**
+     * What stops this cart from going to checkout, most urgent first:
+     * empty, unavailable (a test the lab dropped), no_area, lab_area (the lab
+     * does not collect in the chosen area). An empty list means go ahead.
+     *
+     * @return string[]
+     */
+    public static function problems($user_id, $area_id) {
+        $p = self::priced($user_id);
+        if (!$p['lines']) {
+            return array('empty');
+        }
+        $out = array();
+        foreach ($p['lines'] as $line) {
+            if (!$line['available']) {
+                $out[] = 'unavailable';
+                break;
+            }
+        }
+        if (!$area_id) {
+            $out[] = 'no_area';
+        } elseif (!ECare_Lab_Providers::covers_area($p['provider_id'], $area_id)) {
+            $out[] = 'lab_area';
+        }
+        return $out;
     }
 
     // -----------------------------------------------------------------------

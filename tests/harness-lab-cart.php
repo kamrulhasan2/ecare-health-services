@@ -11,6 +11,10 @@
  *   - no price is ever stored: the cart is priced from the offerings each time,
  *     and a test the lab stopped offering is shown but not charged
  *   - an emptied cart leaves no user meta behind
+ *   - the patient's area: only a real area is saved; a lab that does not
+ *     collect there cannot be added or switched to, and blocks checkout
+ *   - the Change list prices each lab for this cart and says why a lab is
+ *     unavailable (a test it lacks, or the area)
  */
 
 define('ABSPATH', __DIR__ . '/');
@@ -21,6 +25,19 @@ function get_user_meta($u, $k, $s = false) { return $GLOBALS['umeta'][$u][$k] ??
 function update_user_meta($u, $k, $v) { $GLOBALS['umeta'][$u][$k] = $v; return true; }
 function delete_user_meta($u, $k) { unset($GLOBALS['umeta'][$u][$k]); return true; }
 function get_the_title($id) { return 'Test ' . $id; }
+function is_wp_error($x) { return false; }
+// Areas 501 (Dhanmondi) and 502 (Agrabad); 500 is a district.
+$GLOBALS['terms'] = array(500 => 'district', 501 => 'area', 502 => 'area');
+function get_term($id, $tax) { return isset($GLOBALS['terms'][$id]) ? (object) array('term_id' => $id) : null; }
+class ECare_Locations {
+    const TAXONOMY = 'ecare_location'; const LEVEL_AREA = 'area';
+    public static function get_level($id) { return $GLOBALS['terms'][$id] ?? ''; }
+}
+// Which labs collect where.
+$GLOBALS['coverage'] = array();
+class ECare_Lab_Providers {
+    public static function covers_area($lab, $area) { return !empty($GLOBALS['coverage'][$lab][$area]); }
+}
 
 // The real price rules; the rows themselves come from the world below.
 class ECare_Lab_Offerings {
@@ -177,6 +194,82 @@ $GLOBALS['active'][POPULAR] = false;
 check('the whole lab switched off: nothing is charged', $C::priced(U)['subtotal'], 0.0);
 check('...and nothing more can be added there', $C::add(U, 105, POPULAR, 1)['code'], 'not_available');
 $GLOBALS['active'][POPULAR] = true;
+
+
+// ===========================================================================
+echo "\n=== G. the patient's area ===\n";
+// ===========================================================================
+$GLOBALS['umeta'] = array();
+check('no area saved', $C::get_area(U), 0);
+check('a district is not an area', array($C::set_area(U, 500), $C::get_area(U)), array(false, 0));
+check('an unknown id is refused', $C::set_area(U, 999), false);
+check('an area is saved', array($C::set_area(U, 501), $C::get_area(U)), array(true, 501));
+unset($GLOBALS['terms'][501]);
+check('an area deleted later reads as none', $C::get_area(U), 0);
+$GLOBALS['terms'][501] = 'area';
+$C::clear(U);
+check('clearing the cart keeps the area', $C::get_area(U), 501);
+
+// Popular collects in Dhanmondi only; LabAid in both.
+$GLOBALS['coverage'] = array(POPULAR => array(501 => true), LABAID => array(501 => true, 502 => true));
+check('adding from a lab that does not collect there is refused', $C::add(U, 101, POPULAR, 1, '', 502), array('ok' => false, 'code' => 'area'));
+check('...and nothing was stored', isset($GLOBALS['umeta'][U]['_ecare_lab_cart']), false);
+check('a lab that does collect there is fine', $C::add(U, 101, LABAID, 1, '', 502)['ok'], true);
+check('no area given: no area check', $C::add(U, 89, LABAID, 1)['ok'], true);
+
+// ===========================================================================
+echo "\n=== H. the Change list ===\n";
+// ===========================================================================
+$C::clear(U);
+check('empty cart: no labs to list', $C::vendors(U), array());
+$C::add(U, 101, POPULAR, 2);    // Popular: 400 x2 ; LabAid 380 (MRP 450) x2
+$C::add(U, 105, POPULAR, 1);    // package: Popular only, 650 (MRP 800)
+$v = $C::vendors(U);
+check('both labs that offer something are listed, the able one first', array_column($v, 'id'), array(POPULAR, LABAID));
+check('Popular priced for the whole cart, patients counted', array($v[0]['total'], $v[0]['mrp'], $v[0]['savings'], $v[0]['available'], $v[0]['current']), array(1450.0, 1600.0, 150.0, true, true));
+check('LabAid lacks the package: unavailable, and says which test', array($v[1]['available'], $v[1]['reason'], $v[1]['missing']), array(false, 'missing', array(105)));
+check('no area chosen: serves_area is unknown', $v[0]['serves_area'], null);
+
+$C::remove(U, 105);
+$v = $C::vendors(U, 502);
+check('Agrabad: LabAid collects there, Popular does not', array(array_column($v, 'id'), array_column($v, 'reason')), array(array(LABAID, POPULAR), array('', 'area')));
+$v = $C::vendors(U, 501);
+check('Dhanmondi: both can; cheaper LabAid first', array(array_column($v, 'id'), array_column($v, 'total')), array(array(LABAID, POPULAR), array(760.0, 800.0)));
+$GLOBALS['rows'][1]->material_cost = 30;   // LabAid FBS: 380 + 30 material, x2 = 820 in all
+$v = $C::vendors(U, 501);
+check('material cost is counted per patient and decides the order', array(array_column($v, 'id'), array_column($v, 'material')), array(array(POPULAR, LABAID), array(0.0, 60.0)));
+$GLOBALS['rows'][1]->material_cost = 0;
+
+// ===========================================================================
+echo "\n=== I. switching lab ===\n";
+// ===========================================================================
+$C::clear(U);
+check('empty cart', $C::switch_lab(U, LABAID)['code'], 'empty');
+$C::add(U, 101, POPULAR, 2);
+$C::add(U, 105, POPULAR, 1);
+check('LabAid lacks the package: refused', array($C::switch_lab(U, LABAID)['code'], $C::get(U)['provider_id']), array('missing', POPULAR));
+$C::remove(U, 105);
+$C::switch_lab(U, LABAID);
+check('moved to LabAid, counts kept', $C::get(U), array('provider_id' => LABAID, 'items' => array(101 => 2)));
+$r = $C::switch_lab(U, POPULAR, 502);
+check('Popular does not collect in Agrabad: refused, cart stays', array($r, $C::get(U)['provider_id']), array(array('ok' => false, 'code' => 'area'), LABAID));
+check('an unknown lab is refused', $C::switch_lab(U, 4242)['code'], 'missing');
+
+// ===========================================================================
+echo "
+=== J. what blocks checkout ===
+";
+// ===========================================================================
+$C::clear(U);
+check('empty', $C::problems(U, 501), array('empty'));
+$C::add(U, 101, LABAID, 1);
+check('no area chosen', $C::problems(U, 0), array('no_area'));
+check('the lab collects there: nothing blocks', $C::problems(U, 502), array());
+$GLOBALS['coverage'][LABAID] = array(501 => true);
+check('the lab stopped collecting there', $C::problems(U, 502), array('lab_area'));
+$GLOBALS['rows'][1]->status = 'inactive';
+check('a dropped test and the area, most urgent first', $C::problems(U, 502), array('unavailable', 'lab_area'));
+$GLOBALS['rows'][1]->status = 'active';
 
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);

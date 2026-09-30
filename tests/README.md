@@ -27,6 +27,7 @@ From the plugin root:
     php tests/harness-lab-catalog.php
     php tests/harness-lab-front.php
     php tests/harness-lab-cart.php
+    php tests/harness-lab-cart-page.php
 
 There is also an optional layout test, which needs Node and Playwright:
 

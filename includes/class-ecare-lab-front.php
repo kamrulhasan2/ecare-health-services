@@ -165,6 +165,11 @@ class ECare_Lab_Front {
             'no'         => __('No', $d),
             'fewer'      => __('One patient fewer', $d),
             'more'       => __('One patient more', $d),
+            'off'        => __('UNAVAILABLE', $d),
+            /* translators: %s: area name */
+            'notArea'    => __('Does not collect in %s', $d),
+            /* translators: %s: area name */
+            'noneArea'   => __('No lab collects this test in %s yet. You can change your area on the cart page.', $d),
         );
     }
 
@@ -172,6 +177,7 @@ class ECare_Lab_Front {
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-elementor-widgets.php';
         $manager->register(new ECare_Elementor_Lab_Home());
         $manager->register(new ECare_Elementor_Lab_Catalog());
+        $manager->register(new ECare_Elementor_Lab_Cart());
     }
 
     // =======================================================================
@@ -823,18 +829,21 @@ class ECare_Lab_Front {
             wp_send_json_error(array('message' => __('This test cannot be booked right now.', 'ecare-health-services')), 404);
         }
         $info = ECare_Lab_Test_Info::details($id);
+        $area = is_user_logged_in() ? ECare_Lab_Cart::get_area(get_current_user_id()) : 0;
         $labs = array();
-        foreach (ECare_Lab_Catalog::labs_for_test($id) as $l) {
+        foreach (ECare_Lab_Catalog::labs_for_test($id, $area) as $l) {
             $labs[] = array(
-                'id'       => $l['id'],
-                'name'     => $l['name'],
-                'logo'     => $l['logo'],
-                'price'    => $l['price'],
-                'mrp'      => $l['mrp'] > $l['price'] ? $l['mrp'] : 0,
-                'savings'  => $l['savings'],
-                'discount' => $l['discount'],
+                'id'          => $l['id'],
+                'name'        => $l['name'],
+                'logo'        => $l['logo'],
+                'price'       => $l['price'],
+                'mrp'         => $l['mrp'] > $l['price'] ? $l['mrp'] : 0,
+                'savings'     => $l['savings'],
+                'discount'    => $l['discount'],
+                'serves_area' => $l['serves_area'],   // null when no area is chosen yet
             );
         }
+        $area_term = $area ? get_term($area, ECare_Locations::TAXONOMY) : null;
         $cart = is_user_logged_in() ? ECare_Lab_Cart::get(get_current_user_id()) : array('provider_id' => 0, 'items' => array());
         wp_send_json_success(array(
             'id'         => $id,
@@ -847,6 +856,7 @@ class ECare_Lab_Front {
             'parameters' => $info['parameters'],
             'labs'       => $labs,
             'max'        => ECare_Lab_Cart::MAX_PATIENTS,
+            'area_name'  => ($area_term && !is_wp_error($area_term)) ? $area_term->name : '',
             'logged_in'  => is_user_logged_in(),
             'login_url'  => self::login_url(wp_get_referer() ?: self::url('test', array('id' => $id))),
             'cart_lab'   => (int) $cart['provider_id'],
@@ -868,7 +878,8 @@ class ECare_Lab_Front {
             (int) ($_POST['test_id'] ?? 0),
             (int) ($_POST['lab_id'] ?? 0),
             (int) ($_POST['patients'] ?? 1),
-            in_array($mode, array('switch', 'replace'), true) ? $mode : ''
+            in_array($mode, array('switch', 'replace'), true) ? $mode : '',
+            ECare_Lab_Cart::get_area($uid)
         );
         if (!$r['ok']) {
             $out = array('code' => $r['code']);
@@ -880,6 +891,7 @@ class ECare_Lab_Front {
                 'not_available' => __('That lab is no longer taking this test. Please choose another.', 'ecare-health-services'),
                 'cart_full'     => __('Your lab cart is full.', 'ecare-health-services'),
                 'other_lab'     => __('Only one lab can be selected per order.', 'ecare-health-services'),
+                'area'          => __('This lab does not collect samples in your area.', 'ecare-health-services'),
             );
             $out['message'] = $messages[$r['code']] ?? __('Could not add to cart.', 'ecare-health-services');
             wp_send_json_error($out, 409);
