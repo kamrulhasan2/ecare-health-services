@@ -151,7 +151,7 @@
             var fee = parseFloat(r.getAttribute('data-fee')) || 0;
             var total = Math.round(((parseFloat(sum.getAttribute('data-base')) || 0) + fee) * 100) / 100;
             var adv = Math.min(total, Math.ceil(total * (parseFloat(sum.getAttribute('data-pct')) || 0) / 100));
-            var set = function (k, v) { var el = sum.querySelector('[data-ecl-sum="' + k + '"]'); if (el) { el.textContent = money(v); } };
+            var set = function (k, v) { form.querySelectorAll('[data-ecl-sum="' + k + '"]').forEach(function (el) { el.textContent = money(v); }); };   // the summary and the Place Order button
             set('delivery', fee); set('total', total); set('advance', adv); set('later', Math.round((total - adv) * 100) / 100);
         }
         form.querySelectorAll('input[name="delivery"]').forEach(function (r) { r.addEventListener('change', resum); });

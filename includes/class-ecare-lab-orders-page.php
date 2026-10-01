@@ -24,6 +24,16 @@ class ECare_Lab_Orders_Page {
         echo '<div class="ecl ecl-cartp ecl-orders">' . $crumbs; // phpcs:ignore
         echo '<h1 class="ecl-cp-title">' . esc_html__('My Lab Orders', $d) . '</h1>';
 
+        $paid_msg = array(
+            'failed'    => array('error', __('The payment did not go through, and nothing was charged. Use Pay advance to try again.', $d)),
+            'cancelled' => array('warn', __('Payment cancelled. Your order is saved - use Pay advance when you are ready.', $d)),
+            'expired'   => array('error', __('That payment link has expired. Please use Pay advance again.', $d)),
+        );
+        $pay_msg = isset($_GET['pay']) ? sanitize_key(wp_unslash($_GET['pay'])) : '';
+        if (isset($paid_msg[$pay_msg])) {
+            echo '<div class="ecl-notice ecl-notice-' . esc_attr($paid_msg[$pay_msg][0]) . '" role="' . ($paid_msg[$pay_msg][0] === 'error' ? 'alert' : 'status') . '">' . esc_html($paid_msg[$pay_msg][1]) . '</div>';
+        }
+
         foreach ($orders as $o) {
             if ($o->id == $placed && $o->status !== 'pending') {
                 echo '<div class="ecl-notice ecl-notice-ok" role="status">' . esc_html(sprintf(__('Order #%d is confirmed.', $d), $placed)) . '</div>';
@@ -53,7 +63,7 @@ class ECare_Lab_Orders_Page {
         if ($o->status === 'pending' && $o->order_id && function_exists('wc_get_order')) {
             $wc = wc_get_order((int) $o->order_id);
             if ($wc && $wc->has_status(array('pending', 'failed'))) {
-                $pay = $wc->get_checkout_payment_url();
+                $pay = ECare_Lab_Pay::url($wc, 'orders');
             }
         }
         $report = in_array($o->status, array('report_ready', 'completed'), true) ? ECare_Lab_Orders::report_url($o) : '';

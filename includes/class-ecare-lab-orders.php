@@ -295,7 +295,8 @@ class ECare_Lab_Orders {
             $order->payment_complete();
             return array('ok' => true, 'booking_id' => $booking_id, 'order' => $order, 'pay_url' => ECare_Lab_Front::url('cart', array('step' => 'orders', 'placed' => $booking_id)));
         }
-        return array('ok' => true, 'booking_id' => $booking_id, 'order' => $order, 'pay_url' => $order->get_checkout_payment_url());
+        // Straight on to SSLCommerz (ECare_Lab_Pay); WooCommerce's order-pay page only without that gateway.
+        return array('ok' => true, 'booking_id' => $booking_id, 'order' => $order, 'pay_url' => ECare_Lab_Pay::url($order, 'checkout'));
     }
 
     /**

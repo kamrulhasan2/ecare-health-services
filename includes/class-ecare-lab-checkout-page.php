@@ -44,7 +44,7 @@ class ECare_Lab_Checkout_Page {
             set_transient(self::err_key($uid), $r['errors'], 10 * MINUTE_IN_SECONDS);
         }
         if (!empty($r['redirect'])) {
-            wp_safe_redirect($r['redirect']);   // WooCommerce's order-pay page, or My Lab Orders
+            wp_safe_redirect($r['redirect']);   // the pay step (ECare_Lab_Pay, on to SSLCommerz), or My Lab Orders
             exit;
         }
         $url = self::url($r['msg'] !== '' ? array('co_msg' => $r['msg']) : array());
@@ -167,6 +167,9 @@ class ECare_Lab_Checkout_Page {
             'fix'             => array('error', __('Please check the highlighted details.', $d)),
             'order_failed'    => array('error', __('We could not create your order just now. Nothing was charged. Please try again.', $d)),
             'expired'         => array('error', __('That took too long and was not saved. Please try again.', $d)),
+            'pay_failed'      => array('error', __('The payment did not go through, and nothing was charged. Your order is saved - use Pay now to try again.', $d)),
+            'pay_cancelled'   => array('warn', __('Payment cancelled. Your order is saved - use Pay now when you are ready.', $d)),
+            'pay_expired'     => array('error', __('That payment link has expired. Please use Pay now again.', $d)),
         );
     }
 
@@ -318,7 +321,7 @@ class ECare_Lab_Checkout_Page {
             <?php if ($pending): ?>
                 <div class="ecl-notice ecl-notice-warn" role="status">
                     <?php echo esc_html(sprintf(__('Order #%d is waiting for its advance payment.', $d), (int) $pending->get_meta(ECare_Lab_Orders::ORDER_META))); ?>
-                    <a class="ecl-link" href="<?php echo esc_url($pending->get_checkout_payment_url()); ?>"><?php esc_html_e('Pay now', $d); ?></a>
+                    <a class="ecl-link" href="<?php echo esc_url(ECare_Lab_Pay::url($pending, 'checkout')); ?>"><?php esc_html_e('Pay now', $d); ?></a>
                     <small><?php esc_html_e('Placing the order again replaces it with a new one.', $d); ?></small>
                 </div>
             <?php endif; ?>
@@ -472,8 +475,10 @@ class ECare_Lab_Checkout_Page {
                                 <div class="ecl-co-later"><dt><?php esc_html_e('Pay at sample collection', $d); ?></dt><dd data-ecl-sum="later"><?php echo esc_html(ECare_Lab_Front::money($q['later'])); ?></dd></div>
                             </dl>
 
-                            <button type="submit" name="do" value="place" class="ecl-btn ecl-btn-lg ecl-cp-go"<?php disabled(!$sched || isset($v['errors']['cart'])); ?>><?php esc_html_e('Place Order', $d); ?></button>
-                            <p class="ecl-cp-hint"><?php esc_html_e('You pay the advance online to confirm the booking; the rest is paid when the sample is collected.', $d); ?></p>
+                            <button type="submit" name="do" value="place" class="ecl-btn ecl-btn-lg ecl-cp-go"<?php disabled(!$sched || isset($v['errors']['cart'])); ?>><?php esc_html_e('Place Order', $d); ?><?php if ($q['advance'] > 0): ?> <span class="ecl-cp-go-amt">— <span data-ecl-sum="advance"><?php echo esc_html(ECare_Lab_Front::money($q['advance'])); ?></span></span><?php endif; ?></button>
+                            <p class="ecl-cp-hint"><?php echo esc_html($q['advance'] > 0
+                                ? __('Place Order takes you straight to SSLCommerz (bKash, Nagad, cards) to pay the advance; the rest is paid when the sample is collected.', $d)
+                                : __('Nothing to pay online now; the full amount is paid when the sample is collected.', $d)); ?></p>
                         </div>
                     </aside>
                 </div>

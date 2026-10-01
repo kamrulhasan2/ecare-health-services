@@ -52,6 +52,7 @@ class Fake_WC { public $status; public function __construct($s) { $this->status 
     public function has_status($s) { return in_array($this->status, (array) $s, true); }
     public function get_checkout_payment_url() { return 'https://site/pay/701'; } }
 
+class ECare_Lab_Pay { public static function url($o, $from = 'checkout') { return $o->get_checkout_payment_url() . '#via-lab-pay-' . $from; } }
 require_once __DIR__ . '/../admin/class-ecare-lab-orders-admin.php';
 require_once ($argv[1] ?? (__DIR__ . '/../includes/class-ecare-lab-orders-page.php'));
 
@@ -93,7 +94,7 @@ echo "\n=== B. patient: My Lab Orders ===\n";
 // ===========================================================================
 $GLOBALS['wc'][701] = new Fake_WC('pending');
 $h = $P::render_order(order(31, 'pending'));
-check('unpaid, payable: Pay advance with the amount', array(has($h, 'href="https://site/pay/701"'), has($h, 'Pay advance ৳261')), array(true, true));
+check('unpaid, payable: Pay advance with the amount, through the pay step', array(has($h, 'href="https://site/pay/701#via-lab-pay-orders"'), has($h, 'Pay advance ৳261')), array(true, true));
 check('unpaid: no progress line, "Advance" not "Advance paid"', array(has($h, 'ecl-ord-steps'), has($h, 'Advance paid')), array(false, false));
 check('escaped', array(has($h, 'FBS &lt;b&gt; × 2'), has($h, 'Popular &lt;Lab&gt;'), has($h, '<b>')), array(true, true, false));
 check('admin notes never reach the patient', has($h, 'rude'), false);

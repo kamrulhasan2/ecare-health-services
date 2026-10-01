@@ -112,6 +112,7 @@ class WC_Coupon {
     public function get_product_ids() { return array(); } public function get_product_categories() { return array(); }
 }
 
+class ECare_Lab_Pay { public static function url($o, $from = 'checkout') { return $o->get_checkout_payment_url() . '#via-lab-pay-' . $from; } }
 require_once __DIR__ . '/../includes/class-ecare-lab-checkout.php';
 require_once ($argv[1] ?? (__DIR__ . '/../includes/class-ecare-lab-checkout-page.php'));
 
@@ -171,7 +172,7 @@ $r = $P::apply(5, array_merge($f, array('slot' => '', 'do' => 'place')), $now);
 check('only the time missing: jumps to the time', array($r['errors'], $r['anchor']), array(array('slot' => 'missing'), 'ecl-co-time'));
 
 $r = $P::apply(5, $f + array('coupon' => 'save10', 'do' => 'place'), $now);
-check('place: straight to WooCommerce\'s payment page', array($r['msg'], $r['errors'], $r['redirect']), array('', array(), 'https://site/checkout/order-pay/77/?pay_for_order=true&key=wc_k'));
+check('place: straight on to the pay step', array($r['msg'], $r['errors'], $r['redirect']), array('', array(), 'https://site/checkout/order-pay/77/?pay_for_order=true&key=wc_k'));
 check('the order is made once, from the checked state and its quote', array(count(ECare_Lab_Orders::$calls), ECare_Lab_Orders::$calls[0][1]['phone'], ECare_Lab_Orders::$calls[0][2]['address']['id'], ECare_Lab_Orders::$calls[0][2]['quote']['advance']), array(1, '01712345678', 1, 261.0));
 check('the ready hook fires once, with the cleaned phone and the quote', array(count($GLOBALS['fired']), $GLOBALS['fired'][0][0], $GLOBALS['fired'][0][1][1]['phone'], $GLOBALS['fired'][0][1][2]['quote']['total'], $GLOBALS['fired'][0][1][2]['quote']['coupon']),
       array(1, 'ecare_lab_checkout_ready', '01712345678', 1304.0, 116.0));
@@ -211,6 +212,14 @@ check('summary: MRP, special, material, delivery, total, advance, later', array(
 check('the script gets the total without delivery, and the percent', has($html, 'data-base="1220" data-pct="20"'), true);
 check('no service charge: the row is left out', has($html, 'Service Charge'), false);
 check('Place Order is live', (bool) preg_match('/value="place" class="[^"]*"\s*>/', $html), true);
+check('Place Order names the advance it opens SSLCommerz for, kept in step by the script', array(
+    has($html, 'Place Order <span class="ecl-cp-go-amt">— <span data-ecl-sum="advance">৳284</span></span></button>'), has($html, 'straight to SSLCommerz'),
+), array(true, true));
+$_GET = array('co_msg' => 'pay_cancelled');
+check('back from a cancelled payment: the order is kept', has($P::render($now), 'Payment cancelled. Your order is saved'), true);
+$_GET = array('co_msg' => 'pay_failed');
+check('back from a failed payment: nothing charged, Pay now again', has($P::render($now), 'nothing was charged. Your order is saved'), true);
+$_GET = array();
 
 $st = $K::get_state(5); $st['coupon'] = 'save10'; $K::save_state(5, $st);
 $html = $P::render($now);
@@ -225,7 +234,7 @@ $GLOBALS['wc_orders'][77] = new class { public $status = 'pending';
     public function get_meta($k) { return $k === '_ecare_lab_booking_id' ? 31 : ''; }
     public function get_checkout_payment_url() { return 'https://site/pay/77'; } };
 $html = $P::render($now);
-check('an unpaid earlier order: named, with Pay now', array(has($html, 'Order #31 is waiting for its advance payment.'), has($html, 'href="https://site/pay/77"')), array(true, true));
+check('an unpaid earlier order: named, with Pay now through the pay step', array(has($html, 'Order #31 is waiting for its advance payment.'), has($html, 'href="https://site/pay/77#via-lab-pay-checkout"')), array(true, true));
 $GLOBALS['wc_orders'][77]->status = 'completed';
 check('...and gone once it is paid', has($P::render($now), 'waiting for its advance'), false);
 unset($GLOBALS['umeta'][5]['_ecare_lab_pending_order']);

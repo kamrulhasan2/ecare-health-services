@@ -116,6 +116,7 @@ class Fake_WPDB {
 }
 $wpdb = new Fake_WPDB(); $GLOBALS['wpdb'] = $wpdb;
 
+class ECare_Lab_Pay { public static function url($o, $from = 'checkout') { return $o->get_checkout_payment_url() . '#via-lab-pay-' . $from; } }
 require_once ($argv[1] ?? (__DIR__ . '/../includes/class-ecare-lab-orders.php'));
 
 $pass = 0; $fail = 0;
@@ -157,7 +158,7 @@ $quote = array('subtotal_mrp' => 1300.0, 'special' => 140.0, 'material' => 60.0,
 $state = ECare_Lab_Checkout::get_state(5); $state['name'] = 'Md. Kamrul Hasan';
 $v     = array('quote' => $quote, 'address' => array('id' => 1, 'label' => 'home', 'area_id' => 501, 'line' => 'House 12, Road 5'), 'coupon' => array('ok' => true));
 $r     = $O::create_from_checkout(5, $state, $v);
-check('placed: the booking, the order, and the payment page', array($r['ok'], $r['booking_id'], $r['pay_url']), array(true, 31, 'https://site/checkout/order-pay/701/'));
+check('placed: the booking, the order, and the pay step (straight to SSLCommerz)', array($r['ok'], $r['booking_id'], $r['pay_url']), array(true, 31, 'https://site/checkout/order-pay/701/#via-lab-pay-checkout'));
 $row = $wpdb->rows[31];
 check('one row for the whole order', array($row->booking_type, $row->user_id, $row->lab_provider_id, $row->status, $row->order_id, $row->lab_test_ids), array('lab', 5, 99, 'pending', 701, '101,89'));
 check('collection date, time and slot', array($row->required_date, $row->schedule_time, $row->collection_slot), array('2026-10-02', '2026-10-02 09:00:00', '09:00-11:00'));
