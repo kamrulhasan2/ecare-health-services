@@ -1358,7 +1358,15 @@ class ECare_Ajax {
 
         global $wpdb;
         $table = $wpdb->prefix . 'ecare_bookings';
-        $old   = (string) $wpdb->get_var($wpdb->prepare("SELECT status FROM {$table} WHERE id = %d", $booking_id));
+        $row   = $wpdb->get_row($wpdb->prepare("SELECT status, booking_type, provider_id FROM {$table} WHERE id = %d", $booking_id));
+        if (!$row) {
+            wp_send_json_error(array('message' => 'Booking not found.'));
+        }
+        // An ambulance cannot be Assigned or Dispatched with no ambulance on it.
+        if ($row->booking_type === 'ambulance' && in_array($status, array('assigned', 'dispatched'), true) && !(int) $row->provider_id) {
+            wp_send_json_error(array('message' => __('Assign an ambulance first, then mark it Assigned or Dispatched.', 'ecare-health-services'), 'code' => 'no_unit'));
+        }
+        $old   = (string) $row->status;
         $wpdb->update($table, array('status' => $status), array('id' => $booking_id));
         if ($old !== $status) {
             /** A booking's status changed: id, new status, old status (ECare_Provider_Emails tells the provider). */

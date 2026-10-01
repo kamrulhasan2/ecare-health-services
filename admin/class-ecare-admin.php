@@ -974,125 +974,123 @@ class ECare_Admin {
 
     public static function render_ambulance_dispatch() {
         self::admin_style_overrides();
-        global $wpdb;
-        $table = $wpdb->prefix . 'ecare_bookings';
+        $d = 'ecare-health-services';
+        $D = 'ECare_Ambulance_Dispatch';
 
-        // Calculate dynamic ambulance metrics
-        $total = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s", 'ambulance'));
-        $active_dispatched = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'ambulance', 'dispatched'));
-        $completed = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND status = %s", 'ambulance', 'completed'));
-        $emergency = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE booking_type = %s AND priority_level = %s", 'ambulance', 'Emergency'));
-
+        $counts         = $D::counts();
+        $units          = $D::units();
         $ecare_per_page = self::per_page();
         $ecare_paged    = self::current_page();
         $ecare_search   = self::search_term();
         list($bookings, $ecare_total) = self::query_bookings('ambulance', $ecare_search, $ecare_per_page, $ecare_paged);
-        
         ?>
+        <style>
+            .ecare-dispatch-table tr.ecare-unassigned td:first-child { box-shadow: inset 4px 0 0 #EF4444; }
+            .ecare-dispatch-table tr.ecare-unassigned .ecare-assign-select { border-color: #EF4444 !important; background: #FEF2F2; }
+            .ecare-dispatch-table .ecare-assign-select, .ecare-dispatch-table .ecare-dispatch-status { padding: 5px; font-size: 12px; border-radius: 4px; border: 1px solid var(--border-light); max-width: 240px; }
+            .ecare-dispatch-table .ecare-row-msg { display: block; font-size: 11px; margin-top: 4px; color: var(--text-muted); max-width: 240px; }
+            .ecare-dispatch-table .ecare-row-msg.is-error { color: #B91C1C; }
+            .ecare-dispatch-table .ecare-row-msg.is-ok { color: #047857; }
+            .ecare-dispatch-table .ecare-unit-tag { display: inline-block; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+            .ecare-dispatch-alert { display: flex; align-items: center; gap: 8px; background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; border-radius: 10px; padding: 10px 14px; margin: 0 0 16px; font-weight: 600; }
+            .ecare-dispatch-alert[hidden] { display: none; }
+            .ecare-dispatch-help { color: var(--text-muted); font-size: 12px; margin: -6px 0 16px; }
+        </style>
         <div class="ecare-admin-wrap">
-            <h1 style="font-weight:800;font-size:24px;margin-bottom:20px;color:var(--text-dark);"><?php _e('Ambulance Dispatch Management', 'ecare-health-services'); ?></h1>
-            
+            <h1 style="font-weight:800;font-size:24px;margin-bottom:20px;color:var(--text-dark);"><?php esc_html_e('Ambulance Dispatch Management', $d); ?></h1>
+
             <div class="ecare-admin-kpi-grid">
-                <div class="ecare-admin-kpi-card">
-                    <div class="ecare-admin-kpi-icon teal">🚑</div>
-                    <div class="ecare-admin-kpi-details">
-                        <span class="ecare-admin-kpi-label"><?php _e('Total Missions', 'ecare-health-services'); ?></span>
-                        <span class="ecare-admin-kpi-value"><?php echo $total; ?></span>
+                <?php foreach (array(
+                    array('teal', '🚑', __('Total Missions', $d), $counts['total']),
+                    array('yellow', '💨', __('Active Now', $d), $counts['active']),
+                    array('green', '✓', __('Completed', $d), $counts['completed']),
+                    array('red', '🚨', __('Emergency', $d), $counts['emergency']),
+                ) as $k): ?>
+                    <div class="ecare-admin-kpi-card">
+                        <div class="ecare-admin-kpi-icon <?php echo esc_attr($k[0]); ?>"><?php echo esc_html($k[1]); ?></div>
+                        <div class="ecare-admin-kpi-details">
+                            <span class="ecare-admin-kpi-label"><?php echo esc_html($k[2]); ?></span>
+                            <span class="ecare-admin-kpi-value"><?php echo (int) $k[3]; ?></span>
+                        </div>
                     </div>
-                </div>
-                <div class="ecare-admin-kpi-card">
-                    <div class="ecare-admin-kpi-icon yellow">💨</div>
-                    <div class="ecare-admin-kpi-details">
-                        <span class="ecare-admin-kpi-label"><?php _e('Active Now', 'ecare-health-services'); ?></span>
-                        <span class="ecare-admin-kpi-value"><?php echo $active_dispatched; ?></span>
-                    </div>
-                </div>
-                <div class="ecare-admin-kpi-card">
-                    <div class="ecare-admin-kpi-icon green">✓</div>
-                    <div class="ecare-admin-kpi-details">
-                        <span class="ecare-admin-kpi-label"><?php _e('Completed', 'ecare-health-services'); ?></span>
-                        <span class="ecare-admin-kpi-value"><?php echo $completed; ?></span>
-                    </div>
-                </div>
-                <div class="ecare-admin-kpi-card">
-                    <div class="ecare-admin-kpi-icon red">🚨</div>
-                    <div class="ecare-admin-kpi-details">
-                        <span class="ecare-admin-kpi-label"><?php _e('Emergency', 'ecare-health-services'); ?></span>
-                        <span class="ecare-admin-kpi-value"><?php echo $emergency; ?></span>
-                    </div>
-                </div>
+                <?php endforeach; ?>
             </div>
 
-            <!-- Action Bar -->
+            <div class="ecare-dispatch-alert" id="ecare-dispatch-alert"<?php echo $counts['unassigned'] ? '' : ' hidden'; ?>>
+                ⚠ <?php esc_html_e('Needs an ambulance:', $d); ?> <span id="ecare-unassigned-count"><?php echo (int) $counts['unassigned']; ?></span>
+                <small style="font-weight:400;"><?php esc_html_e('Rows marked in red have no ambulance yet. Choose one in "Assigned Unit".', $d); ?></small>
+            </div>
+            <?php if (!$units): ?>
+                <div class="ecare-dispatch-alert"><?php esc_html_e('No approved ambulance yet. Approve one in Ambulance Providers before assigning.', $d); ?></div>
+            <?php endif; ?>
+
             <div class="ecare-admin-action-header">
                 <div class="ecare-admin-title-area">
-                    <h2><?php _e('Active Dispatch Requests', 'ecare-health-services'); ?></h2>
+                    <h2><?php esc_html_e('Active Dispatch Requests', $d); ?></h2>
                     <span class="ecare-admin-badge-count"><?php echo intval($ecare_total); ?></span>
                 </div>
                 <div class="ecare-admin-controls">
-                    <?php self::render_search_form(__('Search dispatch...', 'ecare-health-services')); ?>
-                    <button class="ecare-admin-btn-outline">📊 <?php _e('Export', 'ecare-health-services'); ?></button>
-                    <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_ambulance')); ?>" class="ecare-admin-btn-green">+ <?php _e('Create Dispatch', 'ecare-health-services'); ?></a>
+                    <?php self::render_search_form(__('Search dispatch...', $d)); ?>
+                    <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=ecare_export_bookings'), 'ecare_export_bookings')); ?>" class="ecare-admin-btn-outline">📊 <?php esc_html_e('Export', $d); ?></a>
+                    <a href="<?php echo esc_url(admin_url('post-new.php?post_type=ecare_ambulance')); ?>" class="ecare-admin-btn-green">+ <?php esc_html_e('Add Ambulance', $d); ?></a>
                 </div>
             </div>
+            <p class="ecare-dispatch-help"><?php esc_html_e('When a patient books, the least busy approved ambulance of that type is suggested. Change it any time in "Assigned Unit": the booking becomes Assigned and that provider is emailed the booking at once. Status order: Pending (not paid) → Approved (paid) → Assigned → Dispatched → Completed.', $d); ?></p>
 
-            <!-- Table -->
             <div class="ecare-admin-table-container">
-                <table class="ecare-admin-table">
+                <table class="ecare-admin-table ecare-dispatch-table">
                     <thead>
                         <tr>
-                            <th>[ ]</th>
-                            <th><?php _e('ID', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Patient Details', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Assigned Unit', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Route', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Status', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Issued By', 'ecare-health-services'); ?></th>
-                            <th><?php _e('Actions', 'ecare-health-services'); ?></th>
+                            <th><?php esc_html_e('ID', $d); ?></th>
+                            <th><?php esc_html_e('Patient Details', $d); ?></th>
+                            <th><?php esc_html_e('Assigned Unit', $d); ?></th>
+                            <th><?php esc_html_e('Route', $d); ?></th>
+                            <th><?php esc_html_e('Status', $d); ?></th>
+                            <th><?php esc_html_e('Booked', $d); ?></th>
+                            <th><?php esc_html_e('Change Status', $d); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if ($bookings): ?>
                             <?php foreach ($bookings as $b):
-                                $route = $b->pickup_address . ' → ' . $b->destination;
-                                $provider_name = $b->provider_id ? get_the_title($b->provider_id) : '';
-                                $issued_by = $b->user_id ? get_the_author_meta('display_name', $b->user_id) : 'Guest Patient';
+                                $who      = $b->user_id ? get_the_author_meta('display_name', $b->user_id) : __('Guest Patient', $d);
+                                $open     = in_array($b->status, $D::OPEN, true);
+                                $has_unit = (int) $b->provider_id > 0;
+                                $pickup   = $b->schedule_time ? mysql2date('j M Y, g:i A', $b->schedule_time) : '';
                             ?>
-                                <tr>
-                                    <td><input type="checkbox" /></td>
+                                <tr class="<?php echo (!$has_unit && $open) ? 'ecare-unassigned' : ''; ?>" data-booking-id="<?php echo intval($b->id); ?>">
                                     <td>#<?php echo intval($b->id); ?></td>
                                     <td>
-                                        <strong><?php echo esc_html($issued_by); ?></strong>
+                                        <strong><?php echo esc_html($who); ?></strong>
                                         <span style="display:block;font-size:11px;color:var(--text-muted);">📞 <?php echo esc_html($b->contact_phone); ?></span>
+                                        <?php if ($b->priority_level === 'Emergency'): ?><span class="ecare-status-pill emergency" style="margin-top:4px;"><?php esc_html_e('Emergency', $d); ?></span><?php endif; ?>
                                     </td>
                                     <td>
-                                        <?php if ($provider_name): ?>
-                                            <span class="ecare-status-pill assigned"><?php echo esc_html($provider_name); ?></span>
-                                        <?php else: ?>
-                                            <span class="ecare-status-pill pending"><?php esc_html_e('Unassigned', 'ecare-health-services'); ?></span>
-                                        <?php endif; ?>
-                                        <span style="display:block;font-size:11px;color:var(--text-muted);margin-top:4px;"><?php echo esc_html($b->ambulance_type); ?></span>
+                                        <label class="screen-reader-text" for="ecare-unit-<?php echo intval($b->id); ?>"><?php esc_html_e('Assign ambulance', $d); ?></label>
+                                        <select class="ecare-assign-select" id="ecare-unit-<?php echo intval($b->id); ?>" data-booking-id="<?php echo intval($b->id); ?>" data-prev="<?php echo (int) $b->provider_id; ?>"<?php disabled(!$open); ?>>
+                                            <?php echo $D::options_html($b, $units); // phpcs:ignore -- escaped inside ?>
+                                        </select>
+                                        <span class="ecare-unit-tag"><?php echo esc_html(sprintf(__('Requested: %s', $d), $b->ambulance_type)); ?></span>
+                                        <span class="ecare-row-msg" aria-live="polite"></span>
                                     </td>
-                                    <td><small><?php echo esc_html($route); ?></small></td>
                                     <td>
-                                        <span class="ecare-status-pill <?php echo esc_attr($b->status); ?> <?php echo ($b->priority_level === 'Emergency' && $b->status === 'pending') ? 'emergency' : ''; ?>">
-                                            <?php echo esc_html(ucfirst($b->status)); ?>
-                                        </span>
+                                        <small><?php echo esc_html($b->pickup_address . ' → ' . $b->destination); ?></small>
+                                        <?php if ($pickup !== ''): ?><span style="display:block;font-size:11px;color:var(--text-muted);"><?php echo esc_html(sprintf(__('Pickup: %s', $d), $pickup)); ?></span><?php endif; ?>
                                     </td>
-                                    <td><?php echo esc_html($issued_by); ?></td>
+                                    <td><span class="ecare-status-pill ecare-dispatch-pill <?php echo esc_attr($b->status); ?>"><?php echo esc_html($D::status_label($b->status)); ?></span></td>
+                                    <td><small><?php echo esc_html($D::booked_at($b->created_at)); ?></small></td>
                                     <td>
-                                        <select class="ecare-status-select" data-booking-id="<?php echo intval($b->id); ?>" style="padding:5px;font-size:12px;border-radius:4px;border:1px solid var(--border-light);">
-                                            <option value="pending" <?php selected($b->status, 'pending'); ?>>Pending</option>
-                                            <option value="dispatched" <?php selected($b->status, 'dispatched'); ?>>Dispatched</option>
-                                            <option value="assigned" <?php selected($b->status, 'assigned'); ?>>Assigned</option>
-                                            <option value="completed" <?php selected($b->status, 'completed'); ?>>Completed</option>
-                                            <option value="cancelled" <?php selected($b->status, 'cancelled'); ?>>Cancelled</option>
+                                        <label class="screen-reader-text" for="ecare-st-<?php echo intval($b->id); ?>"><?php esc_html_e('Change status', $d); ?></label>
+                                        <select class="ecare-dispatch-status" id="ecare-st-<?php echo intval($b->id); ?>" data-booking-id="<?php echo intval($b->id); ?>" data-prev="<?php echo esc_attr($b->status); ?>">
+                                            <?php foreach ($D::STATUSES as $st): ?>
+                                                <option value="<?php echo esc_attr($st); ?>" <?php selected($b->status, $st); ?>><?php echo esc_html($D::status_label($st)); ?></option>
+                                            <?php endforeach; ?>
                                         </select>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);"><?php _e('No dispatch requests found.', 'ecare-health-services'); ?></td></tr>
+                            <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);"><?php esc_html_e('No dispatch requests found.', $d); ?></td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>

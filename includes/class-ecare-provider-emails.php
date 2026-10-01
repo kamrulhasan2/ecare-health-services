@@ -40,6 +40,8 @@ class ECare_Provider_Emails {
         add_action('ecare_provider_registered', array(__CLASS__, 'on_registered'));
         add_action('added_post_meta', array(__CLASS__, 'on_meta'), 10, 4);
         add_action('updated_post_meta', array(__CLASS__, 'on_meta'), 10, 4);
+        add_action('save_post', array(__CLASS__, 'flush'), 999);
+        add_action('shutdown', array(__CLASS__, 'flush'));
         add_action('ecare_booking_status_changed', array(__CLASS__, 'on_booking'), 10, 3);
 
         add_action('admin_menu', array(__CLASS__, 'menu'), 30);   // after ECare_Admin (20) has made the E-Care Health menu
@@ -157,7 +159,15 @@ class ECare_Provider_Emails {
         self::send($post_id, 'admin');
     }
 
-    /** The approval status was written - from a list screen button or the edit screen. */
+    /** Decisions waiting to be sent: post id => status. */
+    private static $queue = array();
+
+    /**
+     * The approval status was written - from a list screen button or the edit
+     * screen. Sent a moment later (flush()), not here: the edit screen saves
+     * Status before Email, so on a provider created in wp-admin the address
+     * is not there yet at this point.
+     */
     public static function on_meta($meta_id, $post_id, $key, $value) {
         $type = get_post_type($post_id);
         if (!isset(self::TYPES[$type]) || self::TYPES[$type] !== $key) {
@@ -165,12 +175,25 @@ class ECare_Provider_Emails {
         }
         $value = (string) $value;
         if (!in_array($value, array('approved', 'rejected'), true)) {
-            return;
+            return;   // a queued decision set back since is dropped by flush()
         }
-        if ((string) get_post_meta($post_id, self::SENT_META, true) === $value) {
-            return;   // this decision was already announced
+        self::$queue[(int) $post_id] = $value;
+    }
+
+    /** Send the queued decisions: after the post is fully saved, or at the end of the request. */
+    public static function flush() {
+        $queue       = self::$queue;
+        self::$queue = array();
+        foreach ($queue as $post_id => $value) {
+            $type = get_post_type($post_id);
+            if (!isset(self::TYPES[$type]) || (string) get_post_meta($post_id, self::TYPES[$type], true) !== $value) {
+                continue;   // changed again since
+            }
+            if ((string) get_post_meta($post_id, self::SENT_META, true) === $value) {
+                continue;   // this decision was already announced
+            }
+            self::send($post_id, $value);
         }
-        self::send($post_id, $value);
     }
 
     /** A booking's status changed. */

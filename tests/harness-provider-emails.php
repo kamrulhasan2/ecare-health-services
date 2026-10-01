@@ -81,7 +81,7 @@ function check($label, $got, $want) {
     if ($got === $want) { $pass++; printf("  PASS  %s\n", $label); }
     else { $fail++; printf("  FAIL  %s\n          got:  %s\n          want: %s\n", $label, var_export($got, true), var_export($want, true)); }
 }
-function mails() { $m = $GLOBALS['mails']; $GLOBALS['mails'] = array(); return $m; }
+function mails() { ECare_Provider_Emails::flush(); $m = $GLOBALS['mails']; $GLOBALS['mails'] = array(); return $m; }   // flush: what save_post / shutdown do
 function to_subj($m) { return array_map(function ($x) { return $x['to'] . ' | ' . $x['subject']; }, $m); }
 function provider($id, $type, $email, $extra = array()) {
     $GLOBALS['types'][$id] = $type;
@@ -143,6 +143,19 @@ check('the wrong key for the type: ignored', mails(), array());
 $GLOBALS['types'][30] = 'post'; update_post_meta(30, '_provider_status', 'approved');
 check('other post types: ignored', mails(), array());
 
+// A provider made in wp-admin: the edit screen saves Status before Email.
+$GLOBALS['types'][14] = 'ecare_ambulance'; $GLOBALS['titles'][14] = 'New Van';
+update_post_meta(14, '_ambulance_status', 'approved');
+update_post_meta(14, '_email', 'van@x.com');
+check('Status saved before Email in the same save: the email still reaches the new address', to_subj(mails()), array('van@x.com | Your registration is approved — Meditaj & Co'));
+provider(15, 'ecare_caregiver', 'd@x.com');
+update_post_meta(15, '_provider_status', 'approved');
+update_post_meta(15, '_provider_status', 'pending');
+check('approved and set back to pending in the same request: nothing is announced', mails(), array());
+update_post_meta(15, '_provider_status', 'approved');
+$GLOBALS['meta'][15]['_provider_status'] = 'rejected';   // changed by something that does not go through update_post_meta
+check('changed again before the send: the stale decision is dropped', mails(), array());
+
 echo "\n=== C. switches ===\n";
 $GLOBALS['options']['ecare_provider_emails'] = array('rejected' => 0, 'reg_admin' => 0);
 provider(12, 'ecare_caregiver', 'b@x.com');
@@ -155,6 +168,7 @@ $GLOBALS['options']['ecare_provider_emails'] = array();
 $GLOBALS['mail_ok'] = false;
 provider(13, 'ecare_caregiver', 'c@x.com');
 update_post_meta(13, '_provider_status', 'approved');
+ECare_Provider_Emails::flush();
 check('the mail server refuses: logged as failed, not marked sent', array(end($GLOBALS['meta'][13]['_ecare_mail_log'])['result'], $GLOBALS['meta'][13]['_ecare_status_mailed'] ?? null), array('failed', null));
 $GLOBALS['mail_ok'] = true; mails();
 

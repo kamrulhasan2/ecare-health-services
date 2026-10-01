@@ -151,6 +151,7 @@ final class ECare_Health_Services {
         require_once ECARE_PLUGIN_DIR . 'admin/class-ecare-admin.php';
         require_once ECARE_PLUGIN_DIR . 'admin/class-ecare-lab-admin.php';
         require_once ECARE_PLUGIN_DIR . 'admin/class-ecare-lab-orders-admin.php';
+        require_once ECARE_PLUGIN_DIR . 'admin/class-ecare-ambulance-dispatch.php';
 
         ECare_Secure_Files::init();
         ECare_CPT::init();
@@ -177,6 +178,7 @@ final class ECare_Health_Services {
         ECare_Admin::init();
         ECare_Lab_Admin::init();
         ECare_Lab_Orders_Admin::init();
+        ECare_Ambulance_Dispatch::init();
     }
 
     /** The shortcodes this plugin provides. Elementor widget names match them. */
