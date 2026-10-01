@@ -21,6 +21,8 @@ function add_action() {} function add_filter() {}
 function is_admin() { return false; }
 function __($s, $d = null) { return $s; }
 function get_option($k, $d = false) { return $GLOBALS['options'][$k] ?? $d; }
+function sanitize_email($e) { return preg_replace('/[^a-zA-Z0-9@._+\-]/', '', (string) $e); }
+function is_email($e) { return (bool) filter_var($e, FILTER_VALIDATE_EMAIL); }
 function sanitize_text_field($s) { return trim(strip_tags((string) $s)); }
 function sanitize_textarea_field($s) { return trim(strip_tags((string) $s)); }
 function esc_url_raw($u) { return preg_match('#^https?://#', $u) ? $u : ''; }
@@ -137,6 +139,13 @@ $GLOBALS['options']['ecare_lab_settings'] = array('whatsapp_number' => '88017123
 check('an empty message: a blank chat', $S::whatsapp_url(), 'https://wa.me/8801712345678');
 check('the default message is there for a new site', $S::defaults()['whatsapp_message'] !== '', true);
 $GLOBALS['options']['ecare_lab_settings'] = array();
+
+echo "\n=== G. emails ===\n";
+check('both emails on by default, no copy', array($S::defaults()['email_patient'], $S::defaults()['email_lab'], $S::defaults()['email_copy']), array(1, 1, ''));
+$o = $S::sanitize(array('email_patient' => '0', 'email_lab' => '1', 'email_copy' => " Boss@Meditaj.test; boss@meditaj.test, not-an-email  ops@meditaj.test "));
+check('the boxes and the copy list are cleaned (valid, no repeats)', array($o['email_patient'], $o['email_lab'], $o['email_copy']), array(0, 1, 'Boss@Meditaj.test, ops@meditaj.test'));
+$GLOBALS['options']['ecare_lab_settings'] = array();
+check('a site that has not saved the new settings yet sends both', array($S::get('email_patient'), $S::get('email_lab')), array(1, 1));
 
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);

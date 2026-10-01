@@ -160,6 +160,14 @@ class ECare_Lab_Admin {
                 }
             }
         }
+        // Active labs that would never hear about their orders.
+        $silent = array();
+        $labs   = get_posts(array('post_type' => ECare_Lab_Providers::POST_TYPE, 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC'));
+        foreach ((array) $labs as $lab) {
+            if (ECare_Lab_Providers::is_active($lab->ID) && !ECare_Lab_Providers::clean_emails((string) get_post_meta($lab->ID, '_ecare_notify_emails', true))) {
+                $silent[] = $lab->post_title;
+            }
+        }
         $tz     = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone('UTC');
         $offset = $tz->getOffset(new DateTime('now', $tz));
         $live   = ECare_Lab_Settings::is_live();
@@ -182,6 +190,12 @@ class ECare_Lab_Admin {
                 'ok'     => $s['providers'] > 0,
                 'label'  => __('At least one lab provider, with its areas', $d),
                 'detail' => '',
+                'link'   => admin_url(ECare_Lab_Providers::menu_slug()),
+            ),
+            'lab_emails' => array(
+                'ok'     => !$silent || !ECare_Lab_Settings::get('email_lab'),
+                'label'  => __('Every active lab has a notification email', $d),
+                'detail' => ($silent && ECare_Lab_Settings::get('email_lab')) ? sprintf(__('No email, so new orders are not sent to: %s', $d), implode(', ', $silent)) : '',
                 'link'   => admin_url(ECare_Lab_Providers::menu_slug()),
             ),
             'pages' => array(

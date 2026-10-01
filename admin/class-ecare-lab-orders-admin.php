@@ -241,6 +241,10 @@ class ECare_Lab_Orders_Admin {
             'report'         => array('success', __('Report uploaded. The patient can see it in My Lab Orders.', $d)),
             'report_missing' => array('error', __('Order not found.', $d)),
             'bad_status'     => array('error', __('Unknown status.', $d)),
+            'mail_sent'      => array('success', __('Email sent.', $d)),
+            'mail_no_address'=> array('error', __('Not sent: there is no email address for it.', $d)),
+            'mail_failed'    => array('error', __('The email could not be sent: the mail server refused it. Check the site\'s email (SMTP) setup.', $d)),
+            'mail_missing'   => array('error', __('Order not found.', $d)),
         );
         $code = isset($_GET['msg']) ? sanitize_key(wp_unslash($_GET['msg'])) : '';
         $err  = get_transient('ecare_lab_report_err_' . get_current_user_id());
@@ -343,6 +347,30 @@ class ECare_Lab_Orders_Admin {
                             <p><button class="button"><?php echo $report !== '' ? esc_html__('Replace report', $d) : esc_html__('Upload report', $d); ?></button></p>
                         </form>
                     </div></div>
+
+                    <?php if ($row->is_new && class_exists('ECare_Lab_Emails')): $mailed = (array) ($det['mailed'] ?? array()); ?>
+                    <div class="postbox"><div class="inside">
+                        <h2><?php esc_html_e('Emails', $d); ?></h2>
+                        <?php foreach (array('patient' => __('Patient: order confirmed', $d), 'lab' => __('Lab: new order', $d)) as $who => $label):
+                            $to = ECare_Lab_Emails::recipients($row, $who); ?>
+                            <div class="ecare-lo-mail">
+                                <p><strong><?php echo esc_html($label); ?></strong><br />
+                                    <small><?php echo $to ? esc_html(implode(', ', $to)) : esc_html__('No email address', $d); ?></small><br />
+                                    <small><?php echo !empty($mailed[$who])
+                                        ? esc_html(sprintf(__('Sent %s', $d), wp_date('j M Y, g:i A', (int) $mailed[$who])))
+                                        : esc_html__('Not sent', $d); ?></small></p>
+                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                    <input type="hidden" name="action" value="ecare_lab_email" />
+                                    <input type="hidden" name="id" value="<?php echo (int) $row->id; ?>" />
+                                    <input type="hidden" name="who" value="<?php echo esc_attr($who); ?>" />
+                                    <?php wp_nonce_field('ecare_lab_email_' . $row->id); ?>
+                                    <button class="button button-small"<?php disabled(!$to); ?>><?php echo !empty($mailed[$who]) ? esc_html__('Send again', $d) : esc_html__('Send now', $d); ?></button>
+                                    <a class="button button-small" href="<?php echo esc_url(ECare_Lab_Emails::preview_url($row->id, $who)); ?>" target="_blank" rel="noopener"><?php esc_html_e('Preview', $d); ?></a>
+                                </form>
+                            </div>
+                        <?php endforeach; ?>
+                    </div></div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -372,6 +400,9 @@ class ECare_Lab_Orders_Admin {
             .ecare-lo-log li { border-bottom: 1px solid #f0f0f1; padding: 4px 0; }
             .ecare-lo-log time { color: #646970; margin-right: 6px; }
             .ecare-lo-log small { color: #8c8f94; margin-left: 6px; }
+            .ecare-lo-mail { border-top: 1px solid #f0f0f1; padding-top: 8px; margin-top: 8px; }
+            .ecare-lo-mail:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+            .ecare-lo-mail p { margin: 0 0 6px; }
         </style>
         <?php
     }

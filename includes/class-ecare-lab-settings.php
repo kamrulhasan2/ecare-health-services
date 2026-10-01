@@ -55,6 +55,9 @@ class ECare_Lab_Settings {
             'messenger_link'  => '',
             'whatsapp_number' => '',
             'whatsapp_message'=> 'Hello, I would like to book a lab test.',
+            'email_patient'   => 1,    // "Your lab order is confirmed" to the patient
+            'email_lab'       => 1,    // "New lab order" to the lab's notification emails
+            'email_copy'      => '',   // optional: a copy of both to these addresses
             'hotline'         => '',
             'steps'           => array(
                 array('title' => 'Sample collection at home', 'text' => 'A trained collector comes to your address at the time you choose and takes the sample safely.'),
@@ -205,6 +208,18 @@ class ECare_Lab_Settings {
         return (strlen($d) >= 8 && strlen($d) <= 15) ? $d : '';
     }
 
+    /** "a@x.com; b@y.com  junk" -> "a@x.com, b@y.com" (valid addresses only, no repeats). */
+    public static function clean_email_list($raw) {
+        $out = array();
+        foreach (preg_split('/[\s,;]+/', (string) $raw, -1, PREG_SPLIT_NO_EMPTY) as $email) {
+            $email = sanitize_email($email);
+            if ($email !== '' && is_email($email) && !isset($out[strtolower($email)])) {
+                $out[strtolower($email)] = $email;
+            }
+        }
+        return implode(', ', $out);
+    }
+
     /** The "Order via WhatsApp" link, or '' when no number is set. */
     public static function whatsapp_url() {
         $num = (string) self::get('whatsapp_number');
@@ -299,6 +314,9 @@ class ECare_Lab_Settings {
             'banner_link'     => esc_url_raw(trim((string) ($in['banner_link'] ?? ''))),
             'messenger_link'  => esc_url_raw(trim((string) ($in['messenger_link'] ?? ''))),
             'whatsapp_number' => self::clean_whatsapp($in['whatsapp_number'] ?? ''),
+            'email_patient'   => empty($in['email_patient']) ? 0 : 1,
+            'email_lab'       => empty($in['email_lab']) ? 0 : 1,
+            'email_copy'      => self::clean_email_list($in['email_copy'] ?? ''),
             'whatsapp_message'=> function_exists('mb_substr') ? mb_substr(sanitize_text_field($in['whatsapp_message'] ?? ''), 0, 300) : substr(sanitize_text_field($in['whatsapp_message'] ?? ''), 0, 300),
             'hotline'         => sanitize_text_field($in['hotline'] ?? ''),
             'steps'           => $steps,
@@ -386,6 +404,28 @@ class ECare_Lab_Settings {
                         <th><label for="ecare-svc"><?php esc_html_e('Service charge', 'ecare-health-services'); ?></label></th>
                         <td>৳ <input type="number" id="ecare-svc" min="0" step="1" name="<?php echo esc_attr($name('service_charge')); ?>" value="<?php echo esc_attr($s['service_charge']); ?>" style="width:100px" />
                             <p class="description"><?php esc_html_e('Added once per order.', 'ecare-health-services'); ?></p></td>
+                    </tr>
+                </table>
+
+                <h2 class="title"><?php esc_html_e('Emails', 'ecare-health-services'); ?></h2>
+                <p class="description"><?php esc_html_e('Sent once, when a lab order is confirmed (its advance is paid). They go through WooCommerce, so its email design, sender name and address (WooCommerce -> Settings -> Emails) and any SMTP plugin apply. Each order\'s history in Lab Orders says who was emailed.', 'ecare-health-services'); ?></p>
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th><?php esc_html_e('To the patient', 'ecare-health-services'); ?></th>
+                        <td><input type="hidden" name="<?php echo esc_attr($name('email_patient')); ?>" value="0" />
+                            <label><input type="checkbox" name="<?php echo esc_attr($name('email_patient')); ?>" value="1" <?php checked((int) $s['email_patient'], 1); ?> />
+                            <?php esc_html_e('"Your lab order is confirmed", to the email address of the patient\'s account', 'ecare-health-services'); ?></label></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('To the lab', 'ecare-health-services'); ?></th>
+                        <td><input type="hidden" name="<?php echo esc_attr($name('email_lab')); ?>" value="0" />
+                            <label><input type="checkbox" name="<?php echo esc_attr($name('email_lab')); ?>" value="1" <?php checked((int) $s['email_lab'], 1); ?> />
+                            <?php esc_html_e('"New lab order", to the Notification email(s) of the chosen lab (Lab -> Lab Providers)', 'ecare-health-services'); ?></label></td>
+                    </tr>
+                    <tr>
+                        <th><label for="ecare-email-copy"><?php esc_html_e('Send a copy to', 'ecare-health-services'); ?></label></th>
+                        <td><input type="text" id="ecare-email-copy" class="large-text" name="<?php echo esc_attr($name('email_copy')); ?>" value="<?php echo esc_attr($s['email_copy']); ?>" placeholder="lab-orders@example.com" />
+                            <p class="description"><?php esc_html_e('Optional. Every patient and lab email is also sent here (as a hidden copy). Separate several addresses with commas.', 'ecare-health-services'); ?></p></td>
                     </tr>
                 </table>
 

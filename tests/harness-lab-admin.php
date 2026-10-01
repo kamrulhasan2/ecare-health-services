@@ -31,6 +31,13 @@ function _n($a, $b, $n, $d = null) { return $n == 1 ? $a : $b; }
 function wp_timezone() { return new DateTimeZone($GLOBALS['tz']); }
 function WC() { return new class { public function payment_gateways() { return new class { public function payment_gateways() { return $GLOBALS['gateways']; } }; } }; }
 class ECare_Lab_Front { public static function page_id($w) { return $GLOBALS['pages'][$w] ?? 0; } }
+// Labs for the "notification email" item: id => [title, active, emails].
+$GLOBALS['labs'] = array();
+function get_posts($a) { $o = array(); foreach ($GLOBALS['labs'] as $id => $l) { $o[] = (object) array('ID' => $id, 'post_title' => $l[0], 'post_type' => 'ecare_lab_provider', 'post_status' => 'publish'); } return $o; }
+function get_post($id) { return isset($GLOBALS['labs'][$id]) ? (object) array('ID' => $id, 'post_type' => 'ecare_lab_provider', 'post_status' => 'publish') : null; }
+function get_post_meta($id, $k, $s = false) { $l = $GLOBALS['labs'][$id] ?? null; if (!$l) { return ''; } return $k === '_ecare_provider_status' ? ($l[1] ? 'active' : 'inactive') : ($k === '_ecare_notify_emails' ? $l[2] : ''); }
+function sanitize_email($e) { return trim($e); }
+function is_email($e) { return (bool) filter_var($e, FILTER_VALIDATE_EMAIL); }
 // For the Setup Guide.
 function _e($s, $d = null) { echo $s; }
 function esc_html($s) { return htmlspecialchars((string) $s, ENT_QUOTES); }
@@ -138,7 +145,7 @@ $ok = function ($c) { return array_map(function ($i) { return $i['ok']; }, $c); 
 $gw = function ($id, $enabled) { return (object) array('id' => $id, 'enabled' => $enabled); };
 $stats = array('unlinked' => 3, 'providers' => 0);
 $c = ECare_Lab_Admin::checklist($stats);
-check('a fresh upload: what is left to do', $ok($c), array('migration' => false, 'tests' => false, 'labs' => false, 'pages' => false, 'payment' => false, 'timezone' => true, 'live' => false));
+check('a fresh upload: what is left to do', $ok($c), array('migration' => false, 'tests' => false, 'labs' => false, 'lab_emails' => true, 'pages' => false, 'payment' => false, 'timezone' => true, 'live' => false));
 check('tests without labs are counted', $c['tests']['detail'], '3 tests have none and will not be shown on the new pages.');
 check('missing pages are named', $c['pages']['detail'], 'Missing: Lab home, All tests, Lab cart');
 
@@ -154,8 +161,15 @@ $GLOBALS['opt']['ecare_lab_migration_log'] = array('applied' => 1);
 $GLOBALS['opt']['ecare_lab_settings'] = array('new_front' => 1);
 $GLOBALS['pages'] = array('home' => 1, 'tests' => 2, 'cart' => 3);
 $c = ECare_Lab_Admin::checklist(array('unlinked' => 0, 'providers' => 2));
-check('everything in place, switch on', $ok($c), array('migration' => true, 'tests' => true, 'labs' => true, 'pages' => true, 'payment' => true, 'timezone' => true, 'live' => true));
-check('every item links somewhere', count(array_filter(array_map(function ($i) { return $i['link']; }, $c))), 7);
+check('everything in place, switch on', $ok($c), array('migration' => true, 'tests' => true, 'labs' => true, 'lab_emails' => true, 'pages' => true, 'payment' => true, 'timezone' => true, 'live' => true));
+check('every item links somewhere', count(array_filter(array_map(function ($i) { return $i['link']; }, $c))), 8);
+$GLOBALS['labs'] = array(5 => array('Popular', true, 'orders@popular.test'), 6 => array('LabAid', true, ''), 7 => array('Closed Lab', false, ''), 8 => array('Ibn Sina', true, 'not-an-email'));
+$GLOBALS['opt']['ecare_lab_settings']['email_lab'] = 1;
+$c = ECare_Lab_Admin::checklist(array('unlinked' => 0, 'providers' => 4));
+check('active labs with no (valid) notification email are named; inactive ones are not', array($c['lab_emails']['ok'], $c['lab_emails']['detail']), array(false, 'No email, so new orders are not sent to: LabAid, Ibn Sina'));
+$GLOBALS['opt']['ecare_lab_settings']['email_lab'] = 0;
+check('lab emails turned off in Settings: nothing to warn about', ECare_Lab_Admin::checklist(array('unlinked' => 0, 'providers' => 4))['lab_emails']['ok'], true);
+$GLOBALS['labs'] = array();
 unset($GLOBALS['opt']['ecare_lab_migration_log']);
 check('no migration log but nothing old left either: fine', ECare_Lab_Admin::checklist(array('unlinked' => 0, 'providers' => 2))['migration']['ok'], true);
 

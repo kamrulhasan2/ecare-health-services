@@ -32,6 +32,7 @@ From the plugin root:
     php tests/harness-lab-checkout-page.php
     php tests/harness-lab-orders.php
     php tests/harness-lab-orders-screens.php
+    php tests/harness-lab-emails.php
 
 There is also an optional layout test, which needs Node and Playwright:
 

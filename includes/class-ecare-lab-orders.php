@@ -444,6 +444,19 @@ class ECare_Lab_Orders {
         return true;
     }
 
+    /** Set one key in an order's details (e.g. which emails went out). */
+    public static function set_detail($id, $key, $value) {
+        $row = self::get($id);
+        if (!$row) {
+            return false;
+        }
+        $details       = $row->details;
+        $details[$key] = $value;
+        global $wpdb;
+        $wpdb->update(self::table(), array('lab_details' => wp_json_encode($details)), array('id' => (int) $id));
+        return true;
+    }
+
     /** Keep a note without changing the status. */
     public static function add_note($id, $note, $by = 0) {
         $row = self::get($id);

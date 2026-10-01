@@ -375,7 +375,7 @@ class ECare_Lab_Providers {
                 <th><label for="ecare-provider-emails"><?php esc_html_e('Notification email(s)', 'ecare-health-services'); ?></label></th>
                 <td>
                     <input type="text" id="ecare-provider-emails" name="_ecare_notify_emails" class="large-text" value="<?php echo esc_attr($emails); ?>" placeholder="orders@example.com, lab@example.com" />
-                    <p class="description"><?php esc_html_e('Separate several addresses with commas. Kept for booking notifications; nothing is sent yet.', 'ecare-health-services'); ?></p>
+                    <p class="description"><?php esc_html_e('Separate several addresses with commas. Each confirmed lab order for this lab is emailed here (Lab -> Settings -> Emails).', 'ecare-health-services'); ?></p>
                 </td>
             </tr>
             <tr>
