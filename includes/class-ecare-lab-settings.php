@@ -53,6 +53,8 @@ class ECare_Lab_Settings {
             'banner_id'       => 0,
             'banner_link'     => '',
             'messenger_link'  => '',
+            'whatsapp_number' => '',
+            'whatsapp_message'=> 'Hello, I would like to book a lab test.',
             'hotline'         => '',
             'steps'           => array(
                 array('title' => 'Sample collection at home', 'text' => 'A trained collector comes to your address at the time you choose and takes the sample safely.'),
@@ -187,6 +189,32 @@ class ECare_Lab_Settings {
         return $out;
     }
 
+    /**
+     * A WhatsApp number in the international digits wa.me wants:
+     * "01712-345678", "+880 1712 345678" and "8801712345678" all give
+     * "8801712345678". Anything that is not 8 to 15 digits is dropped.
+     */
+    public static function clean_whatsapp($raw) {
+        $d = preg_replace('/\D+/', '', (string) $raw);
+        if (strpos($d, '00') === 0) {
+            $d = substr($d, 2);                       // 00880... international prefix
+        }
+        if (preg_match('/^01[3-9]\d{8}$/', $d)) {
+            $d = '88' . $d;                           // a Bangladeshi number written locally
+        }
+        return (strlen($d) >= 8 && strlen($d) <= 15) ? $d : '';
+    }
+
+    /** The "Order via WhatsApp" link, or '' when no number is set. */
+    public static function whatsapp_url() {
+        $num = (string) self::get('whatsapp_number');
+        if ($num === '') {
+            return '';
+        }
+        $msg = trim((string) self::get('whatsapp_message'));
+        return 'https://wa.me/' . $num . ($msg !== '' ? '?text=' . rawurlencode($msg) : '');
+    }
+
     /** "07:00-09:00" -> "7:00 AM - 9:00 AM" for display. */
     public static function slot_label($slot) {
         $parts = explode('-', (string) $slot);
@@ -270,6 +298,8 @@ class ECare_Lab_Settings {
             'banner_id'       => $banner,
             'banner_link'     => esc_url_raw(trim((string) ($in['banner_link'] ?? ''))),
             'messenger_link'  => esc_url_raw(trim((string) ($in['messenger_link'] ?? ''))),
+            'whatsapp_number' => self::clean_whatsapp($in['whatsapp_number'] ?? ''),
+            'whatsapp_message'=> function_exists('mb_substr') ? mb_substr(sanitize_text_field($in['whatsapp_message'] ?? ''), 0, 300) : substr(sanitize_text_field($in['whatsapp_message'] ?? ''), 0, 300),
             'hotline'         => sanitize_text_field($in['hotline'] ?? ''),
             'steps'           => $steps,
         );
@@ -420,6 +450,16 @@ class ECare_Lab_Settings {
                         <th><label for="ecare-msgr"><?php esc_html_e('Messenger link', 'ecare-health-services'); ?></label></th>
                         <td><input type="url" id="ecare-msgr" class="regular-text" name="<?php echo esc_attr($name('messenger_link')); ?>" value="<?php echo esc_attr($s['messenger_link']); ?>" placeholder="https://m.me/…" />
                             <p class="description"><?php esc_html_e('Shows the "Order via Messenger" button when set.', 'ecare-health-services'); ?></p></td>
+                    </tr>
+                    <tr>
+                        <th><label for="ecare-wa"><?php esc_html_e('WhatsApp number', 'ecare-health-services'); ?></label></th>
+                        <td><input type="tel" id="ecare-wa" class="regular-text" name="<?php echo esc_attr($name('whatsapp_number')); ?>" value="<?php echo esc_attr($s['whatsapp_number']); ?>" placeholder="01XXXXXXXXX" />
+                            <p class="description"><?php esc_html_e('Shows the "Order via WhatsApp" button when set. A Bangladeshi number can be written as 01XXXXXXXXX; it is saved with 880 in front.', 'ecare-health-services'); ?></p></td>
+                    </tr>
+                    <tr>
+                        <th><label for="ecare-wa-msg"><?php esc_html_e('WhatsApp first message', 'ecare-health-services'); ?></label></th>
+                        <td><input type="text" id="ecare-wa-msg" class="large-text" maxlength="300" name="<?php echo esc_attr($name('whatsapp_message')); ?>" value="<?php echo esc_attr($s['whatsapp_message']); ?>" />
+                            <p class="description"><?php esc_html_e('Already typed in the chat when the patient opens it; they can change it before sending. Leave empty for a blank chat.', 'ecare-health-services'); ?></p></td>
                     </tr>
                     <tr>
                         <th><label for="ecare-hotline"><?php esc_html_e('Hotline', 'ecare-health-services'); ?></label></th>

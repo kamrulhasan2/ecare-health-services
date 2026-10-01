@@ -253,6 +253,7 @@ class ECare_Lab_Front {
             'left'   => '<path d="m15 18-6-6 6-6"/>',
             'right'  => '<path d="m9 18 6-6-6-6"/>',
             'chat'   => '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+            'phone-chat' => '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.5 9.2c.2-.6.8-.8 1.1-.5l.8 1c.2.3.1.6-.1.8l-.3.3c.4.8 1 1.4 1.8 1.8l.3-.3c.2-.2.5-.3.8-.1l1 .8c.3.3.1.9-.5 1.1-1.9.6-5.5-3-4.9-4.9z"/>',
             'list'   => '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
             'box'    => '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
         );
@@ -365,6 +366,11 @@ class ECare_Lab_Front {
                 <?php if ($s['messenger_link']): ?>
                     <a class="ecl-quick-card" href="<?php echo esc_url($s['messenger_link']); ?>" target="_blank" rel="noopener">
                         <?php echo self::icon('chat'); // phpcs:ignore ?><span><small><?php esc_html_e('Order via', 'ecare-health-services'); ?></small><?php esc_html_e('Messenger', 'ecare-health-services'); ?></span>
+                    </a>
+                <?php endif; ?>
+                <?php $wa = ECare_Lab_Settings::whatsapp_url(); if ($wa !== ''): ?>
+                    <a class="ecl-quick-card ecl-quick-wa" href="<?php echo esc_url($wa); ?>" target="_blank" rel="noopener">
+                        <?php echo self::icon('phone-chat'); // phpcs:ignore ?><span><small><?php esc_html_e('Order via', 'ecare-health-services'); ?></small><?php esc_html_e('WhatsApp', 'ecare-health-services'); ?></span>
                     </a>
                 <?php endif; ?>
                 <a class="ecl-quick-card" href="<?php echo esc_url($tests); ?>">

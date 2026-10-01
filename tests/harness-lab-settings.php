@@ -121,5 +121,22 @@ check('is_live reads it', $S::is_live(), true);
 $GLOBALS['options']['ecare_lab_settings'] = array();
 check('a site that never saved settings is not live', $S::is_live(), false);
 
+echo "\n=== F. Order via WhatsApp ===\n";
+foreach (array('01712345678' => '8801712345678', '01712-345 678' => '8801712345678', '+880 1712 345678' => '8801712345678',
+               '008801712345678' => '8801712345678', '8801712345678' => '8801712345678', '+44 20 7946 0958' => '442079460958',
+               '12345' => '', '' => '', 'call us' => '', '1234567890123456' => '') as $in => $want) {
+    check('number "' . $in . '"', $S::clean_whatsapp((string) $in), $want);
+}
+check('saved cleaned, message kept and capped', array_intersect_key($S::sanitize(array('whatsapp_number' => '01712-345678', 'whatsapp_message' => '<b>Hi</b> ' . str_repeat('x', 400))), array('whatsapp_number' => 1, 'whatsapp_message' => 1)),
+      array('whatsapp_number' => '8801712345678', 'whatsapp_message' => 'Hi ' . str_repeat('x', 297)));
+$GLOBALS['options']['ecare_lab_settings'] = array();
+check('no number: no link (and no card)', $S::whatsapp_url(), '');
+$GLOBALS['options']['ecare_lab_settings'] = array('whatsapp_number' => '8801712345678', 'whatsapp_message' => 'আমি FBS test করাতে চাই & জানতে চাই?');
+check('the link opens a chat with the message typed, safely encoded', $S::whatsapp_url(), 'https://wa.me/8801712345678?text=' . rawurlencode('আমি FBS test করাতে চাই & জানতে চাই?'));
+$GLOBALS['options']['ecare_lab_settings'] = array('whatsapp_number' => '8801712345678', 'whatsapp_message' => '  ');
+check('an empty message: a blank chat', $S::whatsapp_url(), 'https://wa.me/8801712345678');
+check('the default message is there for a new site', $S::defaults()['whatsapp_message'] !== '', true);
+$GLOBALS['options']['ecare_lab_settings'] = array();
+
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);

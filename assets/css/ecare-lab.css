@@ -597,3 +597,7 @@ html.ecl-modal-open { overflow: hidden; }
 .ecl .ecl-ord-log { list-style: none; margin: 10px 0 0; padding: 0; font-size: 12px; color: var(--ecl-muted); }
 .ecl .ecl-ord-log time { font-weight: 600; margin-right: 6px; }
 @media (max-width: 600px) { .ecl .ecl-ord-steps li span { display: none; } .ecl .ecl-ord-steps li.is-now span { display: inline; } .ecl .ecl-ord-steps { grid-template-columns: repeat(5, 1fr); } }
+
+/* WhatsApp card: WhatsApp's green, so patients recognise it at a glance. */
+.ecl .ecl-quick-card.ecl-quick-wa .ecl-i { color: #1fa855; }
+.ecl .ecl-quick-card.ecl-quick-wa:hover { border-color: #1fa855; }

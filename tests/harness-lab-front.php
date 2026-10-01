@@ -80,7 +80,8 @@ $GLOBALS['wpdb'] = new Fake_WPDB();
 
 // Stand-ins for the classes the front end reads from; each test sets what they return.
 class ECare_Lab_Settings { public static $s = array(); public static function get($k) { return self::$s[$k] ?? 0; } public static function all() { return self::$s; }
-    public static function is_live() { return !empty(self::$s['new_front']); } }
+    public static function is_live() { return !empty(self::$s['new_front']); }
+    public static function whatsapp_url() { return empty(self::$s['whatsapp_number']) ? '' : 'https://wa.me/' . self::$s['whatsapp_number'] . '?text=Hi%20%26%20hello'; } }
 class ECare_Lab_Catalog {
     public static $filters = array(); public static $rows = array(); public static $result = array(); public static $last = null;
     public static function filters() { return self::$filters; }
@@ -248,6 +249,12 @@ check('lab partners link to the tests page filtered by lab', strpos($home, 'lab=
 check('how we work', strpos($home, 'We come to you') !== false, true);
 ECare_Lab_Settings::$s['messenger_link'] = 'https://m.me/meditaj';
 check('Messenger card with a link', strpos($F::render_home(), 'https://m.me/meditaj') !== false, true);
+check('no WhatsApp card without a number', strpos($F::render_home(), 'WhatsApp'), false);
+ECare_Lab_Settings::$s['whatsapp_number'] = '8801712345678';
+$home = $F::render_home();
+check('WhatsApp card with a number, opening in a new tab', (bool) preg_match('#class="ecl-quick-card ecl-quick-wa" href="https://wa.me/8801712345678\?text=Hi%20%26%20hello" target="_blank" rel="noopener"#', $home), true);
+check('...labelled Order via WhatsApp, next to Messenger', strpos($home, 'Order via</small>WhatsApp') > strpos($home, 'Order via</small>Messenger'), true);
+unset(ECare_Lab_Settings::$s['whatsapp_number']);
 
 // ===========================================================================
 echo "\n=== F. the tests page ===\n";
