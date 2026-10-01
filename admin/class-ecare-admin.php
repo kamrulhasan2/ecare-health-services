@@ -1453,6 +1453,94 @@ class ECare_Admin {
         return $content;
     }
 
+    /**
+     * Section 2 of the Setup Guide: the new lab's three shortcodes, with what
+     * each shows and what has to be in place for it to show anything.
+     */
+    private static function render_lab_shortcodes_guide() {
+        $d    = 'ecare-health-services';
+        $link = function ($page, $label) {
+            return '<a href="' . esc_url(admin_url($page)) . '">' . esc_html($label) . '</a>';
+        };
+        $allowed = array('a' => array('href' => array()), 'code' => array(), 'strong' => array());
+
+        $cards = array(
+            array(
+                'title' => __('Lab Home', $d),
+                'code'  => '[ecare_lab_home]',
+                'widget'=> __('E-Care Lab Home', $d),
+                'desc'  => __('The lab landing page: banner, test search, "Order via Messenger / WhatsApp" and hotline cards, rows of tests for each collection (Trending, Most Booked…), test categories by organ and by health concern, lab partners and "How our test process works".', $d),
+                'steps' => array(
+                    __('Create a page (for example "Lab Home") and add the shortcode, or the Elementor widget named below.', $d),
+                    sprintf(__('Choose the page in %s (or leave "Find automatically").', $d), $link('admin.php?page=ecare-lab-settings', __('Lab → Settings → Pages', $d))),
+                    sprintf(__('Rows come from %1$s: tick tests into a collection, or set it to "Most booked". Category tiles come from %2$s (icon, and group: Vital organs or Health concerns).', $d), $link('edit-tags.php?taxonomy=ecare_lab_collection&post_type=ecare_lab_test', __('Lab → Collections', $d)), $link('edit-tags.php?taxonomy=ecare_lab_category&post_type=ecare_lab_test', __('Lab → Categories', $d))),
+                    sprintf(__('Banner, Messenger link, WhatsApp number and message, hotline and the four "How we work" steps are set in %s. A card is shown only when its link or number is filled in.', $d), $link('admin.php?page=ecare-lab-settings', __('Lab → Settings → Lab home page', $d))),
+                    __('Empty collections and categories with no bookable test are left out automatically.', $d),
+                ),
+            ),
+            array(
+                'title' => __('All Lab Tests + Test details', $d),
+                'code'  => '[ecare_lab_catalog]',
+                'widget'=> __('E-Care Lab Tests (new)', $d),
+                'desc'  => __('Every bookable test and package with search, filters (category, collection, lab, single test or package), sorting and pages. A test\'s detail page and the Book Test window (choose a lab, number of patients, add to cart) open on this same page, so no separate detail page is needed.', $d),
+                'steps' => array(
+                    __('Create a page (for example "All Lab Tests") and add the shortcode or the widget.', $d),
+                    sprintf(__('Choose it in %s. All "View All", search and test links on the other lab pages point here.', $d), $link('admin.php?page=ecare-lab-settings', __('Lab → Settings → Pages', $d))),
+                    sprintf(__('A test appears only when it is published and has at least one active lab with a price: %1$s → edit a test → "Lab Prices". The lab itself must be active in %2$s, with the areas it covers.', $d), $link('admin.php?page=ecare-lab-catalog', __('Lab → All Tests', $d)), $link('edit.php?post_type=ecare_lab_provider', __('Lab → Lab Providers', $d))),
+                    __('The detail page shows the test\'s subtitle, also known as, sample, fasting, report time, parameters, description, FAQ and (for packages) the tests included: fill these in on the test\'s edit screen.', $d),
+                    __('Links look like <code>/all-lab-tests/?category=diabetes</code> or <code>?lab_test=fbs</code> for one test; they can be shared or put in menus.', $d),
+                ),
+            ),
+            array(
+                'title' => __('Lab Cart, Checkout and My Lab Orders', $d),
+                'code'  => '[ecare_lab_cart]',
+                'widget'=> __('E-Care Lab Cart', $d),
+                'desc'  => __('The patient\'s lab cart (one lab per order, patients per test, Change lab, area check), then the checkout on the same page (address book, contact, report delivery, collection date and time, coupon, payment summary with the advance) and the patient\'s "My Lab Orders" (status, pay advance, view report).', $d),
+                'steps' => array(
+                    __('Create a page (for example "Lab Cart") and add the shortcode or the widget. One page serves all three screens: the cart, <code>?step=checkout</code> and <code>?step=orders</code>.', $d),
+                    sprintf(__('Choose it in %s. WooCommerce My Account gets a "Lab Orders" link to it automatically.', $d), $link('admin.php?page=ecare-lab-settings', __('Lab → Settings → Pages', $d))),
+                    __('Patients must be logged in; the page asks them to log in or sign up. It is never cached.', $d),
+                    sprintf(__('Advance %%, report delivery fees, service charge, open days, time slots, cut-off and slot capacity: %s.', $d), $link('admin.php?page=ecare-lab-settings', __('Lab → Settings', $d))),
+                    __('Payment uses WooCommerce: enable SSLCommerz. Only the advance is paid online; Cash on Delivery is removed for it. Coupons are ordinary WooCommerce coupons (not ones limited to products).', $d),
+                    sprintf(__('Orders arrive in %s, where you change their status and upload the report (PDF or image, kept private).', $d), $link('admin.php?page=ecare-lab-orders', __('Lab → Lab Orders', $d))),
+                ),
+            ),
+        );
+        ?>
+        <div class="ecare-guide-section" style="margin-bottom:30px;">
+            <h3 style="font-size:16px;font-weight:700;color:var(--admin-green);margin-bottom:12px;text-transform:uppercase;"><?php esc_html_e('2. Lab Shortcodes (New Lab)', $d); ?></h3>
+            <p style="color:var(--text-muted);font-size:13.5px;line-height:1.6;margin-bottom:16px;">
+                <?php echo wp_kses(sprintf(
+                    /* translators: %s: Lab Dashboard link */
+                    __('Three pages make up the new lab. They work as soon as they are published, even before Go live, so you can test them first. Check the Go-live checklist on the %s before switching over.', $d),
+                    $link('admin.php?page=ecare-lab', __('Lab Dashboard', $d))
+                ), $allowed); ?>
+            </p>
+            <div style="display:grid;grid-template-columns:1fr;gap:16px;">
+                <?php foreach ($cards as $c): ?>
+                    <div style="background:#f8fafc;border:1px solid var(--border-light);border-radius:8px;padding:16px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
+                            <div style="flex:1;min-width:260px;">
+                                <h4 style="margin:0 0 4px 0;font-size:14.5px;color:var(--text-dark);"><?php echo esc_html($c['title']); ?></h4>
+                                <span style="font-size:12px;color:var(--text-muted);"><?php echo esc_html($c['desc']); ?></span>
+                            </div>
+                            <div style="text-align:right;">
+                                <code style="background:#e2e8f0;padding:6px 12px;border-radius:6px;font-weight:700;color:#0e9f6e;font-size:13px;font-family:monospace;"><?php echo esc_html($c['code']); ?></code>
+                                <span style="display:block;font-size:11.5px;color:var(--text-muted);margin-top:6px;"><?php echo esc_html(sprintf(__('Elementor widget: %s', $d), $c['widget'])); ?></span>
+                            </div>
+                        </div>
+                        <ol style="margin:12px 0 0 18px;padding:0;color:var(--text-muted);font-size:12.5px;line-height:1.7;">
+                            <?php foreach ($c['steps'] as $step): ?>
+                                <li><?php echo wp_kses($step, $allowed); ?></li>
+                            <?php endforeach; ?>
+                        </ol>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php
+    }
+
     public static function render_setup_guide() {
         self::admin_style_overrides();
         ?>
@@ -1494,8 +1582,9 @@ class ECare_Admin {
                         <!-- Shortcode 3 -->
                         <div style="background:#f8fafc;border:1px solid var(--border-light);border-radius:8px;padding:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
                             <div>
-                                <h4 style="margin:0 0 4px 0;font-size:14.5px;color:var(--text-dark);"><?php _e('Lab Test Booking Catalog', 'ecare-health-services'); ?></h4>
+                                <h4 style="margin:0 0 4px 0;font-size:14.5px;color:var(--text-dark);"><?php _e('Lab Test Booking Catalog (old)', 'ecare-health-services'); ?></h4>
                                 <span style="font-size:12px;color:var(--text-muted);"><?php _e('Displays searchable cascading locations selects and lab test catalog with cart additions.', 'ecare-health-services'); ?></span>
+                                <span style="display:block;font-size:12px;color:#b45309;margin-top:4px;"><?php _e('Replaced by the new lab shortcodes in section 2. After Lab → Settings → Go live, a page with this shortcode shows the new All Lab Tests page by itself, so it does not need to be changed.', 'ecare-health-services'); ?></span>
                             </div>
                             <code style="background:#e2e8f0;padding:6px 12px;border-radius:6px;font-weight:700;color:#0e9f6e;font-size:13px;font-family:monospace;">[ecare_lab_tests]</code>
                         </div>
@@ -1520,11 +1609,19 @@ class ECare_Admin {
                     </div>
                 </div>
 
+                <?php self::render_lab_shortcodes_guide(); ?>
+
                 <div class="ecare-guide-section" style="margin-bottom:10px;">
-                    <h3 style="font-size:16px;font-weight:700;color:var(--admin-green);margin-bottom:12px;text-transform:uppercase;"><?php _e('2. Setup & Requirements Checklist', 'ecare-health-services'); ?></h3>
+                    <h3 style="font-size:16px;font-weight:700;color:var(--admin-green);margin-bottom:12px;text-transform:uppercase;"><?php _e('3. Setup & Requirements Checklist', 'ecare-health-services'); ?></h3>
                     <ul style="margin:0;padding-left:20px;color:var(--text-muted);font-size:13.5px;line-height:1.8;">
                         <li><strong><?php _e('WooCommerce Integration:', 'ecare-health-services'); ?></strong> <?php _e('Make sure WooCommerce is active. Lab tests and caregiver bookings dynamically interface with WooCommerce products and checkout carts to handle payments.', 'ecare-health-services'); ?></li>
-                        <li><strong><?php _e('Select2 Library:', 'ecare-health-services'); ?></strong> <?php _e('Select2 handles the searchable cascading dropdowns on the lab test catalogue, and is loaded only on pages that use them. WooCommerce already ships selectWoo, which is the same library, so that is used when available and a CDN copy only as a fallback.', 'ecare-health-services'); ?></li>
+                        <li><strong><?php _e('Select2 Library:', 'ecare-health-services'); ?></strong> <?php _e('Select2 handles the searchable cascading dropdowns on the old lab test catalogue, and is loaded only on pages that use them. WooCommerce already ships selectWoo, which is the same library, so that is used when available and a CDN copy only as a fallback. The new lab pages do not need it.', 'ecare-health-services'); ?></li>
+                        <li><strong><?php _e('New Lab:', 'ecare-health-services'); ?></strong> <?php echo wp_kses(sprintf(
+                            /* translators: 1: Lab Dashboard link, 2: Lab Settings link */
+                            __('Follow the Go-live checklist on the %1$s, then turn on %2$s. An online payment method (SSLCommerz) must be enabled for the advance, and the site timezone (Settings → General) should be Dhaka. Step-by-step guide: <code>docs/LAB-DEPLOY.md</code> in the plugin folder.', 'ecare-health-services'),
+                            '<a href="' . esc_url(admin_url('admin.php?page=ecare-lab')) . '">' . esc_html__('Lab Dashboard', 'ecare-health-services') . '</a>',
+                            '<a href="' . esc_url(admin_url('admin.php?page=ecare-lab-settings')) . '">' . esc_html__('Lab → Settings → Go live', 'ecare-health-services') . '</a>'
+                        ), array('a' => array('href' => array()), 'code' => array())); ?></li>
                         <li><strong><?php _e('Provider Approvals:', 'ecare-health-services'); ?></strong> <?php _e('When caregivers or ambulance partners sign up from the front-end, they are set to "Pending" status. You must verify their documents and approve them under "Care Providers" and "Ambulance Providers" dashboards before they appear in the search results.', 'ecare-health-services'); ?></li>
                     </ul>
                 </div>

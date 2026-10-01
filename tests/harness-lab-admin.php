@@ -12,6 +12,8 @@
  *     and nothing else does
  *   - the go-live checklist says what is really missing (migration, tests
  *     without labs, pages, an online payment method, Dhaka time, the switch)
+ *   - the E-Care Setup Guide documents the new lab shortcodes, with links to
+ *     the screens that feed them, and says what happens to the old one
  */
 
 define('ABSPATH', __DIR__ . '/');
@@ -29,6 +31,15 @@ function _n($a, $b, $n, $d = null) { return $n == 1 ? $a : $b; }
 function wp_timezone() { return new DateTimeZone($GLOBALS['tz']); }
 function WC() { return new class { public function payment_gateways() { return new class { public function payment_gateways() { return $GLOBALS['gateways']; } }; } }; }
 class ECare_Lab_Front { public static function page_id($w) { return $GLOBALS['pages'][$w] ?? 0; } }
+// For the Setup Guide.
+function _e($s, $d = null) { echo $s; }
+function esc_html($s) { return htmlspecialchars((string) $s, ENT_QUOTES); }
+function esc_html__($s, $d = null) { return esc_html($s); }
+function esc_html_e($s, $d = null) { echo esc_html($s); }
+function esc_url($s) { return htmlspecialchars((string) $s, ENT_QUOTES); }
+function wp_kses($s, $allowed) {   // keeps only the allowed tags, like the real one
+    return preg_replace_callback('#</?([a-z0-9]+)[^>]*>#i', function ($m) use ($allowed) { return isset($allowed[strtolower($m[1])]) ? $m[0] : ''; }, $s);
+}
 function is_admin() { return true; }
 function __($s, $d = null) { return $s; }
 function add_menu_page($page_title, $menu_title, $cap, $slug, $cb = '', $icon = '', $pos = null) {
@@ -147,6 +158,22 @@ check('everything in place, switch on', $ok($c), array('migration' => true, 'tes
 check('every item links somewhere', count(array_filter(array_map(function ($i) { return $i['link']; }, $c))), 7);
 unset($GLOBALS['opt']['ecare_lab_migration_log']);
 check('no migration log but nothing old left either: fine', ECare_Lab_Admin::checklist(array('unlinked' => 0, 'providers' => 2))['migration']['ok'], true);
+
+// ===========================================================================
+echo "\n=== G. the E-Care Setup Guide ===\n";
+// ===========================================================================
+ob_start(); ECare_Admin::render_setup_guide(); $g = ob_get_clean();
+check('a section for the new lab, before the checklist (now 3.)', array(strpos($g, '2. Lab Shortcodes (New Lab)') !== false, strpos($g, '3. Setup &amp; Requirements Checklist') !== false || strpos($g, '3. Setup & Requirements Checklist') !== false, strpos($g, '2. Lab Shortcodes') < strpos($g, '3. Setup')), array(true, true, true));
+foreach (array('[ecare_lab_home]' => 'E-Care Lab Home', '[ecare_lab_catalog]' => 'E-Care Lab Tests (new)', '[ecare_lab_cart]' => 'E-Care Lab Cart') as $code => $widget) {
+    check("$code is listed with its Elementor widget", strpos($g, $code) !== false && strpos($g, 'Elementor widget: ' . $widget) !== false, true);
+}
+foreach (array('page=ecare-lab-settings', 'taxonomy=ecare_lab_collection', 'taxonomy=ecare_lab_category', 'page=ecare-lab-catalog', 'post_type=ecare_lab_provider', 'page=ecare-lab-orders', 'page=ecare-lab"') as $screen) {
+    check("links to the screen that feeds it: $screen", strpos($g, 'https://site/wp-admin/admin.php?' . ltrim($screen, '"')) !== false || strpos($g, $screen) !== false, true);
+}
+check('the cart page explains its three screens', strpos($g, '<code>?step=checkout</code>') !== false && strpos($g, '<code>?step=orders</code>') !== false, true);
+check('the old shortcode says it is taken over at go-live', strpos($g, 'After Lab → Settings → Go live, a page with this shortcode shows the new All Lab Tests page') !== false, true);
+check('the other shortcodes are untouched', array(strpos($g, '[ecare_caregiver_booking]') !== false, strpos($g, '[ecare_ambulance_registration]') !== false), array(true, true));
+check('no stray markup gets through', preg_match('#<(script|iframe)#i', $g), 0);
 
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);
