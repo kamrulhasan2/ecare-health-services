@@ -132,6 +132,7 @@ $ecare_options = array(
     'ecare_lab_migration_token',
     'ecare_lab_cache_version',
     'ecare_lab_orders_db_version',
+    'ecare_provider_emails',
     'ecare_default_daily_12_price',
     'ecare_default_daily_24_price',
     'ecare_default_monthly_12_price',

@@ -827,6 +827,9 @@ class ECare_Ajax {
             wp_set_post_terms($post_id, array($term->term_id), 'ecare_caregiver_type');
         }
 
+        /** A caregiver / ambulance provider registration was saved (ECare_Provider_Emails sends the "Pending" emails). */
+        do_action('ecare_provider_registered', $post_id);
+
         $message = 'Caregiver Registration submitted successfully! We will review your application and approve it.';
         if (!empty($doc_warning)) {
             $message .= ' However, your verification document was NOT saved (' . $doc_warning . '). Please contact us to submit it again.';
@@ -1319,6 +1322,8 @@ class ECare_Ajax {
             }
         }
 
+        do_action('ecare_provider_registered', $post_id);
+
         $message = 'Ambulance provider registration submitted! We will review and approve.';
         if (!empty($doc_warning)) {
             $message .= ' However, your verification document was NOT saved (' . $doc_warning . '). Please contact us to submit it again.';
@@ -1353,7 +1358,12 @@ class ECare_Ajax {
 
         global $wpdb;
         $table = $wpdb->prefix . 'ecare_bookings';
+        $old   = (string) $wpdb->get_var($wpdb->prepare("SELECT status FROM {$table} WHERE id = %d", $booking_id));
         $wpdb->update($table, array('status' => $status), array('id' => $booking_id));
+        if ($old !== $status) {
+            /** A booking's status changed: id, new status, old status (ECare_Provider_Emails tells the provider). */
+            do_action('ecare_booking_status_changed', $booking_id, $status, $old);
+        }
 
         wp_send_json_success(array('message' => 'Status updated successfully.'));
     }

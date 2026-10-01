@@ -199,6 +199,7 @@ function reset_world($opt_in, $bulk = 0) {
         'ecare_lab_migration_token'          => 'abc',
         'ecare_lab_cache_version'            => 4,
         'ecare_lab_orders_db_version'        => '1',
+        'ecare_provider_emails'              => array('booking' => 0),
         'ecare_default_daily_12_price'       => 1700,
         'ecare_default_daily_24_price'       => 2200,
         'ecare_default_monthly_12_price'     => 30000,
@@ -370,6 +371,7 @@ check('every plugin option plus the flag', $GLOBALS['deleted_options'], array(
     'ecare_lab_settings',
     'ecare_lab_taxonomies_seed_version',
     'ecare_locations_seed_version',
+    'ecare_provider_emails',
     'ecare_rewrite_version',
 ));
 check("WooCommerce's option is untouched", get_option('woocommerce_currency'), 'BDT');

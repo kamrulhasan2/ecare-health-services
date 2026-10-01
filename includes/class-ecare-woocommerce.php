@@ -339,10 +339,15 @@ class ECare_WooCommerce {
         $booking_id = (int) $order->get_meta('_ecare_booking_id');
 
         if ($booking_id) {
-            $wpdb->query($wpdb->prepare(
+            $old     = (string) $wpdb->get_var($wpdb->prepare("SELECT status FROM {$table} WHERE id = %d", $booking_id));
+            $changed = $wpdb->query($wpdb->prepare(
                 "UPDATE {$table} SET status = %s WHERE id = %d AND status IN ({$slots})",
                 array_merge(array($new_status, $booking_id), $from)
             ));
+            if ($changed && $old !== $new_status) {
+                /** See ECare_Ajax::update_booking_status(). */
+                do_action('ecare_booking_status_changed', $booking_id, $new_status, $old);
+            }
         }
 
         // Lab bookings are matched by the order they were created from.

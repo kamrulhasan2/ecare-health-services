@@ -16,6 +16,7 @@ function remove_action($hook, $cb, $priority = 10) { $GLOBALS['removed'][] = $ho
 $GLOBALS['filters'] = array();
 function add_filter($hook, $cb, $priority = 10, $args = 1) { $GLOBALS['filters'][$hook][] = $cb; }
 function __($s, $d = null) { return $s; }
+function do_action($hook, ...$args) { $GLOBALS['fired'][] = array_merge(array($hook), $args); }
 
 /** Product double: only the SKU matters to the code under test. */
 class Fake_Product {
@@ -113,6 +114,14 @@ class Fake_WPDB {
             $out .= $query[$p];
         }
         return $out;
+    }
+
+    /** Only "SELECT status ... WHERE id = N", read before a status change (kept out of $log). */
+    public function get_var($sql) {
+        if (!preg_match("/^SELECT status FROM wp_ecare_bookings WHERE id = (\d+)$/", trim($sql), $m)) {
+            throw new Exception('Unrecognised SQL: ' . $sql);
+        }
+        return isset($this->bookings[(int) $m[1]]) ? $this->bookings[(int) $m[1]]['status'] : null;
     }
 
     public $inserted = array();
@@ -239,6 +248,22 @@ $GLOBALS['orders'] = array();
 $GLOBALS['wpdb']->log = array();
 ECare_WooCommerce::handle_payment_complete(123456);
 check('unknown order issues no query at all', count($GLOBALS['wpdb']->log), 0);
+
+echo "\n=== E2. the booking-status event (provider emails listen to it) ===\n";
+$GLOBALS['fired'] = array();
+scenario(1130, array('_ecare_booking_id' => '21'), array(21 => row(1130, 'pending')));
+ECare_WooCommerce::handle_payment_complete(1130);
+check('paid: one event, with the old status', $GLOBALS['fired'], array(array('ecare_booking_status_changed', 21, 'approved', 'pending')));
+$GLOBALS['fired'] = array();
+ECare_WooCommerce::handle_payment_complete(1130);
+check('the order saved again: nothing changes, no event', $GLOBALS['fired'], array());
+scenario(1130, array('_ecare_booking_id' => '21'), array(21 => row(1130, 'cancelled')));
+ECare_WooCommerce::handle_payment_complete(1130);
+check('a cancelled booking is not revived, no event', $GLOBALS['fired'], array());
+scenario(1130, array('_ecare_booking_id' => '21'), array(21 => row(1130, 'approved')));
+ECare_WooCommerce::handle_order_completed(1130);
+check('completed: the event says so', $GLOBALS['fired'], array(array('ecare_booking_status_changed', 21, 'completed', 'approved')));
+$GLOBALS['fired'] = array();
 
 echo "\n=== F. the SQL itself ===\n";
 scenario(1130, array('_ecare_booking_id' => "21' OR 1=1 -- "), array(21 => row(1130, 'pending')));

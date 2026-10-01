@@ -34,6 +34,7 @@ From the plugin root:
     php tests/harness-lab-orders-screens.php
     php tests/harness-lab-emails.php
     php tests/harness-lab-pay.php
+    php tests/harness-provider-emails.php
 
 There is also an optional layout test, which needs Node and Playwright:
 
