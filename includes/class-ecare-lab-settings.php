@@ -37,6 +37,7 @@ class ECare_Lab_Settings {
 
     public static function defaults() {
         return array(
+            'new_front'       => 0,   // the switch-over: 1 = the new lab pages replace [ecare_lab_tests]
             'page_home'       => 0,
             'page_tests'      => 0,
             'page_cart'       => 0,
@@ -66,6 +67,11 @@ class ECare_Lab_Settings {
     public static function all() {
         $saved = get_option(self::OPTION, array());
         return array_merge(self::defaults(), is_array($saved) ? $saved : array());
+    }
+
+    /** Has the site switched to the new lab pages? */
+    public static function is_live() {
+        return (int) self::get('new_front') === 1;
     }
 
     public static function get($key) {
@@ -247,6 +253,7 @@ class ECare_Lab_Settings {
         }
 
         return array(
+            'new_front'       => empty($in['new_front']) ? 0 : 1,
             'page_home'       => max(0, (int) ($in['page_home'] ?? 0)),
             'page_tests'      => max(0, (int) ($in['page_tests'] ?? 0)),
             'page_cart'       => max(0, (int) ($in['page_cart'] ?? 0)),
@@ -297,6 +304,19 @@ class ECare_Lab_Settings {
             <?php settings_errors(); ?>
             <form method="post" action="options.php">
                 <?php settings_fields(self::PAGE); ?>
+
+                <h2 class="title"><?php esc_html_e('Go live', 'ecare-health-services'); ?></h2>
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th><?php esc_html_e('New lab pages', 'ecare-health-services'); ?></th>
+                        <td>
+                            <input type="hidden" name="<?php echo esc_attr($name('new_front')); ?>" value="0" />
+                            <label><input type="checkbox" name="<?php echo esc_attr($name('new_front')); ?>" value="1" <?php checked((int) $s['new_front'], 1); ?> />
+                                <?php esc_html_e('Use the new lab pages everywhere', 'ecare-health-services'); ?></label>
+                            <p class="description"><?php esc_html_e('On: the old [ecare_lab_tests] shortcode and Elementor widget show the new All Tests page, and the old lab cart buttons stop. Off: the old lab page works as before. Run Data Migration and check the Dashboard checklist before turning this on; turning it off again is safe.', 'ecare-health-services'); ?></p>
+                        </td>
+                    </tr>
+                </table>
 
                 <h2 class="title"><?php esc_html_e('Pages', 'ecare-health-services'); ?></h2>
                 <p class="description"><?php esc_html_e('Which pages hold the lab screens. Left on "Find automatically", the first published page with the matching shortcode or Elementor widget is used.', 'ecare-health-services'); ?></p>

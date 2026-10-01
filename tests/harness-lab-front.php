@@ -25,7 +25,7 @@ define('ECARE_VERSION', 'test');
 $GLOBALS['posts'] = array(); $GLOBALS['meta'] = array(); $GLOBALS['transients'] = array();
 $GLOBALS['enqueued'] = array(); $GLOBALS['is_singular'] = true; $GLOBALS['current'] = null; $GLOBALS['db_page'] = 0;
 
-function add_action() {} function add_filter() {} function add_shortcode() {} function do_action() {}
+function add_action() {} function add_filter() {} function add_shortcode($t = null, $cb = null) { $GLOBALS['shortcodes'][$t] = $cb; } function do_action() {}
 function apply_filters($h, $v) { return $v; }
 function __($s, $d = null) { return $s; }
 function _n($a, $b, $n, $d = null) { return $n == 1 ? $a : $b; }
@@ -65,13 +65,22 @@ class Fake_WPDB {
     public $posts = 'wp_posts'; public $postmeta = 'wp_postmeta';
     public $queries = 0;
     public function esc_like($s) { return $s; }
-    public function prepare($q, ...$a) { return $q; }
-    public function get_var($q) { $this->queries++; return $GLOBALS['db_page']; }
+    public $last = array();
+    public function prepare($q, ...$a) { $this->last = $a; return $q; }
+    public function get_var($q) {
+        $this->queries++;
+        if (isset($GLOBALS['db_by_tag'])) {   // which page holds which shortcode
+            foreach ($GLOBALS['db_by_tag'] as $tag => $id) { if (($this->last[0] ?? '') === '%' . $tag . '%') { return $id; } }
+            return 0;
+        }
+        return $GLOBALS['db_page'];
+    }
 }
 $GLOBALS['wpdb'] = new Fake_WPDB();
 
 // Stand-ins for the classes the front end reads from; each test sets what they return.
-class ECare_Lab_Settings { public static $s = array(); public static function get($k) { return self::$s[$k] ?? 0; } public static function all() { return self::$s; } }
+class ECare_Lab_Settings { public static $s = array(); public static function get($k) { return self::$s[$k] ?? 0; } public static function all() { return self::$s; }
+    public static function is_live() { return !empty(self::$s['new_front']); } }
 class ECare_Lab_Catalog {
     public static $filters = array(); public static $rows = array(); public static $result = array(); public static $last = null;
     public static function filters() { return self::$filters; }
@@ -427,6 +436,45 @@ $_GET = array('lab_test' => 'fbs');
 check('a test detail view hides it', $F::hide_theme_title(null, 61, 'site-post-title', true), 'disabled');
 $GLOBALS['queried'] = 62;
 check('an ordinary page keeps it', $F::hide_theme_title(null, 62, 'site-post-title', true), null);
+$_GET = array(); $GLOBALS['queried'] = 0;
+
+// ===========================================================================
+echo "\n=== J. the switch-over ===\n";
+// ===========================================================================
+ECare_Lab_Settings::$s = array();
+$GLOBALS['shortcodes'] = array();
+$F::take_over_old_shortcode();
+check('before go-live the old shortcode is left to the old catalogue', isset($GLOBALS['shortcodes']['ecare_lab_tests']), false);
+check('...its assets still load', $F::drop_old_lab_assets(array('ecare_caregiver_booking', 'ecare_lab_tests')), array('ecare_caregiver_booking', 'ecare_lab_tests'));
+page(70, 'old-lab', '[ecare_lab_tests]'); $GLOBALS['posts'][70]->post_type = 'page';
+$GLOBALS['current'] = $GLOBALS['posts'][70];
+check('...and the new assets do not', $F::on_lab_page(), false);
+check('...and the old AJAX is not touched', ajax('old_lab_closed'), null);
+
+ECare_Lab_Settings::$s = array('new_front' => 1);
+$F::take_over_old_shortcode();
+check('live: [ecare_lab_tests] (and the old widget, which calls it) shows the new catalogue', $GLOBALS['shortcodes']['ecare_lab_tests'], array('ECare_Lab_Front', 'render_catalog'));
+check('...the old CSS/JS are dropped, other blocks on the page keep theirs', $F::drop_old_lab_assets(array('ecare_caregiver_booking', 'ecare_lab_tests')), array('ecare_caregiver_booking'));
+check('...the new assets load on the old page', $F::on_lab_page(), true);
+check('...the old add-to-cart answers 410 with where to go', array_slice(ajax('old_lab_closed'), 0, 2), array(false, 410));
+
+$GLOBALS['transients'] = array();
+$GLOBALS['db_by_tag'] = array('ecare_lab_tests' => 70);
+check('live, no [ecare_lab_catalog] page: the old page is the tests page', $F::page_id('tests'), 70);
+$GLOBALS['transients'] = array();
+$GLOBALS['db_by_tag'] = array('ecare_lab_tests' => 70, 'ecare_lab_catalog' => 20);
+check('...a page with the new shortcode is preferred', $F::page_id('tests'), 20);
+$GLOBALS['transients'] = array();
+ECare_Lab_Settings::$s = array();
+$GLOBALS['db_by_tag'] = array('ecare_lab_tests' => 70);
+check('not live: the old page is never taken for the new one', $F::page_id('tests'), 0);
+unset($GLOBALS['db_by_tag']); $GLOBALS['transients'] = array();
+
+ECare_Lab_Settings::$s = array('new_front' => 1);
+$GLOBALS['queried'] = 70; $_GET = array('lab_test' => 'fbs');
+check('live: a test detail on the old page hides the theme title too', $F::hide_theme_title(null, 70, 'site-post-title', true), 'disabled');
+ECare_Lab_Settings::$s = array();
+check('not live: it does not', $F::hide_theme_title(null, 70, 'site-post-title', true), null);
 $_GET = array(); $GLOBALS['queried'] = 0;
 
 printf("\n%d passed, %d failed\n", $pass, $fail);

@@ -21,6 +21,8 @@ $GLOBALS['posts'] = array(); $GLOBALS['meta'] = array(); $GLOBALS['obj_terms'] =
 $GLOBALS['transients'] = array();
 
 class WP_Error {}
+// The switch-over (Lab Settings -> Go live); off unless a test says so.
+class ECare_Lab_Settings { const OPTION = 'ecare_lab_settings'; public static $live = false; public static function is_live() { return self::$live; } }
 function add_action() {} function add_filter() {}
 function do_action($hook, ...$args) { $GLOBALS["actions"][] = $hook; }
 function is_admin() { return false; }

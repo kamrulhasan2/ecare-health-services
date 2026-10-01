@@ -112,5 +112,14 @@ check('an empty step title keeps the default', $out['steps'][0], array('title' =
 check('a step keeps its own title, markup stripped', $out['steps'][1], array('title' => 'Mine', 'text' => 'x'));
 check('no days ticked falls back to every day', $S::sanitize(array('open_days' => array()))['open_days'], $S::DAYS);
 
+echo "\n=== E. the go-live switch ===\n";
+check('off by default: uploading the plugin changes nothing for patients', array($S::defaults()['new_front'], $S::sanitize(array())['new_front']), array(0, 0));
+check('the hidden 0 then the ticked box: on', $S::sanitize(array('new_front' => '1'))['new_front'], 1);
+check('unticked (only the hidden 0 posted): off', $S::sanitize(array('new_front' => '0'))['new_front'], 0);
+$GLOBALS['options']['ecare_lab_settings'] = array('new_front' => 1);
+check('is_live reads it', $S::is_live(), true);
+$GLOBALS['options']['ecare_lab_settings'] = array();
+check('a site that never saved settings is not live', $S::is_live(), false);
+
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);

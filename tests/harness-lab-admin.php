@@ -10,6 +10,8 @@
  *   - the old page slugs are kept, so existing links still open
  *   - the edit screens for tests, providers and locations light up the Lab menu,
  *     and nothing else does
+ *   - the go-live checklist says what is really missing (migration, tests
+ *     without labs, pages, an online payment method, Dhaka time, the switch)
  */
 
 define('ABSPATH', __DIR__ . '/');
@@ -18,6 +20,15 @@ $GLOBALS['menus']    = array();
 $GLOBALS['submenus'] = array();
 
 function add_action() {} function add_filter() {}
+// For the go-live checklist.
+define('HOUR_IN_SECONDS', 3600);
+$GLOBALS['opt'] = array(); $GLOBALS['tz'] = 'Asia/Dhaka'; $GLOBALS['gateways'] = array(); $GLOBALS['pages'] = array();
+function get_option($k, $d = false) { return $GLOBALS['opt'][$k] ?? $d; }
+function admin_url($p = '') { return 'https://site/wp-admin/' . $p; }
+function _n($a, $b, $n, $d = null) { return $n == 1 ? $a : $b; }
+function wp_timezone() { return new DateTimeZone($GLOBALS['tz']); }
+function WC() { return new class { public function payment_gateways() { return new class { public function payment_gateways() { return $GLOBALS['gateways']; } }; } }; }
+class ECare_Lab_Front { public static function page_id($w) { return $GLOBALS['pages'][$w] ?? 0; } }
 function is_admin() { return true; }
 function __($s, $d = null) { return $s; }
 function add_menu_page($page_title, $menu_title, $cap, $slug, $cb = '', $icon = '', $pos = null) {
@@ -108,6 +119,34 @@ check('categories -> Categories', $f($sc(array('taxonomy' => 'ecare_lab_category
 check('one collection -> Collections', $f($sc(array('taxonomy' => 'ecare_lab_collection', 'base' => 'term'))), 'edit-tags.php?taxonomy=ecare_lab_collection&post_type=ecare_lab_test');
 check('caregiver types are not a lab screen', $f($sc(array('taxonomy' => 'ecare_caregiver_type', 'base' => 'edit-tags'))), '');
 check('no screen, no answer', $f(null), '');
+
+// ===========================================================================
+echo "\n=== F. the go-live checklist ===\n";
+// ===========================================================================
+$ok = function ($c) { return array_map(function ($i) { return $i['ok']; }, $c); };
+$gw = function ($id, $enabled) { return (object) array('id' => $id, 'enabled' => $enabled); };
+$stats = array('unlinked' => 3, 'providers' => 0);
+$c = ECare_Lab_Admin::checklist($stats);
+check('a fresh upload: what is left to do', $ok($c), array('migration' => false, 'tests' => false, 'labs' => false, 'pages' => false, 'payment' => false, 'timezone' => true, 'live' => false));
+check('tests without labs are counted', $c['tests']['detail'], '3 tests have none and will not be shown on the new pages.');
+check('missing pages are named', $c['pages']['detail'], 'Missing: Lab home, All tests, Lab cart');
+
+$GLOBALS['gateways'] = array('cod' => $gw('cod', 'yes'), 'bacs' => $gw('bacs', 'no'));
+$GLOBALS['tz'] = 'UTC';
+$c = ECare_Lab_Admin::checklist($stats);
+check('Cash on Delivery alone is not an online payment', array($c['payment']['ok'], strpos($c['payment']['detail'], 'Cash on Delivery') !== false), array(false, true));
+check('a UTC site is flagged, with its timezone named', array($c['timezone']['ok'], $c['timezone']['detail']), array(false, 'Now UTC. Collection slots and cut-off times follow it.'));
+
+$GLOBALS['gateways']['sslcommerz'] = $gw('sslcommerz', 'yes');
+$GLOBALS['tz'] = '+06:00';
+$GLOBALS['opt']['ecare_lab_migration_log'] = array('applied' => 1);
+$GLOBALS['opt']['ecare_lab_settings'] = array('new_front' => 1);
+$GLOBALS['pages'] = array('home' => 1, 'tests' => 2, 'cart' => 3);
+$c = ECare_Lab_Admin::checklist(array('unlinked' => 0, 'providers' => 2));
+check('everything in place, switch on', $ok($c), array('migration' => true, 'tests' => true, 'labs' => true, 'pages' => true, 'payment' => true, 'timezone' => true, 'live' => true));
+check('every item links somewhere', count(array_filter(array_map(function ($i) { return $i['link']; }, $c))), 7);
+unset($GLOBALS['opt']['ecare_lab_migration_log']);
+check('no migration log but nothing old left either: fine', ECare_Lab_Admin::checklist(array('unlinked' => 0, 'providers' => 2))['migration']['ok'], true);
 
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);

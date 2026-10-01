@@ -9,6 +9,8 @@
  *     offering it (empty lists, no price) instead of keeping stale areas
  *   - a whole-district lab reaches every area of that district, including
  *     ones added later
+ *   - after go-live the old lists are no longer written; turning the switch
+ *     off again rewrites them for every test with labs (and only then)
  */
 
 define('ABSPATH', __DIR__ . '/');
@@ -63,6 +65,7 @@ class Fake_WPDB {
         return array_map(function ($r) { return (object) $r; }, $out);
     }
     public function get_var($q) { return count($this->get_results($q)); }
+    public function get_col($q) { return array_values(array_unique(array_map(function ($r) { return $r['test_id']; }, $this->rows))); }
     public function insert($table, $data, $f = null) { $data['id'] = $this->next++; $this->rows[$data['id']] = $data; return 1; }
     public function update($table, $data, $where, $f = null, $wf = null) { $this->rows[$where['id']] = array_merge($this->rows[$where['id']], $data); return 1; }
     public function delete($table, $where, $f = null) {
@@ -71,6 +74,8 @@ class Fake_WPDB {
     }
 }
 $GLOBALS['wpdb'] = new Fake_WPDB();
+// The switch-over (Lab Settings -> Go live); off unless a test says so.
+class ECare_Lab_Settings { const OPTION = 'ecare_lab_settings'; public static $live = false; public static function is_live() { return self::$live; } }
 
 require_once __DIR__ . '/../includes/class-ecare-locations.php';
 require_once __DIR__ . '/../includes/class-ecare-lab-providers.php';
@@ -120,6 +125,31 @@ $T::sync_legacy(500);
 $m = $GLOBALS['meta'][500];
 check('switched off: lists are emptied, not left stale', array($m['_lab_provider'], $m['_area'], $m['_district'], $m['_price']), array('', '', '', ''));
 check('the test still counts as linked (it has a row)', $T::is_linked(500), true);
+
+// ===========================================================================
+echo "\n=== D. go-live: the old lists stop, and come back on switching off ===\n";
+// ===========================================================================
+$GLOBALS['wpdb']->rows = array();
+$add(500, 100, 400);
+$T::sync_legacy(500);
+check('before go-live: the old lists are written', array($GLOBALS['meta'][500]['_price'], $GLOBALS['meta'][500]['_lab_provider']), array('400', 'Popular'));
+ECare_Lab_Settings::$live = true;
+$GLOBALS['wpdb']->update('t', array('mrp' => 450, 'price' => 450), array('id' => array_key_last($GLOBALS['wpdb']->rows)));
+$GLOBALS['meta'][500]['_ecare_provider_id'] = 9;
+$T::sync_legacy(500);
+check('live: the old lists are left as they were', $GLOBALS['meta'][500]['_price'], '400');
+check('...but the superseded one-provider link is still cleared', isset($GLOBALS['meta'][500]['_ecare_provider_id']), false);
+post(501, 'ecare_lab_test', 'CBC'); $add(501, 100, 300);
+post(502, 'page', 'Not a test'); $add(502, 100, 1);
+$T::on_settings_saved(array('new_front' => 1), array('new_front' => 1));
+check('saving settings while staying live: nothing rewritten', array($GLOBALS['meta'][500]['_price'], isset($GLOBALS['meta'][501]['_price'])), array('400', false));
+ECare_Lab_Settings::$live = false;
+$T::on_settings_saved(array('new_front' => 0), array('new_front' => 0));
+check('saving while staying off: nothing rewritten either', isset($GLOBALS['meta'][501]['_price']), false);
+$T::on_settings_saved(array('new_front' => 1), array('new_front' => 0));
+check('switched off: every test with labs is brought up to date', array($GLOBALS['meta'][500]['_price'], $GLOBALS['meta'][501]['_price']), array('450', '300'));
+check('...and nothing that is not a lab test is touched', isset($GLOBALS['meta'][502]), false);
+check('resync_all counts what it rewrote', $T::resync_all(), 2);
 
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);

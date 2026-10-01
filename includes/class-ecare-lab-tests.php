@@ -22,6 +22,7 @@ class ECare_Lab_Tests {
 
     public static function init() {
         add_filter('wp_insert_post_data', array(__CLASS__, 'guard_publish'), 10, 2);
+        add_action('update_option_' . ECare_Lab_Settings::OPTION, array(__CLASS__, 'on_settings_saved'), 10, 2);
         if (is_admin()) {
             add_action('admin_notices', array(__CLASS__, 'render_notice'));
         }
@@ -135,13 +136,46 @@ class ECare_Lab_Tests {
         if (!ECare_Lab_Offerings::has_any($test_id)) {
             return;
         }
-        foreach (self::legacy_values($test_id) as $key => $value) {
-            update_post_meta((int) $test_id, $key, $value);
+        // After go-live nothing reads these lists; resync_all() refills them
+        // if the switch is ever turned off again.
+        if (!ECare_Lab_Settings::is_live()) {
+            foreach (self::legacy_values($test_id) as $key => $value) {
+                update_post_meta((int) $test_id, $key, $value);
+            }
         }
         // The one-provider link from before offerings is superseded.
         delete_post_meta((int) $test_id, '_ecare_provider_id');
         delete_post_meta((int) $test_id, '_ecare_coverage_mode');
         wp_set_object_terms((int) $test_id, array(), ECare_Locations::TAXONOMY, false);
+    }
+
+    /**
+     * Rewrite the old lists for every test with lab rows. Run when the switch
+     * is turned off, so the old page shows today's labs and prices, not those
+     * from the day the switch went on.
+     *
+     * @return int tests rewritten
+     */
+    public static function resync_all() {
+        global $wpdb;
+        $ids = $wpdb->get_col('SELECT DISTINCT test_id FROM ' . ECare_Lab_Offerings::table());
+        $n   = 0;
+        foreach ((array) $ids as $id) {
+            if (get_post_type((int) $id) === self::POST_TYPE) {
+                self::sync_legacy((int) $id);
+                $n++;
+            }
+        }
+        return $n;
+    }
+
+    /** Lab Settings saved: the switch went from on to off. */
+    public static function on_settings_saved($old, $new) {
+        $was = is_array($old) && !empty($old['new_front']);
+        $now = is_array($new) && !empty($new['new_front']);
+        if ($was && !$now) {
+            self::resync_all();
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -199,7 +233,9 @@ class ECare_Lab_Tests {
         }
         ?>
         <div style="background:#fcf9e8;border-left:4px solid #dba617;padding:8px 12px;margin-top:12px;">
-            <p style="margin:0 0 6px;"><?php esc_html_e('Old location data. These typed-in lists stay in use until labs are added above; adding them replaces the lists.', 'ecare-health-services'); ?></p>
+            <p style="margin:0 0 6px;"><?php echo ECare_Lab_Settings::is_live()
+                ? esc_html__('This test is not on the lab pages: it has no lab yet. Add a lab with its price above; these old typed-in lists are kept only for reference.', 'ecare-health-services')
+                : esc_html__('Old location data. These typed-in lists stay in use until labs are added above; adding them replaces the lists.', 'ecare-health-services'); ?></p>
             <?php foreach (array('_lab_provider' => __('Provider', 'ecare-health-services'), '_price' => __('Price', 'ecare-health-services'), '_division' => __('Division', 'ecare-health-services'), '_district' => __('District', 'ecare-health-services'), '_area' => __('Area', 'ecare-health-services')) as $key => $label):
                 $value = (string) get_post_meta($post->ID, $key, true);
                 if ($value === '') { continue; }

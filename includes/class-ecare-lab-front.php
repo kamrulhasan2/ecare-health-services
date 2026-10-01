@@ -22,6 +22,13 @@ class ECare_Lab_Front {
     public static function init() {
         add_shortcode('ecare_lab_home', array(__CLASS__, 'render_home'));
         add_shortcode('ecare_lab_catalog', array(__CLASS__, 'render_catalog'));
+        // The switch-over (Lab Settings -> Go live). After ECare_Shortcodes, so ours wins.
+        add_action('init', array(__CLASS__, 'take_over_old_shortcode'), 20);
+        add_filter('ecare_blocks_on_page', array(__CLASS__, 'drop_old_lab_assets'), 10, 2);
+        foreach (array('add_lab_test_to_cart', 'filter_lab_tests') as $old) {
+            add_action('wp_ajax_ecare_' . $old, array(__CLASS__, 'old_lab_closed'), 1);
+            add_action('wp_ajax_nopriv_ecare_' . $old, array(__CLASS__, 'old_lab_closed'), 1);
+        }
         add_filter('document_title_parts', array(__CLASS__, 'document_title'));
         add_filter('get_post_metadata', array(__CLASS__, 'hide_theme_title'), 10, 4);
         add_action('wp_ajax_ecare_lab_book_options', array(__CLASS__, 'ajax_book_options'));
@@ -38,6 +45,41 @@ class ECare_Lab_Front {
     // =======================================================================
     // Where things are
     // =======================================================================
+
+    // =======================================================================
+    // Switch-over
+    // =======================================================================
+
+    /** The shortcodes that show the new screens: after go-live the old catalogue's too. */
+    public static function tags() {
+        return ECare_Lab_Settings::is_live() ? array_merge(self::TAGS, array('ecare_lab_tests')) : self::TAGS;
+    }
+
+    /** Live: pages and Elementor widgets still using [ecare_lab_tests] show the new All Tests page. */
+    public static function take_over_old_shortcode() {
+        if (ECare_Lab_Settings::is_live()) {
+            add_shortcode('ecare_lab_tests', array(__CLASS__, 'render_catalog'));
+        }
+    }
+
+    /** Live: the old catalogue's CSS, JS and select2 are not needed for it any more. */
+    public static function drop_old_lab_assets($found, $post = null) {
+        if (!ECare_Lab_Settings::is_live()) {
+            return $found;
+        }
+        return array_values(array_diff((array) $found, array('ecare_lab_tests')));
+    }
+
+    /** Live: a tab left open on the old page cannot add to the old cart. */
+    public static function old_lab_closed() {
+        if (!ECare_Lab_Settings::is_live()) {
+            return;   // ECare_Ajax answers as before
+        }
+        wp_send_json_error(array(
+            'message' => __('Lab tests have moved to a new page. Please book from there.', 'ecare-health-services'),
+            'url'     => self::url('tests'),
+        ), 410);
+    }
 
     /**
      * The page that holds a given lab screen: the one chosen in Lab Settings,
@@ -59,15 +101,26 @@ class ECare_Lab_Front {
             return (int) $cache;
         }
         global $wpdb;
-        $like = '%' . $wpdb->esc_like($tags[$which]) . '%';
-        $id   = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT p.ID FROM {$wpdb->posts} p
-             LEFT JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = '_elementor_data'
-             WHERE p.post_type = 'page' AND p.post_status = 'publish'
-             AND (p.post_content LIKE %s OR m.meta_value LIKE %s)
-             ORDER BY p.ID ASC LIMIT 1",
-            $like, $like
-        ));
+        // After go-live the old catalogue page counts too, if no page has the new shortcode.
+        $look = array($tags[$which]);
+        if ($which === 'tests' && ECare_Lab_Settings::is_live()) {
+            $look[] = 'ecare_lab_tests';
+        }
+        $id = 0;
+        foreach ($look as $tag) {
+            $like = '%' . $wpdb->esc_like($tag) . '%';
+            $id   = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT p.ID FROM {$wpdb->posts} p
+                 LEFT JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = '_elementor_data'
+                 WHERE p.post_type = 'page' AND p.post_status = 'publish'
+                 AND (p.post_content LIKE %s OR m.meta_value LIKE %s)
+                 ORDER BY p.ID ASC LIMIT 1",
+                $like, $like
+            ));
+            if ($id) {
+                break;
+            }
+        }
         // Only a hit is remembered: a miss must not hide a page added a minute later.
         if ($id) {
             set_transient('ecare_lab_page_' . $which, $id, HOUR_IN_SECONDS);
@@ -104,7 +157,7 @@ class ECare_Lab_Front {
         }
         $haystack = (string) $post->post_content . ' ' . (string) get_post_meta($post->ID, '_elementor_data', true);
         $found    = false;
-        foreach (self::TAGS as $tag) {
+        foreach (self::tags() as $tag) {
             if (strpos($haystack, $tag) !== false) {
                 $found = true;
                 break;
@@ -665,7 +718,8 @@ class ECare_Lab_Front {
         }
         $hay    = (string) $post->post_content . ' ' . (string) get_post_meta($post->ID, '_elementor_data', true);
         $cart   = strpos($hay, 'ecare_lab_cart') !== false;
-        $detail = isset($_GET['lab_test']) && strpos($hay, 'ecare_lab_catalog') !== false;
+        $detail = isset($_GET['lab_test']) && (strpos($hay, 'ecare_lab_catalog') !== false
+            || (ECare_Lab_Settings::is_live() && strpos($hay, 'ecare_lab_tests') !== false));
         if (!($cart || $detail) || !apply_filters('ecare_lab_hide_theme_title', true, $post)) {
             return $value;
         }
