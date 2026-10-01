@@ -209,7 +209,8 @@
         sample: 'Sample', report: 'Report in', fasting: 'Fasting', yes: 'Yes', no: 'No',
         fewer: 'One patient fewer', more: 'One patient more',
         off: 'UNAVAILABLE', notArea: 'Does not collect in %s',
-        noneArea: 'No lab collects this test in %s yet. You can change your area on the cart page.'
+        noneArea: 'No lab collects this test in %s yet. You can change your area on the cart page.',
+        item: '%s item', items: '%s items'
     };
     if (L.i18n) { for (var k in L.i18n) { if (Object.prototype.hasOwnProperty.call(L.i18n, k)) { T[k] = L.i18n[k]; } } }
     function fmt(s, v) { return s.replace('%s', v); }
@@ -240,6 +241,25 @@
         return fetch(L.ajax, { method: 'POST', credentials: 'same-origin', body: body })
             .then(function (r) { return r.json().then(function (j) { return { status: r.status, ok: !!(j && j.success), data: (j && j.data) || {} }; }); });
     }
+
+    // Floating cart tab (lab home, all tests, a test's page): follows every
+    // add, and asks again when the browser restores the page from its
+    // back/forward cache (the cart may have changed on the cart page).
+    var FC = document.querySelector('[data-ecl-fcart]');
+    function setCart(count, total, bump) {
+        if (!FC) { return; }
+        count = parseInt(count, 10) || 0;
+        var c = FC.querySelector('[data-ecl-fcart-count]'), t = FC.querySelector('[data-ecl-fcart-total]');
+        if (c) { c.textContent = fmt(count === 1 ? T.item : T.items, count.toLocaleString('en-US')); }
+        if (t) { t.textContent = money(total); }
+        FC.hidden = count < 1;
+        if (bump && count > 0) { FC.classList.remove('is-bump'); void FC.offsetWidth; FC.classList.add('is-bump'); }
+    }
+    document.addEventListener('ecl:cart', function (e) { if (e.detail) { setCart(e.detail.count, e.detail.total, true); } });
+    window.addEventListener('pageshow', function (e) {
+        if (!FC || !e.persisted) { return; }
+        post('ecare_lab_cart_summary', {}).then(function (r) { if (r.ok) { setCart(r.data.count, r.data.total, false); } }).catch(function () { /* keep what is shown */ });
+    });
 
     var M = null;         // the open modal: { root, dialog, body, opener, test, lab, n }
     function close() {

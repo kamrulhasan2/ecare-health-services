@@ -14,6 +14,9 @@
  *     escapes what it prints, and names the test in the browser tab
  *   - the booking endpoints: anyone may read the options, only a logged-in
  *     patient may add, and a clash of labs comes back as 409 with the lab named
+ *   - the floating cart tab: only after a lab home / all-tests shortcode ran,
+ *     only for a logged-in patient, only with a cart page; hidden when empty;
+ *     its refresh endpoint needs the nonce and a login
  */
 
 define('ABSPATH', __DIR__ . '/');
@@ -153,7 +156,8 @@ class ECare_Lab_Cart {
     public static function get($u) { return self::$carts[$u] ?? array('provider_id' => 0, 'items' => array()); }
     public static function get_area($u) { return self::$areas[$u] ?? 0; }
     public static function add($u, $t, $l, $n, $mode = '', $area = 0) { self::$last_add = array($u, $t, $l, $n, $mode, $area); return self::$add; }
-    public static function priced($u) { return array('count' => 2, 'subtotal' => 830.0); }
+    public static $priced = null; public static $priced_for = null;
+    public static function priced($u) { self::$priced_for = $u; return self::$priced ?? array('count' => 2, 'subtotal' => 830.0); }
 }
 
 require_once ($argv[1] ?? (__DIR__ . '/../includes/class-ecare-lab-front.php'));
@@ -483,6 +487,53 @@ check('live: a test detail on the old page hides the theme title too', $F::hide_
 ECare_Lab_Settings::$s = array();
 check('not live: it does not', $F::hide_theme_title(null, 70, 'site-post-title', true), null);
 $_GET = array(); $GLOBALS['queried'] = 0;
+
+// ===========================================================================
+echo "\n=== K. the floating cart tab ===\n";
+// ===========================================================================
+function float_flag($v = null) { $r = new ReflectionProperty('ECare_Lab_Front', 'float_cart'); $r->setAccessible(true); if ($v !== null) { $r->setValue(null, $v); } return $r->getValue(); }
+function footer() { ob_start(); ECare_Lab_Front::print_float_cart(); return ob_get_clean(); }
+$GLOBALS['transients'] = array();
+ECare_Lab_Settings::$s = array('page_cart' => 60, 'banner_id' => 0, 'messenger_link' => '', 'hotline' => '', 'steps' => array());
+$GLOBALS['uid'] = 5; ECare_Lab_Cart::$priced = array('count' => 2, 'subtotal' => 5300.0); $_GET = array();
+float_flag(false);
+check('no lab home / tests shortcode on the page: no tab', footer(), '');
+$F::render_home();
+check('the lab home turns it on', float_flag(), true);
+float_flag(false); $F::render_catalog();
+check('the all-tests page turns it on', float_flag(), true);
+float_flag(false); $_GET = array('lab_test' => 'no-such-test'); $F::render_catalog(); $_GET = array();
+check('...and so does a test\'s own page', float_flag(), true);
+$html = footer();
+check('logged in with 2 tests: count, total, link to the cart, the patient\'s own cart', array(
+    strpos($html, '>2 items<') !== false, strpos($html, '>৳5,300<') !== false,
+    strpos($html, 'href="https://site/lab-cart/"') !== false, strpos($html, ' hidden') === false, ECare_Lab_Cart::$priced_for,
+), array(true, true, true, true, 5));
+check('...named for screen readers, icon hidden from them', array(strpos($html, 'screen-reader-text">Lab cart:') !== false, strpos($html, 'aria-hidden="true"') !== false), array(true, true));
+ECare_Lab_Cart::$priced = array('count' => 1, 'subtotal' => 120.5);
+check('one test: "1 item", paisa kept', array(strpos(footer(), '>1 item<') !== false, strpos(footer(), '>৳120.50<') !== false), array(true, true));
+ECare_Lab_Cart::$priced = array('count' => 0, 'subtotal' => 0.0);
+$html = footer();
+check('an empty cart: printed but hidden, so an add can show it', array($html !== '', strpos($html, 'data-ecl-fcart hidden>') !== false), array(true, true));
+ECare_Lab_Cart::$priced = array('count' => 2, 'subtotal' => 5300.0);
+$GLOBALS['uid'] = 0;
+check('logged out: no tab (the cart belongs to a login)', footer(), '');
+$GLOBALS['uid'] = 5; $_GET = array('elementor-preview' => '12');
+check('inside the Elementor editor preview: no tab', footer(), '');
+$_GET = array(); ECare_Lab_Settings::$s = array(); $GLOBALS['transients'] = array(); $GLOBALS['db_page'] = 0;
+check('no cart page anywhere: no tab (nowhere to go)', footer(), '');
+ECare_Lab_Settings::$s = array('page_cart' => 60);
+check('a tab label never goes below zero', $F::items_label(-3), '0 items');
+
+$_POST = array('nonce' => 'bad');
+check('refresh: a bad nonce is refused', array_slice(ajax('ajax_cart_summary'), 0, 2), array(false, 403));
+$_POST = array('nonce' => 'n'); $GLOBALS['uid'] = 0; ECare_Lab_Cart::$priced_for = null;
+check('refresh: logged out gets 401, no cart read', array(array_slice(ajax('ajax_cart_summary'), 0, 2), ECare_Lab_Cart::$priced_for), array(array(false, 401), null));
+$GLOBALS['uid'] = 7;
+list($ok, $st, $d) = ajax('ajax_cart_summary');
+check('refresh: the patient\'s own count and total, nothing more', array($ok, $d, ECare_Lab_Cart::$priced_for), array(true, array('count' => 2, 'total' => 5300.0), 7));
+$_POST = array(); $GLOBALS['uid'] = 0;
+check('the script gets the item words', array($F::js_strings()['item'], $F::js_strings()['items']), array('%s item', '%s items'));
 
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);

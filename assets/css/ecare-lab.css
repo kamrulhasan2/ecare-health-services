@@ -601,3 +601,36 @@ html.ecl-modal-open { overflow: hidden; }
 /* WhatsApp card: WhatsApp's green, so patients recognise it at a glance. */
 .ecl .ecl-quick-card.ecl-quick-wa .ecl-i { color: #1fa855; }
 .ecl .ecl-quick-card.ecl-quick-wa:hover { border-color: #1fa855; }
+
+/* ===== Floating cart tab (printed in the footer, so it carries .ecl itself) ===== */
+.ecl.ecl-fcart {
+    position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 9990;
+    display: flex; flex-direction: column; align-items: stretch;
+    width: 92px; max-width: none; margin: 0; padding: 0; overflow: hidden;
+    background: var(--ecl-bg); color: var(--ecl-text) !important; text-decoration: none !important;
+    border: 1px solid var(--ecl-line); border-right: 0; border-radius: 10px 0 0 10px;
+    box-shadow: 0 6px 20px rgba(16, 24, 40, .16);
+    font-size: 14px; line-height: 1.3; text-align: center;
+    transition: box-shadow .15s;
+}
+.ecl.ecl-fcart[hidden] { display: none; }
+.ecl.ecl-fcart:hover, .ecl.ecl-fcart:focus-visible { box-shadow: 0 8px 26px rgba(16, 24, 40, .24); color: var(--ecl-text) !important; }
+.ecl.ecl-fcart:focus-visible { outline: 2px solid var(--ecl-primary); outline-offset: 2px; }
+.ecl.ecl-fcart .ecl-fcart-top { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px 10px; font-weight: 600; }
+.ecl.ecl-fcart .ecl-fcart-top .ecl-i { width: 28px; height: 28px; color: var(--ecl-primary); }
+.ecl.ecl-fcart .ecl-fcart-total { display: block; padding: 7px 4px; background: var(--ecl-primary); color: #fff; font-weight: 700; font-size: 13px; white-space: nowrap; }
+.ecl.ecl-fcart.is-bump { animation: ecl-fcart-bump .45s ease; }
+@keyframes ecl-fcart-bump {
+    0%, 100% { transform: translateY(-50%) scale(1); }
+    40% { transform: translateY(-50%) scale(1.08); }
+}
+@media (max-width: 600px) {
+    .ecl.ecl-fcart { width: 74px; font-size: 12px; top: auto; bottom: 96px; transform: none; }
+    .ecl.ecl-fcart .ecl-fcart-top { padding: 9px 4px 7px; }
+    .ecl.ecl-fcart .ecl-fcart-top .ecl-i { width: 22px; height: 22px; }
+    .ecl.ecl-fcart .ecl-fcart-total { font-size: 12px; padding: 5px 3px; }
+    .ecl.ecl-fcart.is-bump { animation-name: ecl-fcart-bump-m; }
+}
+@keyframes ecl-fcart-bump-m { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .ecl.ecl-fcart.is-bump { animation: none; } }
+@media print { .ecl.ecl-fcart { display: none !important; } }

@@ -35,6 +35,8 @@ class ECare_Lab_Front {
         add_action('wp_ajax_nopriv_ecare_lab_book_options', array(__CLASS__, 'ajax_book_options'));
         add_action('wp_ajax_ecare_lab_cart_add', array(__CLASS__, 'ajax_cart_add'));
         add_action('wp_ajax_nopriv_ecare_lab_cart_add', array(__CLASS__, 'ajax_cart_add'));
+        add_action('wp_ajax_ecare_lab_cart_summary', array(__CLASS__, 'ajax_cart_summary'));
+        add_action('wp_footer', array(__CLASS__, 'print_float_cart'), 5);
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue'), 20);
         add_action('elementor/widgets/register', array(__CLASS__, 'register_widgets'));
         // A page gained or lost a lab shortcode: look again.
@@ -224,6 +226,10 @@ class ECare_Lab_Front {
             'notArea'    => __('Does not collect in %s', $d),
             /* translators: %s: area name */
             'noneArea'   => __('No lab collects this test in %s yet. You can change your area on the cart page.', $d),
+            /* translators: %s: number of tests in the lab cart */
+            'item'       => __('%s item', $d),
+            /* translators: %s: number of tests in the lab cart */
+            'items'      => __('%s items', $d),
         );
     }
 
@@ -256,6 +262,7 @@ class ECare_Lab_Front {
             'phone-chat' => '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.5 9.2c.2-.6.8-.8 1.1-.5l.8 1c.2.3.1.6-.1.8l-.3.3c.4.8 1 1.4 1.8 1.8l.3-.3c.2-.2.5-.3.8-.1l1 .8c.3.3.1.9-.5 1.1-1.9.6-5.5-3-4.9-4.9z"/>',
             'list'   => '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
             'box'    => '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
+            'cart'   => '<path d="M3 4h2.2l2.3 11h11l2.2-8H6.3"/><circle cx="9.5" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/>',
         );
         return '<svg class="ecl-i" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . ($paths[$name] ?? '') . '</svg>';
     }
@@ -325,10 +332,57 @@ class ECare_Lab_Front {
     }
 
     // =======================================================================
+    // Floating cart: a small tab on the right edge of the lab home and
+    // all-tests pages (a test's own page too) with the cart's count and total,
+    // linking to the cart. Printed in the footer so no theme or Elementor
+    // wrapper can pin it inside a section.
+    // =======================================================================
+
+    /** Set by the lab home and all-tests shortcodes; the cart, checkout and orders screens never set it. */
+    private static $float_cart = false;
+
+    /** "1 item" / "3 items" - tests in the cart, whatever the patient count. */
+    public static function items_label($n) {
+        $n = max(0, (int) $n);
+        /* translators: %s: number of tests in the lab cart */
+        return sprintf(_n('%s item', '%s items', $n, 'ecare-health-services'), number_format_i18n($n));
+    }
+
+    /** Hidden while the cart is empty; the script shows it once a test is added. */
+    public static function float_cart_html($count, $total) {
+        $count = max(0, (int) $count);
+        return '<a class="ecl ecl-fcart" href="' . esc_url(self::url('cart')) . '" data-ecl-fcart' . ($count ? '' : ' hidden') . '>'
+            . '<span class="screen-reader-text">' . esc_html__('Lab cart:', 'ecare-health-services') . ' </span>'
+            . '<span class="ecl-fcart-top">' . self::icon('cart') . '<span data-ecl-fcart-count>' . esc_html(self::items_label($count)) . '</span></span>'
+            . '<span class="ecl-fcart-total" data-ecl-fcart-total>' . esc_html(self::money($total)) . '</span>'
+            . '</a>';
+    }
+
+    /** wp_footer: only for a logged-in patient (the cart is theirs), and only when there is a cart page to go to. */
+    public static function print_float_cart() {
+        if (!self::$float_cart || !is_user_logged_in() || isset($_GET['elementor-preview']) || !self::page_id('cart')) {
+            return;
+        }
+        $p = ECare_Lab_Cart::priced(get_current_user_id());
+        echo self::float_cart_html($p['count'], $p['subtotal']); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above
+    }
+
+    /** The tab's numbers again, for a page the browser brings back from its back/forward cache. */
+    public static function ajax_cart_summary() {
+        check_ajax_referer('ecare_lab', 'nonce');
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('code' => 'login'), 401);
+        }
+        $p = ECare_Lab_Cart::priced(get_current_user_id());
+        wp_send_json_success(array('count' => $p['count'], 'total' => $p['subtotal']));
+    }
+
+    // =======================================================================
     // [ecare_lab_home]
     // =======================================================================
 
     public static function render_home() {
+        self::$float_cart = true;
         $s        = ECare_Lab_Settings::all();
         $filters  = ECare_Lab_Catalog::filters();
         $tests    = self::url('tests');
@@ -489,6 +543,7 @@ class ECare_Lab_Front {
     }
 
     public static function render_catalog() {
+        self::$float_cart = true;   // the list and a test's own page alike
         if (isset($_GET['lab_test'])) {
             $test = self::requested_test();
             return $test ? self::render_detail($test)
