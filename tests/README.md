@@ -36,6 +36,7 @@ From the plugin root:
     php tests/harness-lab-pay.php
     php tests/harness-provider-emails.php
     php tests/harness-ambulance-dispatch.php
+    php tests/harness-search.php
 
 There is also an optional layout test, which needs Node and Playwright:
 
