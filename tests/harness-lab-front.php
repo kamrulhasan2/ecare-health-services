@@ -130,7 +130,8 @@ function is_admin() { return $GLOBALS['is_admin'] ?? false; }
 function did_action($h) { return $GLOBALS['did_wp'] ?? 1; }
 function get_queried_object_id() { return $GLOBALS['queried'] ?? 0; }
 function wp_get_referer() { return 'https://site/lab-tests/?lab_test=fbs'; }
-function wp_login_url($back) { return 'https://site/wp-login.php?redirect_to=' . rawurlencode($back); }
+function wp_login_url($back) { return ($GLOBALS['login_base'] ?? 'https://site/wp-login.php') . '?redirect_to=' . rawurlencode($back); }
+function wc_get_page_permalink($p) { return $p === 'myaccount' ? ($GLOBALS['myaccount'] ?? '') : ''; }
 class Json_Out extends Exception { public $ok; public $data; public $status; public function __construct($ok, $data, $status) { $this->ok = $ok; $this->data = $data; $this->status = $status; } }
 function wp_send_json_success($d = null, $status = 200) { throw new Json_Out(true, $d, $status); }
 function wp_send_json_error($d = null, $status = 400) { throw new Json_Out(false, $d, $status); }
@@ -410,6 +411,14 @@ check('labs cheapest first, no struck price without a discount', array_map(funct
 check('material cost and internal ids stay on the server', array_keys($d['labs'][0]), array('id', 'name', 'logo', 'price', 'mrp', 'savings', 'discount', 'serves_area'));
 check('logged out: no area is used', array(ECare_Lab_Catalog::$labs_area, $d['area_name']), array(0, ''));
 check('login link comes back to the page', $d['login_url'], 'https://site/wp-login.php?redirect_to=' . rawurlencode('https://site/lab-tests/?lab_test=fbs'));
+$back = rawurlencode('https://site/x/');
+$GLOBALS['login_base'] = 'https://site/sign-in/'; $GLOBALS['myaccount'] = 'https://site/account/';
+check('login: the site\'s own sign-in page wins over My Account', $F::login_url('https://site/x/'), 'https://site/sign-in/?redirect_to=' . $back);
+unset($GLOBALS['login_base']);
+// The stub add_query_arg() encodes like http_build_query; WordPress's does not, hence the code encodes once itself.
+check('login: stock wp-login.php is swapped for My Account', $F::login_url('https://site/x/'), 'https://site/account/?redirect_to=' . rawurlencode($back));
+unset($GLOBALS['myaccount']);
+check('login: no My Account page, stock login kept', $F::login_url('https://site/x/'), 'https://site/wp-login.php?redirect_to=' . $back);
 $GLOBALS['uid'] = 5; ECare_Lab_Cart::$carts[5] = array('provider_id' => 103, 'items' => array(101 => 3));
 list($ok, $st, $d) = ajax('ajax_book_options');
 check('logged in: the cart lab and the count already in it', array($d['logged_in'], $d['cart_lab'], $d['in_cart']), array(true, 103, 3));

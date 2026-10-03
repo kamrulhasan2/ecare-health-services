@@ -957,16 +957,25 @@ class ECare_Lab_Front {
     // Booking: AJAX
     // =======================================================================
 
-    /** Where to send someone who must log in first, coming back here. */
+    /**
+     * Where to send someone who must log in first, coming back here.
+     *
+     * wp_login_url() comes first: a site with its own sign-in page points it
+     * there (meditaj.com: /sign-in/?redirect_to=...), the same link the
+     * provider registration pages use. Only when it is still the stock
+     * wp-login.php is WooCommerce's My Account login used instead, as it
+     * looks like the rest of the site.
+     */
     public static function login_url($back = '') {
         $back = $back ?: home_url(add_query_arg(array()));
-        if (function_exists('wc_get_page_permalink')) {
+        $url  = (string) wp_login_url($back);
+        if (strpos($url, 'wp-login.php') !== false && function_exists('wc_get_page_permalink')) {
             $acct = wc_get_page_permalink('myaccount');
             if ($acct) {
-                return add_query_arg('redirect_to', rawurlencode($back), $acct);
+                $url = add_query_arg('redirect_to', rawurlencode($back), $acct);
             }
         }
-        return wp_login_url($back);
+        return (string) apply_filters('ecare_sign_in_url', $url, $back);
     }
 
     /** What the booking modal needs for one test. Anyone may ask. */
