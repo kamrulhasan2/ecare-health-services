@@ -145,6 +145,7 @@ final class ECare_Health_Services {
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-pay.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-provider-emails.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-search.php';
+        require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-my-bookings.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-lab-emails.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-ajax.php';
         require_once ECARE_PLUGIN_DIR . 'includes/class-ecare-woocommerce.php';
@@ -173,6 +174,7 @@ final class ECare_Health_Services {
         ECare_Lab_Pay::init();
         ECare_Provider_Emails::init();
         ECare_Search::init();
+        ECare_My_Bookings::init();
         ECare_Lab_Emails::init();
         ECare_Ajax::init();
         ECare_WooCommerce::init();
