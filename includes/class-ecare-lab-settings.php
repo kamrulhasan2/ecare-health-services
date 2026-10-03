@@ -60,10 +60,10 @@ class ECare_Lab_Settings {
             'email_copy'      => '',   // optional: a copy of both to these addresses
             'hotline'         => '',
             'steps'           => array(
-                array('title' => 'Sample collection at home', 'text' => 'A trained collector comes to your address at the time you choose and takes the sample safely.'),
-                array('title' => 'Safe transport',            'text' => 'Samples are sealed, labelled and kept at the right temperature on the way to the lab.'),
-                array('title' => 'Tested by the lab you chose', 'text' => 'Your chosen partner lab runs the tests with its own equipment and specialists.'),
-                array('title' => 'Report online',             'text' => 'The report is uploaded to your account as soon as it is ready; a printed copy can follow if you asked for one.'),
+                array('title' => 'Sample collection at home', 'text' => 'A trained collector comes to your address at the time you choose and takes the sample safely.', 'image' => 0),
+                array('title' => 'Safe transport',            'text' => 'Samples are sealed, labelled and kept at the right temperature on the way to the lab.', 'image' => 0),
+                array('title' => 'Tested by the lab you chose', 'text' => 'Your chosen partner lab runs the tests with its own equipment and specialists.', 'image' => 0),
+                array('title' => 'Report online',             'text' => 'The report is uploaded to your account as soon as it is ready; a printed copy can follow if you asked for one.', 'image' => 0),
             ),
         );
     }
@@ -281,9 +281,14 @@ class ECare_Lab_Settings {
             }
             $title = sanitize_text_field($s['title'] ?? '');
             $text  = sanitize_textarea_field($s['text'] ?? '');
+            $image = max(0, (int) ($s['image'] ?? 0));
+            if ($image > 0 && function_exists('wp_attachment_is_image') && !wp_attachment_is_image($image)) {
+                $image = 0;
+            }
             $steps[] = array(
                 'title' => $title !== '' ? $title : $d['steps'][$i]['title'],
                 'text'  => $text,
+                'image' => $image,
             );
         }
         while (count($steps) < 4) {
@@ -505,12 +510,23 @@ class ECare_Lab_Settings {
                         <th><label for="ecare-hotline"><?php esc_html_e('Hotline', 'ecare-health-services'); ?></label></th>
                         <td><input type="text" id="ecare-hotline" class="regular-text" name="<?php echo esc_attr($name('hotline')); ?>" value="<?php echo esc_attr($s['hotline']); ?>" /></td>
                     </tr>
+                    <tr>
+                        <th></th>
+                        <td><p class="description"><?php esc_html_e('Each step can have a picture. With a picture the step is shown as a photo card with its title and text on the picture; without one, as a plain card. The same four steps appear on the lab home page and on every test page. A wide picture (about 600 x 450) works best.', 'ecare-health-services'); ?></p></td>
+                    </tr>
                     <?php foreach (array_values((array) $s['steps']) as $i => $step): ?>
                         <tr>
                             <th><?php echo esc_html(sprintf(__('How we work - step %d', 'ecare-health-services'), $i + 1)); ?></th>
                             <td>
                                 <input type="text" class="regular-text" name="<?php echo esc_attr($name('steps')); ?>[<?php echo (int) $i; ?>][title]" value="<?php echo esc_attr($step['title']); ?>" /><br />
                                 <textarea rows="2" class="large-text" name="<?php echo esc_attr($name('steps')); ?>[<?php echo (int) $i; ?>][text]" style="margin-top:4px;"><?php echo esc_textarea($step['text']); ?></textarea>
+                                <?php $img = (int) ($step['image'] ?? 0); $img_url = $img ? wp_get_attachment_image_url($img, 'medium') : ''; ?>
+                                <div class="ecare-step-img" style="margin-top:6px;">
+                                    <input type="hidden" name="<?php echo esc_attr($name('steps')); ?>[<?php echo (int) $i; ?>][image]" value="<?php echo $img_url ? $img : 0; ?>" />
+                                    <div class="ecare-step-img-preview" style="margin-bottom:6px;"><?php if ($img_url): ?><img src="<?php echo esc_url($img_url); ?>" alt="" style="max-width:200px;height:auto;border-radius:6px;" /><?php endif; ?></div>
+                                    <button type="button" class="button ecare-step-img-choose"><?php esc_html_e('Choose image', 'ecare-health-services'); ?></button>
+                                    <button type="button" class="button-link ecare-step-img-remove" style="margin-left:8px;<?php echo $img_url ? '' : 'display:none;'; ?>"><?php esc_html_e('Remove', 'ecare-health-services'); ?></button>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -538,6 +554,27 @@ class ECare_Lab_Settings {
                 f.open();
             });
             rm.addEventListener('click', function () { input.value = 0; preview.innerHTML = ''; rm.style.display = 'none'; });
+
+            // One picture per "How we work" step.
+            document.querySelectorAll('.ecare-step-img').forEach(function (box) {
+                var inp = box.querySelector('input'), pv = box.querySelector('.ecare-step-img-preview'), del = box.querySelector('.ecare-step-img-remove');
+                box.querySelector('.ecare-step-img-choose').addEventListener('click', function () {
+                    if (!window.wp || !wp.media) { return; }
+                    var f = wp.media({ title: <?php echo wp_json_encode(__('Step picture', 'ecare-health-services')); ?>, library: { type: 'image' }, multiple: false });
+                    f.on('select', function () {
+                        var a = f.state().get('selection').first().toJSON();
+                        inp.value = a.id;
+                        pv.innerHTML = '';
+                        var img = document.createElement('img');
+                        img.src = (a.sizes && a.sizes.medium) ? a.sizes.medium.url : a.url;
+                        img.style.maxWidth = '200px'; img.style.height = 'auto'; img.style.borderRadius = '6px';
+                        pv.appendChild(img);
+                        del.style.display = '';
+                    });
+                    f.open();
+                });
+                del.addEventListener('click', function () { inp.value = 0; pv.innerHTML = ''; del.style.display = 'none'; });
+            });
         })();
         </script>
         <?php

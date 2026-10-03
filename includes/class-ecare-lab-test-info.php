@@ -18,6 +18,7 @@ defined('ABSPATH') || exit;
  *   _ecare_gender         all | men | women
  *   _ecare_age_min/_max   0 = no bound
  *   _ecare_faq            array of array(q, a)
+ *   _ecare_related        test ids the admin recommends under "Related tests", in order
  *
  * Test code, sample type and status keep their old meta keys (_test_code,
  * _sample_type, _test_status) and are still saved by ECare_CPT; this box only
@@ -32,6 +33,7 @@ class ECare_Lab_Test_Info {
     const TYPE_PACKAGE = 'package';
 
     const MAX_FAQ = 30;
+    const MAX_RELATED = 8;
 
     public static function init() {
         add_action('add_meta_boxes_' . self::POST_TYPE, array(__CLASS__, 'add_meta_boxes'));
@@ -118,6 +120,28 @@ class ECare_Lab_Test_Info {
     }
 
     /** Everything the front end will need, in one array. */
+    /** Tests the admin picked for "Related tests", in their order. */
+    public static function related_ids($id) {
+        $ids = get_post_meta((int) $id, '_ecare_related', true);
+        return is_array($ids) ? array_values(array_filter(array_map('intval', $ids))) : array();
+    }
+
+    /** Picked ids: lab tests only, not the test itself, no repeats, at most MAX_RELATED. */
+    public static function clean_related($ids, $self_id) {
+        $out = array();
+        foreach ((array) $ids as $tid) {
+            $tid = (int) $tid;
+            if ($tid <= 0 || $tid === (int) $self_id || in_array($tid, $out, true) || get_post_type($tid) !== self::POST_TYPE) {
+                continue;
+            }
+            $out[] = $tid;
+            if (count($out) >= self::MAX_RELATED) {
+                break;
+            }
+        }
+        return $out;
+    }
+
     public static function details($id) {
         $fasting = get_post_meta((int) $id, '_ecare_fasting', true);
         return array(
@@ -228,6 +252,15 @@ class ECare_Lab_Test_Info {
         update_post_meta($post_id, '_ecare_age_max', $age_max);
 
         update_post_meta($post_id, '_ecare_faq', self::clean_faq($in['ecare_faq_q'] ?? array(), $in['ecare_faq_a'] ?? array()));
+
+        if (isset($in['ecare_related_box'])) {   // only when the box was on the form
+            $related = self::clean_related($in['ecare_related'] ?? array(), $post_id);
+            if ($related) {
+                update_post_meta($post_id, '_ecare_related', $related);
+            } else {
+                delete_post_meta($post_id, '_ecare_related');
+            }
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -243,6 +276,7 @@ class ECare_Lab_Test_Info {
     public static function add_meta_boxes() {
         add_meta_box('ecare_lab_test_info', __('Test Information', 'ecare-health-services'), array(__CLASS__, 'render_info_box'), self::POST_TYPE, 'normal', 'high');
         add_meta_box('ecare_lab_test_faq', __('Frequently Asked Questions', 'ecare-health-services'), array(__CLASS__, 'render_faq_box'), self::POST_TYPE, 'normal', 'low');
+        add_meta_box('ecare_lab_test_related', __('Related tests', 'ecare-health-services'), array(__CLASS__, 'render_related_box'), self::POST_TYPE, 'normal', 'low');
         remove_meta_box('slugdiv', self::POST_TYPE, 'normal');
     }
 
@@ -379,6 +413,73 @@ class ECare_Lab_Test_Info {
             });
         })();
         </script>
+        <?php
+    }
+
+    /**
+     * Pick the tests shown under "Related tests" on this test's page. Ticked
+     * tests come first, in the order they were ticked; the page fills the rest
+     * with tests from the same category, then popular ones.
+     */
+    public static function render_related_box($post) {
+        $d      = 'ecare-health-services';
+        $picked = self::related_ids($post->ID);
+        $all    = array_map('intval', (array) get_posts(array(
+            'post_type'      => self::POST_TYPE,
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+            'post__not_in'   => array((int) $post->ID),
+        )));
+        // Ticked ones first, in their saved order; a picked test that is no longer published is dropped.
+        $order = array_merge(array_values(array_intersect($picked, $all)), array_values(array_diff($all, $picked)));
+        ?>
+        <input type="hidden" name="ecare_related_box" value="1" />
+        <p class="description" style="margin-top:0;"><?php echo esc_html(sprintf(__('Tick up to %d tests to recommend on this test\'s page, in the order you want them. Places left over are filled with tests from the same category, then with popular tests. Tests no lab offers right now are skipped on the page.', $d), self::MAX_RELATED)); ?></p>
+        <?php if (!$order): ?>
+            <p><?php esc_html_e('There are no other published tests yet.', $d); ?></p>
+        <?php else: ?>
+            <p><input type="search" id="ecare-related-filter" class="widefat" placeholder="<?php esc_attr_e('Search tests…', $d); ?>" />
+               <span id="ecare-related-count" class="description" style="display:block;margin-top:4px;"></span></p>
+            <ul id="ecare-related-list" data-max="<?php echo (int) self::MAX_RELATED; ?>" style="max-height:280px;overflow:auto;border:1px solid #dcdcde;border-radius:4px;padding:6px 10px;margin:0;background:#fff;">
+                <?php foreach ($order as $tid): $on = in_array($tid, $picked, true); ?>
+                    <li style="margin:4px 0;"><label><input type="checkbox" name="ecare_related[]" value="<?php echo (int) $tid; ?>" <?php checked($on); ?> />
+                        <?php echo esc_html(get_the_title($tid)); ?>
+                        <?php if (self::is_package($tid)): ?><small style="color:#646970;">(<?php esc_html_e('package', $d); ?>)</small><?php endif; ?>
+                        <?php if (get_post_meta($tid, '_test_status', true) === 'inactive'): ?><small style="color:#b32d2e;">(<?php esc_html_e('inactive', $d); ?>)</small><?php endif; ?>
+                    </label></li>
+                <?php endforeach; ?>
+            </ul>
+            <script>
+            (function () {
+                var list = document.getElementById('ecare-related-list'), max = +list.getAttribute('data-max');
+                var filter = document.getElementById('ecare-related-filter'), count = document.getElementById('ecare-related-count');
+                var msg = <?php echo wp_json_encode(__('%1$d of %2$d picked', $d)); ?>;
+                function boxes() { return Array.prototype.slice.call(list.querySelectorAll('input[type=checkbox]')); }
+                function refresh() {
+                    var n = boxes().filter(function (b) { return b.checked; }).length;
+                    boxes().forEach(function (b) { b.disabled = !b.checked && n >= max; });
+                    count.textContent = msg.replace('%1$d', n).replace('%2$d', max);
+                }
+                list.addEventListener('change', function (e) {
+                    var li = e.target.closest('li');
+                    if (!li) { return; }
+                    // Keep ticked tests together at the top, newest tick last, so the saved order is the tick order.
+                    var firstOff = boxes().filter(function (b) { return !b.checked && b !== e.target; })[0];
+                    list.insertBefore(li, firstOff ? firstOff.closest('li') : null);
+                    refresh();
+                });
+                filter.addEventListener('input', function () {
+                    var q = filter.value.trim().toLowerCase();
+                    list.querySelectorAll('li').forEach(function (li) { li.hidden = q !== '' && li.textContent.toLowerCase().indexOf(q) === -1; });
+                });
+                filter.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); } });
+                refresh();
+            })();
+            </script>
+        <?php endif; ?>
         <?php
     }
 

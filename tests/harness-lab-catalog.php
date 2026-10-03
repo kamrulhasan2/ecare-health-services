@@ -12,9 +12,12 @@
  *   - the booking modal lists labs cheapest first, serving labs first for an area
  *   - the cart's vendor list only offers labs that can do every test in it
  *   - the cached answer is thrown away when something changes
+ *   - related tests: admin picks first, then same category, then popular -
+ *     only bookable ones, never the test itself, never more than asked
  */
 
 define('ABSPATH', __DIR__ . '/');
+define('HOUR_IN_SECONDS', 3600);
 
 $GLOBALS['options'] = array(); $GLOBALS['transients'] = array();
 $GLOBALS['posts'] = array(); $GLOBALS['meta'] = array(); $GLOBALS['obj'] = array();
@@ -33,6 +36,7 @@ function get_transient($k) { return $GLOBALS['transients'][$k] ?? false; }
 function set_transient($k, $v, $t) { $GLOBALS['transients'][$k] = $v; return true; }
 function get_post($id) { return $GLOBALS['posts'][(int) $id] ?? null; }
 function get_post_meta($id, $k, $s = false) { return $GLOBALS['meta'][$id][$k] ?? ''; }
+function get_post_type($id) { return $GLOBALS['posts'][(int) $id]->post_type ?? false; }
 function get_the_title($id) { return $GLOBALS['posts'][(int) $id]->post_title ?? ''; }
 function get_the_post_thumbnail_url($id, $size = '') { return isset($GLOBALS['meta'][$id]['_thumb']) ? 'img-' . $id : false; }
 function get_term($id, $tax = '') { $t = $GLOBALS['terms'][(int) $id] ?? null; return ($t && $t->taxonomy === $tax) ? $t : null; }
@@ -163,7 +167,21 @@ check('home page row respects the limit of 2', array_map(function ($c) { return 
 $f = $C::filters();
 check('category counts (bookable tests only)', array_map(function ($c) { return $c['name'] . ':' . $c['count']; }, $f['categories']), array('Diabetes:2', 'Liver:1'));
 check('lab vendors with counts, closed lab absent', array_map(function ($l) { return $l['name'] . ':' . $l['count']; }, $f['labs']), array('LabAid:2', 'Popular:2', 'Praava:1'));
-check('related tests share a category', array_map(function ($c) { return $c['title']; }, $C::related(1)), array('Diabetes Care'));
+$rel = function ($id, $n = 6) use ($C) { return array_map(function ($c) { return $c['title']; }, $C::related($id, $n)); };
+check('related: same category first, then filled with other bookable tests', $rel(1), array('Diabetes Care', 'CBC'));
+check('related: limit respected', $rel(1, 1), array('Diabetes Care'));
+check('related: limit 0 shows nothing', $rel(1, 0), array());
+$GLOBALS['transients']['ecare_lab_booking_counts'] = array(6 => 9, 1 => 2);
+check('related: no shared category: most booked first (not just most labs), never empty', $rel(2), array('Diabetes Care', 'FBS'));
+$GLOBALS['transients']['ecare_lab_booking_counts'] = array(1 => 9, 6 => 2);
+$GLOBALS['meta'][2]['_ecare_related'] = array(3, 6, 2, 5, 6);
+check('related: admin picks first, unbookable/self/repeat skipped, then popular', $rel(2), array('Diabetes Care', 'FBS'));
+$GLOBALS['meta'][2]['_ecare_related'] = array(6, 1);
+check('related: more picks than the limit are cut', $rel(2, 1), array('Diabetes Care'));
+$GLOBALS['meta'][1]['_ecare_related'] = array(2);
+check('related: a pick beats the shared category', $rel(1), array('CBC', 'Diabetes Care'));
+unset($GLOBALS['meta'][1]['_ecare_related'], $GLOBALS['meta'][2]['_ecare_related']);
+$GLOBALS['transients']['ecare_lab_booking_counts'] = array();
 
 // ===========================================================================
 echo "\n=== D. the booking modal ===\n";

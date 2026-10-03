@@ -29,6 +29,7 @@ function current_user_can() { return true; }
 function get_post_meta($id, $k, $single = false) { return $GLOBALS['meta'][$id][$k] ?? ''; }
 function update_post_meta($id, $k, $v) { $GLOBALS['meta'][$id][$k] = $v; return true; }
 function delete_post_meta($id, $k) { unset($GLOBALS['meta'][$id][$k]); return true; }
+function get_post_type($id) { return in_array((int) $id, array(20, 30, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50), true) ? 'ecare_lab_test' : ((int) $id === 99 ? 'page' : false); }
 
 require_once ($argv[1] ?? (__DIR__ . '/../includes/class-ecare-lab-test-info.php'));
 
@@ -136,6 +137,24 @@ list($min, $max, $unit) = $I::report_time(30);
 $_POST = array('ecare_lab_test_info_nonce' => 'good', '_ecare_report_min' => (string) $min, '_ecare_report_max' => '', '_ecare_report_unit' => $unit);
 $I::save(30, null);
 check('an untouched old test keeps its 3 days', array($I::report_label(30), $GLOBALS['meta'][30]['_turnaround_days']), array('3 days', 3));
+
+
+echo "\n=== Related tests box ===\n";
+$GLOBALS['meta'][20]['_ecare_related'] = array(41, 42);
+$_POST = array('ecare_lab_test_info_nonce' => 'good', '_ecare_subtitle' => 'y');
+$I::save(20, null);
+check('a save without the box keeps the picks', $I::related_ids(20), array(41, 42));
+$_POST = array('ecare_lab_test_info_nonce' => 'good', 'ecare_related_box' => '1', 'ecare_related' => array('43', '20', '99', 'x', '41', '43', '0', '-5'));
+$I::save(20, null);
+check('picks kept in order: no self, no page, no junk, no repeats', $I::related_ids(20), array(43, 41));
+$_POST = array('ecare_lab_test_info_nonce' => 'good', 'ecare_related_box' => '1', 'ecare_related' => array('41','42','43','44','45','46','47','48','49','50'));
+$I::save(20, null);
+check('at most eight', $I::related_ids(20), array(41, 42, 43, 44, 45, 46, 47, 48));
+$_POST = array('ecare_lab_test_info_nonce' => 'good', 'ecare_related_box' => '1');
+$I::save(20, null);
+check('all unticked: none left', array($I::related_ids(20), isset($GLOBALS['meta'][20]['_ecare_related'])), array(array(), false));
+$GLOBALS['meta'][20]['_ecare_related'] = 'garbage';
+check('a broken value reads as none', $I::related_ids(20), array());
 
 $_POST = array();
 printf("\n%d passed, %d failed\n", $pass, $fail);

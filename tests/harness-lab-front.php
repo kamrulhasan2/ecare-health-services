@@ -55,7 +55,7 @@ function wp_enqueue_script($h) { $GLOBALS['enqueued'][] = 'js:' . $h; }
 function wp_localize_script() {}
 function wp_create_nonce() { return 'n'; }
 function admin_url($p = '') { return 'https://site/wp-admin/' . $p; }
-function wp_get_attachment_image_url() { return ''; }
+function wp_get_attachment_image_url($id = 0, $size = '') { return $id === 77 ? 'https://site/up/step"1.jpg' : ''; }
 function wp_unslash($v) { return is_string($v) ? stripslashes($v) : $v; }
 function sanitize_text_field($s) { return trim(strip_tags((string) $s)); }
 function sanitize_key($s) { return preg_replace('/[^a-z0-9_\-]/', '', strtolower((string) $s)); }
@@ -259,6 +259,23 @@ $home = $F::render_home();
 check('WhatsApp card with a number, opening in a new tab', (bool) preg_match('#class="ecl-quick-card ecl-quick-wa" href="https://wa.me/8801712345678\?text=Hi%20%26%20hello" target="_blank" rel="noopener"#', $home), true);
 check('...labelled Order via WhatsApp, next to Messenger', strpos($home, 'Order via</small>WhatsApp') > strpos($home, 'Order via</small>Messenger'), true);
 unset(ECare_Lab_Settings::$s['whatsapp_number']);
+
+echo "\n=== E2. How we work steps ===\n";
+$st = $F::steps_html(array(
+    array('title' => 'Collect <b>', 'text' => 'At home', 'image' => 77),
+    array('title' => 'Transport', 'text' => '', 'image' => 0),
+    array('title' => 'Lab', 'text' => 'Tested'),                       // saved before pictures existed
+    array('title' => 'Gone', 'text' => 'x', 'image' => 55),            // picture since deleted
+    array('title' => '  ', 'text' => 'no title'),
+), 'How we work');
+check('steps: heading', strpos($st, '<h2>How we work</h2>') !== false, true);
+check('steps: a step with a picture is a photo card with Step 1 on it', (bool) preg_match('#<li class="has-img"><img class="ecl-step-img" src="https://site/up/step&quot;1.jpg" alt="" loading="lazy" /><div class="ecl-step-over"><span class="ecl-step-tag">Step 1</span><h3>Collect &lt;b&gt;</h3><p>At home</p></div></li>#', $st), true);
+check('steps: without a picture, a plain numbered card; no empty text', strpos($st, '<li><span class="ecl-step-n">2</span><h3>Transport</h3></li>') !== false, true);
+check('steps: an old step with no image key is a plain card', strpos($st, '<li><span class="ecl-step-n">3</span><h3>Lab</h3><p>Tested</p></li>') !== false, true);
+check('steps: a deleted picture falls back to the plain card', strpos($st, '<li><span class="ecl-step-n">4</span><h3>Gone</h3>') !== false, true);
+check('steps: a step with no title is left out', strpos($st, 'no title'), false);
+check('steps: only one photo card', substr_count($st, 'has-img'), 1);
+check('steps: none set, no section', $F::steps_html(array(), 'x'), '');
 
 // ===========================================================================
 echo "\n=== F. the tests page ===\n";

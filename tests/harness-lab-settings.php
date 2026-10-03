@@ -97,7 +97,7 @@ $out = $S::sanitize(array(
     'advance_percent' => '150', 'service_charge' => '-5', 'hard_copy_fee' => '250', 'both_fee' => 'abc',
     'days_ahead' => '400', 'open_days' => array('fri', 'sat', 'bogus', 'sat'), 'slots' => "junk\n", 'cutoff_hours' => '-1',
     'slot_capacity' => '3', 'banner_id' => '10', 'banner_link' => 'javascript:alert(1)', 'hotline' => ' <b>16263</b> ',
-    'steps' => array(array('title' => '', 'text' => 'Custom text'), array('title' => 'Mine', 'text' => '<i>x</i>')),
+    'steps' => array(array('title' => '', 'text' => 'Custom text', 'image' => '9'), array('title' => 'Mine', 'text' => '<i>x</i>', 'image' => '10'), array('title' => 'Three', 'image' => '-4')),
 ));
 check('percent capped at 100', $out['advance_percent'], 100.0);
 check('negative charge becomes 0', $out['service_charge'], 0.0);
@@ -110,8 +110,11 @@ check('a non-image banner is refused', $out['banner_id'], 0);
 check('a javascript: link is refused', $out['banner_link'], '');
 check('hotline tags stripped', $out['hotline'], '16263');
 check('always four steps', count($out['steps']), 4);
-check('an empty step title keeps the default', $out['steps'][0], array('title' => $S::defaults()['steps'][0]['title'], 'text' => 'Custom text'));
-check('a step keeps its own title, markup stripped', $out['steps'][1], array('title' => 'Mine', 'text' => 'x'));
+check('an empty step title keeps the default; an image kept', $out['steps'][0], array('title' => $S::defaults()['steps'][0]['title'], 'text' => 'Custom text', 'image' => 9));
+check('a step keeps its own title, markup stripped; a non-image refused', $out['steps'][1], array('title' => 'Mine', 'text' => 'x', 'image' => 0));
+check('a negative image id becomes 0', $out['steps'][2]['image'], 0);
+check('a missing step is the default, with no image', $out['steps'][3], $S::defaults()['steps'][3]);
+check('default steps carry no image', array_column($S::defaults()['steps'], 'image'), array(0, 0, 0, 0));
 check('no days ticked falls back to every day', $S::sanitize(array('open_days' => array()))['open_days'], $S::DAYS);
 
 echo "\n=== E. the go-live switch ===\n";

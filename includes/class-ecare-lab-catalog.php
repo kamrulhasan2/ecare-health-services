@@ -397,27 +397,68 @@ class ECare_Lab_Catalog {
     }
 
     /** Bookable tests sharing the most categories with this one. */
+    /**
+     * "Related tests" under a test's page, as cards. Only tests a lab offers
+     * right now; never the test itself; no repeats. In this order until $limit:
+     *   1. the tests the admin picked for this test (Related tests box)
+     *   2. tests sharing the most categories with it
+     *   3. popular tests: most booked first, then those more labs offer
+     */
     public static function related($test_id, $limit = 6) {
         $test_id = (int) $test_id;
-        $mine    = wp_get_object_terms($test_id, ECare_Lab_Taxonomies::CATEGORY, array('fields' => 'ids'));
-        $mine    = is_wp_error($mine) ? array() : array_map('intval', $mine);
-        if (!$mine) {
-            return array();
-        }
-        $scores = array();
-        foreach (array_keys(self::bookable_map()) as $tid) {
-            if ($tid === $test_id) {
-                continue;
+        $limit   = max(0, (int) $limit);
+        $map     = self::bookable_map();
+        $ids     = array();
+        $add     = function ($tid) use (&$ids, $map, $test_id, $limit) {
+            $tid = (int) $tid;
+            if (count($ids) < $limit && $tid !== $test_id && isset($map[$tid]) && !in_array($tid, $ids, true)) {
+                $ids[] = $tid;
             }
-            $theirs = wp_get_object_terms($tid, ECare_Lab_Taxonomies::CATEGORY, array('fields' => 'ids'));
-            $shared = count(array_intersect($mine, is_wp_error($theirs) ? array() : array_map('intval', $theirs)));
-            if ($shared) {
-                $scores[$tid] = $shared;
+        };
+
+        foreach (ECare_Lab_Test_Info::related_ids($test_id) as $tid) {
+            $add($tid);
+        }
+
+        if (count($ids) < $limit) {
+            $mine = wp_get_object_terms($test_id, ECare_Lab_Taxonomies::CATEGORY, array('fields' => 'ids'));
+            $mine = is_wp_error($mine) ? array() : array_map('intval', $mine);
+            if ($mine) {
+                $scores = array();
+                foreach (array_keys($map) as $tid) {
+                    if ($tid === $test_id) {
+                        continue;
+                    }
+                    $theirs = wp_get_object_terms($tid, ECare_Lab_Taxonomies::CATEGORY, array('fields' => 'ids'));
+                    $shared = count(array_intersect($mine, is_wp_error($theirs) ? array() : array_map('intval', $theirs)));
+                    if ($shared) {
+                        $scores[$tid] = $shared;
+                    }
+                }
+                uksort($scores, function ($a, $b) use ($scores) {
+                    return ($scores[$b] <=> $scores[$a]) ?: strcasecmp(get_the_title($a), get_the_title($b));
+                });
+                foreach (array_keys($scores) as $tid) {
+                    $add($tid);
+                }
             }
         }
-        uksort($scores, function ($a, $b) use ($scores) {
-            return ($scores[$b] <=> $scores[$a]) ?: strcasecmp(get_the_title($a), get_the_title($b));
-        });
-        return array_map(array(__CLASS__, 'card'), array_slice(array_keys($scores), 0, $limit));
+
+        if (count($ids) < $limit) {
+            foreach (array_keys(ECare_Lab_Taxonomies::booking_counts()) as $tid) {
+                $add($tid);
+            }
+        }
+        if (count($ids) < $limit) {
+            $rest = array_keys($map);
+            usort($rest, function ($a, $b) use ($map) {
+                return (count($map[$b]['providers']) <=> count($map[$a]['providers'])) ?: strcasecmp(get_the_title($a), get_the_title($b));
+            });
+            foreach ($rest as $tid) {
+                $add($tid);
+            }
+        }
+
+        return array_map(array(__CLASS__, 'card'), $ids);
     }
 }

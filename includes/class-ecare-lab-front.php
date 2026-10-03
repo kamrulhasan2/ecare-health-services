@@ -484,18 +484,7 @@ class ECare_Lab_Front {
                 </section>
             <?php endif; ?>
 
-            <section class="ecl-sec">
-                <div class="ecl-sec-head"><h2><?php esc_html_e('How we work', 'ecare-health-services'); ?></h2></div>
-                <ol class="ecl-steps">
-                    <?php foreach ((array) $s['steps'] as $i => $step): ?>
-                        <li>
-                            <span class="ecl-step-n"><?php echo (int) $i + 1; ?></span>
-                            <h3><?php echo esc_html($step['title']); ?></h3>
-                            <?php if ($step['text'] !== ''): ?><p><?php echo esc_html($step['text']); ?></p><?php endif; ?>
-                        </li>
-                    <?php endforeach; ?>
-                </ol>
-            </section>
+            <?php echo self::steps_html((array) $s['steps'], __('How we work', 'ecare-health-services')); // phpcs:ignore -- escaped inside ?>
 
         </div>
         <?php
@@ -787,6 +776,31 @@ class ECare_Lab_Front {
         return $single ? 'disabled' : array('disabled');
     }
 
+    /**
+     * The four "How we work" steps. A step with a picture is a photo card
+     * (picture behind, "Step 1", title and text on it); without one, a plain card.
+     */
+    public static function steps_html($steps, $heading) {
+        $steps = array_values(array_filter((array) $steps, function ($st) { return is_array($st) && trim((string) ($st['title'] ?? '')) !== ''; }));
+        if (!$steps) {
+            return '';
+        }
+        $html = '<section class="ecl-sec"><div class="ecl-sec-head"><h2>' . esc_html($heading) . '</h2></div><ol class="ecl-steps">';
+        foreach ($steps as $i => $st) {
+            $img  = (int) ($st['image'] ?? 0);
+            $url  = $img ? (string) wp_get_attachment_image_url($img, 'medium_large') : '';
+            $text = trim((string) ($st['text'] ?? ''));
+            $body = '<h3>' . esc_html($st['title']) . '</h3>' . ($text !== '' ? '<p>' . esc_html($text) . '</p>' : '');
+            if ($url !== '') {
+                $html .= '<li class="has-img"><img class="ecl-step-img" src="' . esc_url($url) . '" alt="" loading="lazy" />'
+                    . '<div class="ecl-step-over"><span class="ecl-step-tag">' . esc_html(sprintf(__('Step %d', 'ecare-health-services'), $i + 1)) . '</span>' . $body . '</div></li>';
+            } else {
+                $html .= '<li><span class="ecl-step-n">' . ($i + 1) . '</span>' . $body . '</li>';
+            }
+        }
+        return $html . '</ol></section>';
+    }
+
     public static function render_detail($post) {
         $id   = (int) $post->ID;
         $map  = ECare_Lab_Catalog::bookable_map();
@@ -924,16 +938,7 @@ class ECare_Lab_Front {
                 </section>
             <?php endif; ?>
 
-            <?php if ($steps): ?>
-                <section class="ecl-sec">
-                    <div class="ecl-sec-head"><h2><?php esc_html_e('How our test process works', 'ecare-health-services'); ?></h2></div>
-                    <ol class="ecl-steps">
-                        <?php foreach ($steps as $i => $step): ?>
-                            <li><span class="ecl-step-n"><?php echo (int) $i + 1; ?></span><h3><?php echo esc_html($step['title']); ?></h3><?php if ($step['text'] !== ''): ?><p><?php echo esc_html($step['text']); ?></p><?php endif; ?></li>
-                        <?php endforeach; ?>
-                    </ol>
-                </section>
-            <?php endif; ?>
+            <?php echo self::steps_html($steps, __('How our test process works', 'ecare-health-services')); // phpcs:ignore -- escaped inside ?>
 
             <?php if ($related): $sid = 'ecl-related-' . $id; ?>
                 <section class="ecl-sec">
