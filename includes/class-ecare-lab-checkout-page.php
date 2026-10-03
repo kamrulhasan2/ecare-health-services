@@ -68,20 +68,37 @@ class ECare_Lab_Checkout_Page {
         $redirect = '';
         $do       = isset($in['del_address']) ? 'del_address' : sanitize_key((string) ($in['do'] ?? ''));
 
-        switch ($do) {
-            case 'add_address':
-                $r = ECare_Lab_Checkout::add_address($user_id, array(
-                    'label'   => (string) ($in['new_label'] ?? ''),
-                    'area_id' => (int) ($in['new_area'] ?? 0),
-                    'line'    => (string) ($in['new_line'] ?? ''),
-                ));
-                if ($r['ok']) {
-                    $state['address_id'] = $r['id'];
-                    $msg                 = 'address_added';
-                } else {
-                    $errors['new_address'] = $r['code'];
+        // A new address typed into the form goes with whichever button was
+        // pressed - Place Order included. There is no separate "Save address"
+        // step: patients typed an address, never saved it, and could not order.
+        $typed = self::typed_address($in);
+        if ($typed && $do !== 'del_address') {
+            $r = ECare_Lab_Checkout::add_or_find_address($user_id, $typed);
+            if ($r['ok']) {
+                $state['address_id'] = $r['id'];
+                if ($do !== 'place' && !empty($r['new'])) {
+                    $msg    = 'address_added';
+                    $anchor = 'ecl-co-address';
                 }
-                $anchor = 'ecl-co-address';
+            } else {
+                $errors['new_address'] = $r['code'];
+                $errors['_draft']      = $typed;   // shown again, so nothing typed is lost
+                $anchor                = 'ecl-co-address';
+                if ($do === 'place') {
+                    $msg = 'fix';
+                    $do  = '';   // no order without the address it was meant for
+                }
+            }
+        } elseif ($typed) {
+            $errors['_draft'] = $typed;
+        }
+
+        switch ($do) {
+            case 'add_address':   // the old Save address button, from a page still open in a tab
+                if (!$typed) {
+                    $errors['new_address'] = 'line';
+                    $anchor                = 'ecl-co-address';
+                }
                 break;
 
             case 'del_address':
@@ -152,6 +169,19 @@ class ECare_Lab_Checkout_Page {
         }
         ECare_Lab_Checkout::save_state($user_id, $state);
         return array('msg' => $msg, 'errors' => $errors, 'anchor' => $anchor, 'state' => $state, 'redirect' => $redirect);
+    }
+
+    /** The new-address fields, when something was written in them. */
+    public static function typed_address($in) {
+        $line = trim((string) ($in['new_line'] ?? ''));
+        if ($line === '') {
+            return null;
+        }
+        return array(
+            'label'   => (string) ($in['new_label'] ?? 'home'),
+            'area_id' => (int) ($in['new_area'] ?? 0),
+            'line'    => function_exists('mb_substr') ? mb_substr($line, 0, 200) : substr($line, 0, 200),
+        );
     }
 
     // =======================================================================
@@ -358,12 +388,13 @@ class ECare_Lab_Checkout_Page {
                             <?php endif; ?>
 
                             <?php if (count($book) < ECare_Lab_Checkout::MAX_ADDRESSES): ?>
-                            <details class="ecl-co-new"<?php echo (!$book || isset($errors['new_address'])) ? ' open' : ''; ?>>
+                            <?php $draft = isset($errors['_draft']) && is_array($errors['_draft']) ? $errors['_draft'] : array(); ?>
+                            <details class="ecl-co-new"<?php echo (!$book || isset($errors['new_address']) || $draft) ? ' open' : ''; ?>>
                                 <summary><?php echo $book ? esc_html__('+ Add a new address', $d) : esc_html__('Add your address', $d); ?></summary>
                                 <?php echo self::field_error($errors, 'new_address'); // phpcs:ignore ?>
                                 <div class="ecl-co-labels" role="radiogroup" aria-label="<?php esc_attr_e('Address type', $d); ?>">
                                     <?php foreach ($labels as $k => $txt): ?>
-                                        <label class="ecl-co-chip"><input type="radio" name="new_label" value="<?php echo esc_attr($k); ?>"<?php checked($k, 'home'); ?> /> <span><?php echo esc_html($txt); ?></span></label>
+                                        <label class="ecl-co-chip"><input type="radio" name="new_label" value="<?php echo esc_attr($k); ?>"<?php checked($k, $draft['label'] ?? 'home'); ?> /> <span><?php echo esc_html($txt); ?></span></label>
                                     <?php endforeach; ?>
                                 </div>
                                 <label class="ecl-co-lbl" for="ecl-co-new-area"><?php esc_html_e('Area', $d); ?></label>
@@ -372,14 +403,14 @@ class ECare_Lab_Checkout_Page {
                                     <?php foreach (ECare_Lab_Cart_Page::area_options() as $district => $list): ?>
                                         <optgroup label="<?php echo esc_attr($district); ?>">
                                             <?php foreach ($list as $aid => $aname): ?>
-                                                <option value="<?php echo (int) $aid; ?>"<?php selected(ECare_Lab_Cart::get_area($uid), $aid); ?>><?php echo esc_html($aname); ?></option>
+                                                <option value="<?php echo (int) $aid; ?>"<?php selected(!empty($draft['area_id']) ? $draft['area_id'] : ECare_Lab_Cart::get_area($uid), $aid); ?>><?php echo esc_html($aname); ?></option>
                                             <?php endforeach; ?>
                                         </optgroup>
                                     <?php endforeach; ?>
                                 </select>
                                 <label class="ecl-co-lbl" for="ecl-co-new-line"><?php esc_html_e('House, road, block, landmark', $d); ?></label>
-                                <input type="text" id="ecl-co-new-line" name="new_line" maxlength="200" autocomplete="street-address" />
-                                <button type="submit" name="do" value="add_address" class="ecl-btn ecl-btn-ghost" formnovalidate><?php esc_html_e('Save address', $d); ?></button>
+                                <input type="text" id="ecl-co-new-line" name="new_line" maxlength="200" autocomplete="street-address" value="<?php echo esc_attr($draft['line'] ?? ''); ?>" />
+                                <p class="ecl-cp-hint"><?php echo $book ? esc_html__('Fill this in to use a new address: it is saved to your address book when you place the order.', $d) : esc_html__('Your address is saved for next time when you place the order.', $d); ?></p>
                             </details>
                             <?php endif; ?>
                         </section>

@@ -131,8 +131,9 @@
     // keeps the page in step while the patient fills it in.
     // =====================================================================
     document.querySelectorAll('.ecl-co-form').forEach(function (form) {
-        // Enter in the coupon box applies it; in the address box, saves it.
-        [['#ecl-co-coupon', 'coupon'], ['#ecl-co-new-line', 'add_address']].forEach(function (pair) {
+        // Enter in the coupon box applies it. (Enter in the address box presses
+        // the form's harmless first button; the address goes with any post.)
+        [['#ecl-co-coupon', 'coupon']].forEach(function (pair) {
             var input = form.querySelector(pair[0]);
             var btn = form.querySelector('button[name="do"][value="' + pair[1] + '"]');
             if (!input || !btn) { return; }

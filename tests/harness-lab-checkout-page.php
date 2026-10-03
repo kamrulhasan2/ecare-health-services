@@ -146,7 +146,7 @@ check('...and everything else typed is kept', array_intersect_key($K::get_state(
       array('delivery' => 'hard', 'date' => '2026-10-02', 'slot' => '09:00-11:00', 'name' => 'Rahim', 'phone' => '+880 1712 345678', 'note' => 'Ring twice'));
 check('the chosen address sets the area everywhere else', ECare_Lab_Cart::$area, 501);
 $r = $P::apply(5, $form + array('address_id' => 1, 'do' => 'add_address', 'new_area' => '', 'new_line' => 'Somewhere'), $now);
-check('a bad new address: an error, the old choice kept', array($r['errors'], $r['state']['address_id']), array(array('new_address' => 'area'), 1));
+check('a bad new address: an error, the old choice kept, what was typed comes back', array($r['errors'], $r['state']['address_id']), array(array('new_address' => 'area', '_draft' => array('label' => 'home', 'area_id' => 0, 'line' => 'Somewhere')), 1));
 $P::apply(5, $form + array('address_id' => 1, 'do' => 'add_address', 'new_area' => '502', 'new_line' => 'Mirpur 10 circle'), $now);
 
 $f = $form + array('address_id' => 1);
@@ -187,6 +187,36 @@ check('with a problem, no order is made', ECare_Lab_Orders::$calls, array());
 $r = $P::apply(5, $f + array('del_address' => '1', 'do' => 'place'), $now);
 check('× on an address deletes it (and does not place the order)', array($r['msg'], array_keys($K::addresses(5)), $r['state']['address_id'], $GLOBALS['fired']), array('address_deleted', array(2), 0, array()));
 $P::apply(5, $form + array('do' => 'add_address', 'new_area' => '501', 'new_line' => 'House 12, Road 5'), $now);   // id 3, chosen
+
+// ===========================================================================
+echo "\n=== A2. no Save address step: the typed address goes with the order ===\n";
+// ===========================================================================
+ECare_Lab_Orders::$calls = array(); $GLOBALS['fired'] = array();
+$typed = array_merge($form, array('address_id' => 2, 'new_label' => 'other', 'new_area' => '501', 'new_line' => '  Road 9,   Block C  ', 'do' => 'place'));
+$r = $P::apply(5, $typed, $now);
+check('Place Order with a typed address: saved, chosen over the old choice, order made with it', array($r['errors'], $r['state']['address_id'], array_keys($K::addresses(5)), count(ECare_Lab_Orders::$calls), ECare_Lab_Orders::$calls[0][2]['address']['line'], $r['redirect'] !== ''),
+      array(array(), 4, array(2, 3, 4), 1, 'Road 9, Block C', true));
+check('...its label kept', $K::addresses(5)[4]['label'], 'other');
+$r = $P::apply(5, array_merge($typed, array('new_line' => 'road 9, block c')), $now);
+check('the same address again (any case or spacing): no copy in the book', array($r['state']['address_id'], array_keys($K::addresses(5))), array(4, array(2, 3, 4)));
+ECare_Lab_Orders::$calls = array(); $GLOBALS['fired'] = array();
+$r = $P::apply(5, array_merge($typed, array('new_area' => '', 'new_line' => 'Somewhere else')), $now);
+check('a typed address without its area: no order, the error, back to the address with what was typed', array(ECare_Lab_Orders::$calls, $GLOBALS['fired'], $r['msg'], $r['errors']['new_address'], $r['errors']['_draft']['line'], $r['anchor'], $r['redirect']),
+      array(array(), array(), 'fix', 'area', 'Somewhere else', 'ecl-co-address', ''));
+$r = $P::apply(5, array_merge($typed, array('new_line' => 'Abc', 'do' => 'place')), $now);
+check('...too short: the same', array($r['errors']['new_address'], ECare_Lab_Orders::$calls), array('line', array()));
+$r = $P::apply(5, array_merge($typed, array('new_line' => 'House 7, Lane 2', 'do' => 'coupon', 'coupon_input' => '')), $now);
+check('any other button also keeps a typed address', array($r['state']['address_id'], count($K::addresses(5))), array(5, 4));
+$r = $P::apply(5, array_merge($typed, array('new_line' => 'Not this one', 'del_address' => '5')), $now);
+check('× on an address does not save the typed one, but keeps it on screen', array(array_keys($K::addresses(5)), $r['errors']['_draft']['line'], $r['msg']), array(array(2, 3, 4), 'Not this one', 'address_deleted'));
+$r = $P::apply(5, array_merge($typed, array('new_line' => '', 'do' => 'place', 'address_id' => 3)), $now);
+check('nothing typed: the chosen address is used as before', $r['state']['address_id'], 3);
+ECare_Lab_Orders::$calls = array(); $GLOBALS['fired'] = array();
+$GLOBALS['transients']['ecare_lab_co_err_5'] = array('new_address' => 'line', '_draft' => array('label' => 'office', 'area_id' => 502, 'line' => 'Mirpur <b>'));
+$html = $P::render($now);
+check('the page: no Save address button; what was typed is back, escaped, and the form is open', array(has($html, 'value="add_address"'), has($html, 'value="Mirpur &lt;b&gt;"'), (bool) preg_match('/value="office" checked/', $html), (bool) preg_match('/value="502" selected/', $html), (bool) preg_match('/<details class="ecl-co-new" open>/', $html)),
+      array(false, true, true, true, true));
+check('...and says the address is saved with the order', has($html, 'saved to your address book when you place the order'), true);
 
 // ===========================================================================
 echo "\n=== B. the page ===\n";

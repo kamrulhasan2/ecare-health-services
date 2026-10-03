@@ -86,6 +86,28 @@ class ECare_Lab_Checkout {
         return array('ok' => true, 'id' => $id);
     }
 
+    /**
+     * The id of this address in the book, adding it if it is not there yet
+     * (same area, same text ignoring case and spaces). Placing an order twice
+     * with the same typed address must not fill the book with copies.
+     *
+     * @return array{ok:bool, id?:int, new?:bool, code?:string}
+     */
+    public static function add_or_find_address($user_id, $in) {
+        $norm = function ($s) {
+            $s = trim((string) preg_replace('/\s+/u', ' ', sanitize_text_field((string) $s)));
+            return function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
+        };
+        $line = $norm($in['line'] ?? '');
+        foreach (self::addresses($user_id) as $id => $a) {
+            if ((int) $a['area_id'] === (int) ($in['area_id'] ?? 0) && $norm($a['line']) === $line) {
+                return array('ok' => true, 'id' => (int) $id, 'new' => false);
+            }
+        }
+        $r = self::add_address($user_id, $in);
+        return $r['ok'] ? $r + array('new' => true) : $r;
+    }
+
     public static function delete_address($user_id, $id) {
         $raw  = self::raw_book($user_id);
         $book = self::addresses($user_id);
