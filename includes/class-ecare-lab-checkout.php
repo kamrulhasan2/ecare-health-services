@@ -115,6 +115,28 @@ class ECare_Lab_Checkout {
         update_user_meta((int) $user_id, self::ADDR_META, array('seq' => $raw['seq'], 'list' => $book));
     }
 
+    /**
+     * Free one place in a full address book for an address in $keep_area: the
+     * oldest address in another area goes. Checkout only offers addresses in
+     * the cart's area, so a book filled with other areas must not block it.
+     *
+     * @return bool whether one was removed
+     */
+    public static function make_room($user_id, $keep_area) {
+        $book = self::addresses($user_id);
+        if (count($book) < self::MAX_ADDRESSES) {
+            return false;
+        }
+        ksort($book);
+        foreach ($book as $id => $a) {
+            if ((int) $a['area_id'] !== (int) $keep_area) {
+                self::delete_address($user_id, $id);
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** "House 12, Road 5, Dhanmondi, Dhaka" */
     public static function address_text($addr) {
         $parts = array($addr['line']);
@@ -363,10 +385,17 @@ class ECare_Lab_Checkout {
             }
         }
 
+        // The area is chosen in the Lab Cart and fixed at checkout: the
+        // address must be in it.
+        $area    = (int) ECare_Lab_Cart::get_area($user_id);
         $book    = self::addresses($user_id);
         $address = $book[$state['address_id']] ?? null;
         if (!$address) {
             $errors['address'] = 'missing';
+        } elseif (!$area) {
+            $errors['address'] = 'no_area';
+        } elseif ((int) $address['area_id'] !== $area) {
+            $errors['address'] = 'other_area';
         } elseif (!ECare_Lab_Providers::covers_area($p['provider_id'], $address['area_id'])) {
             $errors['address'] = 'lab_area';
         }

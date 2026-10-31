@@ -68,12 +68,19 @@ class ECare_Lab_Checkout_Page {
         $redirect = '';
         $do       = isset($in['del_address']) ? 'del_address' : sanitize_key((string) ($in['do'] ?? ''));
 
+        // The area was chosen in the Lab Cart and is fixed here: a typed
+        // address always takes it, whatever the form sent.
+        $area = (int) ECare_Lab_Cart::get_area($user_id);
+
         // A new address typed into the form goes with whichever button was
         // pressed - Place Order included. There is no separate "Save address"
         // step: patients typed an address, never saved it, and could not order.
-        $typed = self::typed_address($in);
+        $typed = self::typed_address($in, $area);
         if ($typed && $do !== 'del_address') {
             $r = ECare_Lab_Checkout::add_or_find_address($user_id, $typed);
+            if (!$r['ok'] && ($r['code'] ?? '') === 'full' && ECare_Lab_Checkout::make_room($user_id, $area)) {
+                $r = ECare_Lab_Checkout::add_or_find_address($user_id, $typed);
+            }
             if ($r['ok']) {
                 $state['address_id'] = $r['id'];
                 if ($do !== 'place' && !empty($r['new'])) {
@@ -162,24 +169,22 @@ class ECare_Lab_Checkout_Page {
                 break;
         }
 
-        // The chosen address decides the area everywhere else (cart, Book modal).
-        $book = ECare_Lab_Checkout::addresses($user_id);
-        if (isset($book[$state['address_id']])) {
-            ECare_Lab_Cart::set_area($user_id, $book[$state['address_id']]['area_id']);
-        }
         ECare_Lab_Checkout::save_state($user_id, $state);
         return array('msg' => $msg, 'errors' => $errors, 'anchor' => $anchor, 'state' => $state, 'redirect' => $redirect);
     }
 
-    /** The new-address fields, when something was written in them. */
-    public static function typed_address($in) {
+    /**
+     * The new-address field, when something was written in it. The area is
+     * the cart's ($area); there is no area or Home/Office/Other choice here.
+     */
+    public static function typed_address($in, $area = 0) {
         $line = trim((string) ($in['new_line'] ?? ''));
         if ($line === '') {
             return null;
         }
         return array(
-            'label'   => (string) ($in['new_label'] ?? 'home'),
-            'area_id' => (int) ($in['new_area'] ?? 0),
+            'label'   => 'home',
+            'area_id' => (int) $area,
             'line'    => function_exists('mb_substr') ? mb_substr($line, 0, 200) : substr($line, 0, 200),
         );
     }
@@ -211,7 +216,10 @@ class ECare_Lab_Checkout_Page {
             'address:missing'   => __('Choose where the sample should be collected.', $d),
             /* translators: %s: lab name */
             'address:lab_area'  => sprintf(__('%s does not collect samples at this address. Choose another address or change the lab in your cart.', $d), $ctx['lab'] ?? ''),
-            'new_address:area'  => __('Choose the area.', $d),
+            'address:no_area'   => __('Choose your sample collection area in the Lab Cart first.', $d),
+            /* translators: %s: area name */
+            'address:other_area'=> sprintf(__('This address is not in %s, the area chosen in your Lab Cart. Choose or add an address there.', $d), $ctx['area'] ?? ''),
+            'new_address:area'  => __('Choose your sample collection area in the Lab Cart first.', $d),
             'new_address:line'  => __('Write the house, road and block (at least 5 characters).', $d),
             'new_address:full'  => __('You can keep up to 5 addresses. Remove one first.', $d),
             'name:missing'      => __('Write the patient\'s or contact person\'s name.', $d),
@@ -289,22 +297,25 @@ class ECare_Lab_Checkout_Page {
             $state['phone'] = (string) get_user_meta($uid, 'billing_phone', true);
         }
 
-        $lab_id   = (int) $p['provider_id'];
-        $lab_name = get_the_title($lab_id);
-        $book     = ECare_Lab_Checkout::addresses($uid);
-        $covers   = array();
-        foreach ($book as $id => $a) {
-            $covers[$id] = (bool) ECare_Lab_Providers::covers_area($lab_id, $a['area_id']);
+        $lab_id    = (int) $p['provider_id'];
+        $lab_name  = get_the_title($lab_id);
+        // The area was chosen in the Lab Cart and cannot be changed here.
+        $area      = (int) ECare_Lab_Cart::get_area($uid);
+        $area_name = $area ? ECare_Lab_Checkout::address_text(array('line' => '', 'area_id' => $area)) : '';
+        if (!$area || !ECare_Lab_Providers::covers_area($lab_id, $area)) {
+            $why = !$area
+                ? __('Choose your sample collection area in the Lab Cart first.', $d)
+                /* translators: 1: lab name, 2: area name */
+                : sprintf(__('%1$s does not collect samples in %2$s. Change the lab or the area in your Lab Cart.', $d), $lab_name, $area_name);
+            return '<div class="ecl ecl-cartp ecl-co">' . $crumbs . '<div class="ecl-empty">' . ECare_Lab_Front::icon('flask')
+                . '<h2>' . esc_html__('Your sample collection area is not set', $d) . '</h2>'
+                . '<p>' . esc_html($why) . '</p>'
+                . '<a class="ecl-btn" href="' . esc_url($cart_url) . '">' . esc_html__('Back to Lab Cart', $d) . '</a></div></div>';
         }
-        // Keep the chosen address; else one in the cart's area this lab serves; else any it serves.
+        // Only addresses in that area can be used.
+        $book = array_filter(ECare_Lab_Checkout::addresses($uid), function ($a) use ($area) { return (int) $a['area_id'] === $area; });
         if (!isset($book[$state['address_id']])) {
-            $state['address_id'] = 0;
-            $area = ECare_Lab_Cart::get_area($uid);
-            foreach ($book as $id => $a) {
-                if ($covers[$id] && ($a['area_id'] === $area || !$state['address_id'])) {
-                    $state['address_id'] = $id;
-                }
-            }
+            $state['address_id'] = $book ? (int) array_key_first($book) : 0;
         }
 
         $errors = get_transient(self::err_key($uid));
@@ -337,7 +348,6 @@ class ECare_Lab_Checkout_Page {
             'hard' => array(__('Hard copy', $d), __('A printed report is delivered to your address.', $d)),
             'both' => array(__('Both', $d), __('Online report, and a printed copy delivered to you.', $d)),
         );
-        $labels = array('home' => __('Home', $d), 'office' => __('Office', $d), 'other' => __('Other', $d));
 
         ob_start();
         ?>
@@ -368,17 +378,21 @@ class ECare_Lab_Checkout_Page {
 
                         <section class="ecl-cp-box<?php echo isset($errors['address']) ? ' has-err' : ''; ?>" id="ecl-co-address" aria-labelledby="ecl-co-address-h">
                             <h2 id="ecl-co-address-h"><span class="ecl-co-n">1</span><?php esc_html_e('Sample collection address', $d); ?></h2>
-                            <?php echo self::field_error($errors, 'address', array('lab' => $lab_name)); // phpcs:ignore ?>
+                            <?php echo self::field_error($errors, 'address', array('lab' => $lab_name, 'area' => $area_name)); // phpcs:ignore ?>
+                            <div class="ecl-co-area-lock">
+                                <span class="ecl-co-lbl"><?php esc_html_e('Area', $d); ?></span>
+                                <p><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                                   <strong><?php echo esc_html($area_name); ?></strong>
+                                   <small><?php esc_html_e('Chosen in your Lab Cart', $d); ?></small></p>
+                            </div>
                             <?php if ($book): ?>
                                 <div class="ecl-co-addrs" role="radiogroup" aria-labelledby="ecl-co-address-h">
-                                    <?php foreach ($book as $id => $a): $off = !$covers[$id]; ?>
-                                        <div class="ecl-co-addr<?php echo $off ? ' is-off' : ''; ?>">
+                                    <?php foreach ($book as $id => $a): ?>
+                                        <div class="ecl-co-addr">
                                             <label>
-                                                <input type="radio" name="address_id" value="<?php echo (int) $id; ?>"<?php checked($state['address_id'], $id); ?><?php disabled($off); ?> />
+                                                <input type="radio" name="address_id" value="<?php echo (int) $id; ?>"<?php checked($state['address_id'], $id); ?> />
                                                 <span class="ecl-co-addr-body">
-                                                    <strong><?php echo esc_html($labels[$a['label']]); ?></strong>
                                                     <span><?php echo esc_html(ECare_Lab_Checkout::address_text($a)); ?></span>
-                                                    <?php if ($off): ?><span class="ecl-tag ecl-tag-off"><?php echo esc_html(sprintf(__('UNAVAILABLE for %s', $d), $lab_name)); ?></span><?php endif; ?>
                                                 </span>
                                             </label>
                                             <button type="submit" name="del_address" value="<?php echo (int) $id; ?>" class="ecl-cp-x" formnovalidate aria-label="<?php echo esc_attr(sprintf(__('Remove address: %s', $d), ECare_Lab_Checkout::address_text($a))); ?>">×</button>
@@ -392,22 +406,6 @@ class ECare_Lab_Checkout_Page {
                             <details class="ecl-co-new"<?php echo (!$book || isset($errors['new_address']) || $draft) ? ' open' : ''; ?>>
                                 <summary><?php echo $book ? esc_html__('+ Add a new address', $d) : esc_html__('Add your address', $d); ?></summary>
                                 <?php echo self::field_error($errors, 'new_address'); // phpcs:ignore ?>
-                                <div class="ecl-co-labels" role="radiogroup" aria-label="<?php esc_attr_e('Address type', $d); ?>">
-                                    <?php foreach ($labels as $k => $txt): ?>
-                                        <label class="ecl-co-chip"><input type="radio" name="new_label" value="<?php echo esc_attr($k); ?>"<?php checked($k, $draft['label'] ?? 'home'); ?> /> <span><?php echo esc_html($txt); ?></span></label>
-                                    <?php endforeach; ?>
-                                </div>
-                                <label class="ecl-co-lbl" for="ecl-co-new-area"><?php esc_html_e('Area', $d); ?></label>
-                                <select id="ecl-co-new-area" name="new_area">
-                                    <option value=""><?php esc_html_e('— Choose your area —', $d); ?></option>
-                                    <?php foreach (ECare_Lab_Cart_Page::area_options() as $district => $list): ?>
-                                        <optgroup label="<?php echo esc_attr($district); ?>">
-                                            <?php foreach ($list as $aid => $aname): ?>
-                                                <option value="<?php echo (int) $aid; ?>"<?php selected(!empty($draft['area_id']) ? $draft['area_id'] : ECare_Lab_Cart::get_area($uid), $aid); ?>><?php echo esc_html($aname); ?></option>
-                                            <?php endforeach; ?>
-                                        </optgroup>
-                                    <?php endforeach; ?>
-                                </select>
                                 <label class="ecl-co-lbl" for="ecl-co-new-line"><?php esc_html_e('House, road, block, landmark', $d); ?></label>
                                 <input type="text" id="ecl-co-new-line" name="new_line" maxlength="200" autocomplete="street-address" value="<?php echo esc_attr($draft['line'] ?? ''); ?>" />
                                 <p class="ecl-cp-hint"><?php echo $book ? esc_html__('Fill this in to use a new address: it is saved to your address book when you place the order.', $d) : esc_html__('Your address is saved for next time when you place the order.', $d); ?></p>

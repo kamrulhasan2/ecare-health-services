@@ -10,7 +10,9 @@
  *     page jumps to the first problem
  *   - pressing Enter can never delete an address (a harmless default button
  *     comes first)
- *   - an address the lab does not serve cannot be chosen
+ *   - the area chosen in the Lab Cart is fixed: a typed address takes it,
+ *     only addresses in it are offered, no other can be ordered with, and
+ *     checkout never changes the cart's area; no Home/Office/Other choice
  *   - the summary on the page is the quote, and escapes what it prints
  */
 
@@ -132,6 +134,7 @@ ECare_Lab_Cart::$priced = array('provider_id' => 99, 'count' => 2, 'subtotal_mrp
     array('test_id' => 89, 'title' => 'CBC', 'patients' => 1, 'available' => true, 'price' => 400.0, 'mrp' => 400.0, 'line_total' => 400.0),
 ));
 ECare_Lab_Settings::$slots = array('2026-10-01' => array('15:00-17:00'), '2026-10-02' => array('09:00-11:00', '15:00-17:00'));
+ECare_Lab_Cart::$area = 501;   // Dhanmondi, chosen in the Lab Cart
 
 // ===========================================================================
 echo "\n=== A. posts ===\n";
@@ -140,14 +143,17 @@ $r = $P::apply(5, array('do' => 'place', 'name' => 'X'), $now);
 check('no nonce: expired, nothing saved or fired', array($r['msg'], isset($GLOBALS['umeta'][5]), $GLOBALS['fired']), array('expired', false, array()));
 
 $form = array('_ecl' => $N, 'name' => 'Rahim <script>', 'phone' => '+880 1712 345678', 'delivery' => 'hard', 'date' => '2026-10-02', 'slot' => '09:00-11:00', 'note' => 'Ring twice');
-$r = $P::apply(5, $form + array('do' => 'add_address', 'new_label' => 'office', 'new_area' => '501', 'new_line' => 'House 12, Road 5'), $now);
+$r = $P::apply(5, $form + array('do' => 'add_address', 'new_label' => 'office', 'new_area' => '502', 'new_line' => 'House 12, Road 5'), $now);
 check('add address: saved, chosen, message', array($r['msg'], $r['errors'], $r['state']['address_id'], $r['anchor']), array('address_added', array(), 1, 'ecl-co-address'));
+check('...in the cart\'s area whatever area or label was posted', array($K::addresses(5)[1]['area_id'], $K::addresses(5)[1]['label']), array(501, 'home'));
 check('...and everything else typed is kept', array_intersect_key($K::get_state(5), array_flip(array('name', 'phone', 'delivery', 'date', 'slot', 'note'))),
       array('delivery' => 'hard', 'date' => '2026-10-02', 'slot' => '09:00-11:00', 'name' => 'Rahim', 'phone' => '+880 1712 345678', 'note' => 'Ring twice'));
-check('the chosen address sets the area everywhere else', ECare_Lab_Cart::$area, 501);
-$r = $P::apply(5, $form + array('address_id' => 1, 'do' => 'add_address', 'new_area' => '', 'new_line' => 'Somewhere'), $now);
-check('a bad new address: an error, the old choice kept, what was typed comes back', array($r['errors'], $r['state']['address_id']), array(array('new_address' => 'area', '_draft' => array('label' => 'home', 'area_id' => 0, 'line' => 'Somewhere')), 1));
-$P::apply(5, $form + array('address_id' => 1, 'do' => 'add_address', 'new_area' => '502', 'new_line' => 'Mirpur 10 circle'), $now);
+check('checkout never changes the cart\'s area', ECare_Lab_Cart::$area, 501);
+ECare_Lab_Cart::$area = 0;
+$r = $P::apply(5, $form + array('address_id' => 1, 'do' => 'add_address', 'new_area' => '501', 'new_line' => 'Somewhere'), $now);
+check('no area in the cart: a new address is refused, the old choice kept, what was typed comes back', array($r['errors'], $r['state']['address_id']), array(array('new_address' => 'area', '_draft' => array('label' => 'home', 'area_id' => 0, 'line' => 'Somewhere')), 1));
+ECare_Lab_Cart::$area = 501;
+$K::add_address(5, array('area_id' => 502, 'line' => 'Mirpur 10 circle'));   // id 2: saved earlier, in another area
 
 $f = $form + array('address_id' => 1);
 $GLOBALS['status'][7] = 'publish'; $GLOBALS['coupons']['save10'] = true;
@@ -167,7 +173,7 @@ check('another button keeps an applied coupon', $P::apply(5, $f + array('coupon'
 $GLOBALS['fired'] = array();
 $r = $P::apply(5, array('_ecl' => $N, 'address_id' => 2, 'name' => '', 'phone' => '0171', 'date' => '2026-10-02', 'slot' => '09:00-11:00', 'do' => 'place'), $now);
 check('place with problems: nothing fired', $GLOBALS['fired'], array());
-check('...every problem named, and the page jumps to the first', array($r['msg'], $r['errors'], $r['anchor']), array('fix', array('address' => 'lab_area', 'name' => 'missing', 'phone' => 'invalid'), 'ecl-co-address'));
+check('...every problem named (an address outside the cart\'s area among them), and the page jumps to the first', array($r['msg'], $r['errors'], $r['anchor']), array('fix', array('address' => 'other_area', 'name' => 'missing', 'phone' => 'invalid'), 'ecl-co-address'));
 $r = $P::apply(5, array_merge($f, array('slot' => '', 'do' => 'place')), $now);
 check('only the time missing: jumps to the time', array($r['errors'], $r['anchor']), array(array('slot' => 'missing'), 'ecl-co-time'));
 
@@ -196,12 +202,14 @@ $typed = array_merge($form, array('address_id' => 2, 'new_label' => 'other', 'ne
 $r = $P::apply(5, $typed, $now);
 check('Place Order with a typed address: saved, chosen over the old choice, order made with it', array($r['errors'], $r['state']['address_id'], array_keys($K::addresses(5)), count(ECare_Lab_Orders::$calls), ECare_Lab_Orders::$calls[0][2]['address']['line'], $r['redirect'] !== ''),
       array(array(), 4, array(2, 3, 4), 1, 'Road 9, Block C', true));
-check('...its label kept', $K::addresses(5)[4]['label'], 'other');
+check('...no Home/Office/Other any more: a posted label is ignored', $K::addresses(5)[4]['label'], 'home');
 $r = $P::apply(5, array_merge($typed, array('new_line' => 'road 9, block c')), $now);
 check('the same address again (any case or spacing): no copy in the book', array($r['state']['address_id'], array_keys($K::addresses(5))), array(4, array(2, 3, 4)));
 ECare_Lab_Orders::$calls = array(); $GLOBALS['fired'] = array();
-$r = $P::apply(5, array_merge($typed, array('new_area' => '', 'new_line' => 'Somewhere else')), $now);
-check('a typed address without its area: no order, the error, back to the address with what was typed', array(ECare_Lab_Orders::$calls, $GLOBALS['fired'], $r['msg'], $r['errors']['new_address'], $r['errors']['_draft']['line'], $r['anchor'], $r['redirect']),
+ECare_Lab_Cart::$area = 0;
+$r = $P::apply(5, array_merge($typed, array('new_line' => 'Somewhere else')), $now);
+ECare_Lab_Cart::$area = 501;
+check('a typed address with no area in the cart: no order, the error, back to the address with what was typed', array(ECare_Lab_Orders::$calls, $GLOBALS['fired'], $r['msg'], $r['errors']['new_address'], $r['errors']['_draft']['line'], $r['anchor'], $r['redirect']),
       array(array(), array(), 'fix', 'area', 'Somewhere else', 'ecl-co-address', ''));
 $r = $P::apply(5, array_merge($typed, array('new_line' => 'Abc', 'do' => 'place')), $now);
 check('...too short: the same', array($r['errors']['new_address'], ECare_Lab_Orders::$calls), array('line', array()));
@@ -214,8 +222,10 @@ check('nothing typed: the chosen address is used as before', $r['state']['addres
 ECare_Lab_Orders::$calls = array(); $GLOBALS['fired'] = array();
 $GLOBALS['transients']['ecare_lab_co_err_5'] = array('new_address' => 'line', '_draft' => array('label' => 'office', 'area_id' => 502, 'line' => 'Mirpur <b>'));
 $html = $P::render($now);
-check('the page: no Save address button; what was typed is back, escaped, and the form is open', array(has($html, 'value="add_address"'), has($html, 'value="Mirpur &lt;b&gt;"'), (bool) preg_match('/value="office" checked/', $html), (bool) preg_match('/value="502" selected/', $html), (bool) preg_match('/<details class="ecl-co-new" open>/', $html)),
-      array(false, true, true, true, true));
+check('the page: no Save address button; what was typed is back, escaped, and the form is open', array(has($html, 'value="add_address"'), has($html, 'value="Mirpur &lt;b&gt;"'), (bool) preg_match('/<details class="ecl-co-new" open>/', $html)),
+      array(false, true, true));
+check('...no Home/Office/Other and no area list: the cart\'s area shown locked', array(has($html, 'name="new_label"'), has($html, 'Office'), has($html, 'name="new_area"'), has($html, '<select'), (bool) preg_match('#class="ecl-co-area-lock">.*<strong>Dhanmondi, Dhaka</strong>\s*<small>Chosen in your Lab Cart</small>#s', $html)),
+      array(false, false, false, false, true));
 check('...and says the address is saved with the order', has($html, 'saved to your address book when you place the order'), true);
 
 // ===========================================================================
@@ -227,7 +237,8 @@ $html = $P::render($now);
 check('an error from the last post is shown once', array(has($html, 'Write a Bangladeshi mobile number'), isset($GLOBALS['transients']['ecare_lab_co_err_5'])), array(true, false));
 $first_del = strpos($html, 'name="del_address"'); $default = strpos($html, 'class="ecl-co-default"');
 check('the first button in the form is the harmless default, not an address ×', $default !== false && $default < $first_del && $default < strpos($html, 'name="do" value="place"'), true);
-check('an address the lab does not serve: disabled and labelled', array((bool) preg_match('/value="2"[^>]*disabled/', $html), has($html, 'UNAVAILABLE for Popular &lt;Lab&gt;')), array(true, true));
+check('an address in another area is not offered at all', array(has($html, 'name="address_id" value="2"'), has($html, 'Mirpur 10 circle'), has($html, 'UNAVAILABLE')), array(false, false, false));
+check('the addresses in the cart\'s area are', array(has($html, 'name="address_id" value="3"'), has($html, 'name="address_id" value="4"')), array(true, true));
 check('the chosen address is checked', (bool) preg_match('/name="address_id" value="3" checked/', $html), true);
 check('address text', has($html, 'House 12, Road 5, Dhanmondi, Dhaka'), true);
 check('values are escaped', array(has($html, 'FBS &lt;b&gt;'), has($html, 'FBS <b>')), array(true, false));
@@ -277,6 +288,28 @@ $GLOBALS['umeta'][5] = array();
 ECare_Lab_Settings::$slots = array('2026-10-02' => array('09:00-11:00'));
 $html = $P::render($now);
 check('first visit: name from the account, the address form open', array(has($html, 'value="Rahim Uddin"'), has($html, '<details class="ecl-co-new" open>')), array(true, true));
+
+echo "\n=== C. the area is fixed by the cart ===\n";
+$GLOBALS['umeta'][5] = array();
+$K::add_address(5, array('area_id' => 502, 'line' => 'Mirpur 10 circle'));   // 1
+$K::add_address(5, array('area_id' => 501, 'line' => 'Road 7, House 3'));    // 2
+$st = $K::get_state(5); $st['address_id'] = 1; $K::save_state(5, $st);
+$html = $P::render($now);
+check('a remembered address in another area is swapped for one in the cart\'s area', array((bool) preg_match('/name="address_id" value="2" checked/', $html), has($html, 'value="1"')), array(true, false));
+ECare_Lab_Cart::$area = 0;
+$html = $P::render($now);
+check('no area in the cart: no form, sent back to the cart', array(has($html, '<form'), has($html, 'Choose your sample collection area in the Lab Cart first.'), has($html, 'href="https://site/cart/">Back to Lab Cart')), array(false, true, true));
+ECare_Lab_Cart::$area = 502;
+$html = $P::render($now);
+check('the lab does not collect in the cart\'s area: no form, said why', array(has($html, '<form'), has($html, 'Popular &lt;Lab&gt; does not collect samples in Mirpur, Dhaka.')), array(false, true));
+ECare_Lab_Cart::$area = 501;
+
+// A full book of other areas never blocks an address in this one.
+$GLOBALS['umeta'][5] = array();
+foreach (range(1, 5) as $i) { $K::add_address(5, array('area_id' => 502, 'line' => 'Mirpur house ' . $i)); }
+ECare_Lab_Orders::$calls = array();
+$r = $P::apply(5, array_merge($form, array('new_line' => 'House 1, Road 1', 'do' => 'place')), $now);
+check('full book: the oldest other-area address makes room, the order goes ahead', array($r['errors'], array_keys($K::addresses(5)), $K::addresses(5)[6]['area_id'], count(ECare_Lab_Orders::$calls)), array(array(), array(2, 3, 4, 5, 6), 501, 1));
 
 ECare_Lab_Cart::$priced = array('provider_id' => 0, 'lines' => array(), 'count' => 0, 'subtotal_mrp' => 0.0, 'subtotal' => 0.0, 'savings' => 0.0, 'material' => 0.0);
 check('empty cart: no form', array(has($P::render($now), '<form'), has($P::render($now), 'Your lab cart is empty')), array(false, true));

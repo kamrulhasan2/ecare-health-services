@@ -40,7 +40,8 @@ function get_term($id, $tax) { return $GLOBALS['terms'][$id] ?? null; }
 class ECare_Locations { const TAXONOMY = 'ecare_location'; }
 
 class ECare_Lab_Cart {
-    public static $priced;
+    public static $priced; public static $area = 501;
+    public static function get_area($u) { return self::$area; }
     public static function is_area($id) { return in_array((int) $id, array(501, 502), true) && isset($GLOBALS['terms'][$id]); }
     public static function priced($u) { return self::$priced; }
 }
@@ -223,8 +224,13 @@ ECare_Lab_Cart::$priced = $priced;
 check('a test the lab dropped', $K::validate(U, $ok, $now)['errors'], array('cart' => 'unavailable'));
 ECare_Lab_Cart::$priced = $ECP;
 
+check('an address outside the cart\'s area is refused', $K::validate(U, array('address_id' => 2) + $ok, $now)['errors'], array('address' => 'other_area'));
+ECare_Lab_Cart::$area = 0;
+check('no area chosen in the cart: refused', $K::validate(U, $ok, $now)['errors'], array('address' => 'no_area'));
+ECare_Lab_Cart::$area = 502;
 $e = $K::validate(U, array('address_id' => 2) + $ok, $now)['errors'];
 check('the lab does not collect at that address', $e, array('address' => 'lab_area'));
+ECare_Lab_Cart::$area = 501;
 check('no address', $K::validate(U, array('address_id' => 99) + $ok, $now)['errors'], array('address' => 'missing'));
 check('name and phone', $K::validate(U, array('name' => '', 'phone' => '12345') + $ok, $now)['errors'], array('name' => 'missing', 'phone' => 'invalid'));
 check('phone missing', $K::validate(U, array('phone' => '') + $ok, $now)['errors'], array('phone' => 'missing'));
@@ -238,6 +244,16 @@ check('a good coupon is applied', array($v['errors'], $v['quote']['coupon']), ar
 $GLOBALS['coupons']['save10']->expires = new DateTime('-1 hour');
 $v = $K::validate(U, array('coupon' => 'save10') + $ok, $now);
 check('a coupon that expired since: refused, and not applied', array($v['errors'], $v['quote']['coupon']), array(array('coupon' => 'expired'), 0.0));
+
+echo "\n=== make_room: a full book never blocks an address in the cart's area ===\n";
+$GLOBALS['umeta'][U] = array();
+foreach (array(502, 501, 502, 502, 501) as $i => $ar) { $K::add_address(U, array('area_id' => $ar, 'line' => 'House ' . ($i + 10) . ', Road 1')); }
+check('book full', array(count($K::addresses(U)), $K::add_address(U, array('area_id' => 501, 'line' => 'House 99, Road 9'))['code']), array(5, 'full'));
+check('room made: the oldest address in another area goes', array($K::make_room(U, 501), array_keys($K::addresses(U))), array(true, array(2, 3, 4, 5)));
+check('not full: nothing removed', array($K::make_room(U, 501), count($K::addresses(U))), array(false, 4));
+$GLOBALS['umeta'][U] = array();
+foreach (range(1, 5) as $i) { $K::add_address(U, array('area_id' => 501, 'line' => 'House ' . $i . ', Road 2')); }
+check('all five in this area: nothing removed', array($K::make_room(U, 501), count($K::addresses(U))), array(false, 5));
 
 printf("\n%d passed, %d failed\n", $pass, $fail);
 exit($fail ? 1 : 0);

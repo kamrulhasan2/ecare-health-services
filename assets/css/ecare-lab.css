@@ -723,3 +723,10 @@ html.ecl-modal-open { overflow: hidden; }
 .ecl .ecl-steps li.has-img h3 { color: #fff; }
 .ecl .ecl-steps li.has-img p { color: rgba(255, 255, 255, .88); }
 @media (prefers-reduced-motion: reduce) { .ecl .ecl-steps .ecl-step-img { transition: none; } }
+
+/* Checkout: the area chosen in the Lab Cart, shown locked */
+.ecl .ecl-co-area-lock { margin: 4px 0 12px; }
+.ecl .ecl-co-area-lock p { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 4px 0 0; padding: 10px 12px; border: 1px solid var(--ecl-line); border-radius: 10px; background: #f8fafc; color: var(--ecl-text); }
+.ecl .ecl-co-area-lock svg { color: var(--ecl-muted); flex: none; }
+.ecl .ecl-co-area-lock strong { font-size: 14px; }
+.ecl .ecl-co-area-lock small { color: var(--ecl-muted); font-size: 12px; margin-left: auto; }
